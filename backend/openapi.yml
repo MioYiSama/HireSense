@@ -4,6 +4,8 @@ info:
   title: HireSense (知聘) - Backend
 servers:
   - url: http://127.0.0.1:8080
+security:
+  - bearerAuth: []
 tags:
   - name: Authentication
     description: 认证
@@ -12,50 +14,407 @@ tags:
   - name: Interview
     description: 面试
 paths:
+  # Auth
   /api/auth/signin:
     post:
       tags: [Authentication]
       summary: 登录
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SignInRequest" }
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SignInResponse" }
   /api/auth/signup:
     post:
       tags: [Authentication]
       summary: 注册
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SignUpRequest" }
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SignUpResponse" }
   /api/auth/signout:
     post:
       tags: [Authentication]
       summary: 注销
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SignOutResponse" }
 
+  # User
+  /api/user/password:
+    put:
+      tags: [User]
+      summary: 修改密码
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UserPasswordRequest" }
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/UserPasswordResponse" }
   /api/user/profile:
     get:
       tags: [User]
       summary: 获取用户档案
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ProfileResponse" }
     put:
       tags: [User]
       summary: 更新用户档案
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/Profile" }
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PutProfileResponse" }
   /api/user/interviews:
     get:
       tags: [User]
       summary: 获取所有历史面试记录
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InterviewsResponse" }
 
-  /api/interview:
-    get:
-      tags: [Interview]
-      summary: 获取此次面试的详细信息
-  /api/interview/report:
-    get:
-      tags: [Interview]
-      summary: 获取此次面试的报告
+  # Interview
   /api/interview/start:
     post:
       tags: [Interview]
       summary: 开始一场面试
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InterviewStartResponse" }
   /api/interview/stop:
     post:
       tags: [Interview]
       summary: 结束一场面试
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InterviewStopRequest" }
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InterviewStopResponse" }
   /api/interview/reply:
     post:
       tags: [Interview]
       summary: 生成面试官回复
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InterviewReplyRequest" }
+          audio/wav:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InterviewReplyResponse" }
+  /api/interview/report:
+    put:
+      tags: [Interview]
+      summary: 添加面试的报告
+      security: []
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PutReportRequest" }
+      responses:
+        "200":
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PutReportResponse" }
 
-components: {}
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    # Auth
+    SignInRequest:
+      type: object
+      properties:
+        account: { type: string }
+        password: { type: string }
+      required: [account, password]
+    SignUpRequest:
+      type: object
+      properties:
+        name: { type: string }
+        account: { type: string }
+        password: { type: string }
+      required: [name, account, password]
+    SignInResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        data:
+          type: string
+          description: Access Token
+      required: [success, message, data]
+    SignUpResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        data:
+          type: string
+          description: Access Token
+      required: [success, message, data]
+    SignOutResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        data: {}
+      required: [success, message, data]
+
+    # User
+    UserPasswordRequest:
+      type: object
+      properties:
+        password: { type: string }
+      required: [password]
+    UserPasswordResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        data: {}
+      required: [success, message, data]
+    Profile:
+      type: object
+      properties:
+        name: { type: string }
+        job: { type: string }
+        resume: { type: string }
+        personalization: { type: string }
+    ProfileResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        data: { $ref: "#/components/schemas/Profile" }
+      required: [success, message, data]
+    PutProfileResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        data: {}
+      required: [success, message, data]
+    Interview:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        created_at:
+          type: number
+          description: 时间戳（毫秒）
+        status:
+          type: string
+          enum: ["started", "stopped"]
+        report:
+          $ref: "#/components/schemas/Report"
+      required: [id, created_at, status] # Report 可能为空
+    InterviewsResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        data:
+          type: array
+          items: { $ref: "#/components/schemas/Interview" }
+      required: [success, message, data]
+
+    # Interview
+    InterviewStartResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+          required: [id]
+      required: [success, message, data]
+    InterviewStopRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+      required: [id]
+    InterviewStopResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        data: {}
+      required: [success, message, data]
+    InterviewReplyRequest:
+      type: object
+      properties:
+        text: { type: string }
+      required: [text]
+    InterviewReplyResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        data:
+          type: object
+          properties:
+            reply: { type: string }
+            ending:
+              type: boolean
+              description: "面试是否结束"
+          required: [reply, ending]
+      required: [success, message, data]
+    PutReportRequest:
+      type: object
+      properties:
+        secret: { type: "string" }
+        id: { type: string, format: uuid }
+        report: { $ref: "#/components/schemas/Report" }
+      required: [secret, id, report]
+    PutReportResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        message: { type: string }
+        data: {}
+      required: [success, message, data]
+    Report:
+      type: object
+      properties:
+        score:
+          type: number
+          description: "总评分"
+          examples:
+            - 82.5
+        general:
+          type: object
+          additionalProperties:
+            type: number
+          description: "通用能力评分"
+          examples:
+            - "逻辑思维": 8
+              "沟通表达": 7.5
+              "应变能力": 8.5
+              "自信度": 8
+              "学习能力": 7.5
+              "团队协同": 6
+        specific:
+          type: object
+          additionalProperties:
+            type: number
+          description: "专业能力评分"
+          examples:
+            - "设计": 7
+              "性能": 6.5
+              "工程化": 8
+              "组件化": 7.5
+              "数据流": 7.5
+              "安全": 7.5
+        feedback:
+          type: string
+          description: "面试表现反馈"
+          examples:
+            - "候选人整体表现良好，沟通清晰，能够解释自己的思路。编程基础较扎实，但在系统设计和复杂问题拆解方面还有提升空间。"
+        shortcomings:
+          type: array
+          items: { type: string }
+          description: "短板"
+          examples:
+            - - 系统设计经验不足
+              - 复杂问题拆解不够结构化
+              - 对边界情况考虑不够全面
+        advice:
+          type: string
+          description: "改进建议"
+          examples:
+            - "建议加强系统设计方面的学习，多做大型系统案例分析，并在算法题练习中刻意训练问题拆解与边界情况分析能力。"
+        resources:
+          type: array
+          items: { type: string }
+          description: "学习资源"
+          examples:
+            - - "Designing Data-Intensive Applications"
+              - "LeetCode"
+              - "System Design Primer (GitHub)"
+              - "Cracking the Coding Interview"
+        reviews:
+          type: array
+          items:
+            type: object
+            properties:
+              interviewer: { type: string }
+              interviewee: { type: string }
+              score: { type: number }
+              advice: { type: string }
+            required: [interviewer, interviewee, score, advice]
+            description: "逐轮复盘（只展示低于75分的问题）"
+            examples:
+              - - "interviewer": "请解释一下哈希表在处理冲突时常见的策略，并比较它们的优缺点。"
+                  "interviewee": "可以使用链地址法或者开放寻址法。链地址法是每个桶存一个链表，冲突元素放在链表中；开放寻址法则是通过探测寻找下一个空位，比如线性探测。"
+                  "score": 72
+                  "advice": "回答基本正确，但缺少对时间复杂度退化情况以及不同探测策略（如二次探测、双重哈希）的补充说明。"
+                - "interviewer": "如果需要设计一个高并发的短链接服务，你会如何设计整体架构？"
+                  "interviewee": "可以用一个数据库存储短链接映射，然后用应用服务器处理请求，通过缓存来加速查询。"
+                  "score": 68
+                  "advice": "答案较为概括。需要进一步说明ID生成策略、缓存一致性、热点问题处理以及扩展性设计。"
+      required: [score, general, specific, feedback, shortcomings, advice, resources, reviews]

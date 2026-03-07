@@ -10,63 +10,46 @@ tags:
 paths:
   /api/interview/start:
     post:
-      tags: [ Interview ]
+      tags: [Interview]
       summary: 开始一场面试
       requestBody:
         content:
           application/json:
             schema: { $ref: "#/components/schemas/InterviewStartRequest" }
       responses:
-        '200':
+        "200":
           description: 成功
           content:
             application/json:
               schema: { $ref: "#/components/schemas/InterviewStatusResponse" }
   /api/interview/stop:
     post:
-      tags: [ Interview ]
+      tags: [Interview]
       summary: 结束一场面试
       requestBody:
         content:
           application/json:
             schema: { $ref: "#/components/schemas/InterviewStopRequest" }
       responses:
-        '200':
+        "200":
           description: 成功
           content:
             application/json:
               schema: { $ref: "#/components/schemas/InterviewStatusResponse" }
   /api/interview/reply:
     post:
-      tags: [ Interview ]
+      tags: [Interview]
       summary: 生成面试官回复
       requestBody:
         content:
           application/json:
             schema: { $ref: "#/components/schemas/InterviewReplyRequest" }
       responses:
-        '200':
+        "200":
           description: 成功
           content:
             application/json:
               schema: { $ref: "#/components/schemas/InterviewReplyResponse" }
-  /api/interview/report:
-    get:
-      tags: [ Interview ]
-      summary: 获取面试报告
-      parameters:
-        - name: id
-          in: query
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: 成功
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/InterviewReportResponse" }
 components:
   schemas:
     InterviewStartRequest:
@@ -75,53 +58,55 @@ components:
         id:
           type: string
           format: uuid
-          description: 面试ID
         resume:
           type: string
           description: 用户简历
         personalization:
           type: string
           description: 个性化面试官风格
-      required: [ id, resume, personalization ]
+      required: [id, resume, personalization]
     InterviewStopRequest:
       type: object
       properties:
         id:
           type: string
           format: uuid
-          description: 面试ID
-      required: [ id ]
+      required: [id]
+    InterviewStatusResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+      required: [success]
+    InputText:
+      type: object
+      properties:
+        type: { const: "text" }
+        content: { type: string }
+      required: [type, content]
+    InputTranscript:
+      type: object
+      properties:
+        type: { const: "transcript" }
+        content: { type: object } # TODO
+      required: [type, content]
     InterviewReplyRequest:
       type: object
       properties:
         id:
           type: string
           format: uuid
-          description: 面试ID
         input:
+          type: object
+          discriminator: { propertyName: type }
           oneOf:
-            - type: object
-              properties:
-                type: { const: "text" }
-                content: { type: string }
-              required: [ type, content ]
-            - type: object
-              properties:
-                type: { const: "transcript" }
-                content: { type: object } # TODO
-              required: [ type, content ]
-      required: [ id, input ]
-    InterviewStatusResponse:
-      type: object
-      properties:
-        success: { type: boolean }
-      required: [ success ]
+            - $ref: "#/components/schemas/InputText"
+            - $ref: "#/components/schemas/InputTranscript"
+      required: [id, input]
     InterviewReplyResponse:
       type: object
       properties:
         reply: { type: string }
-      required: [ reply ]
-    InterviewReportResponse:
-      type: object
-      properties:
-        report: { type: [ "string", "null" ] }
+        ending:
+          type: boolean
+          description: "面试是否结束"
+      required: [reply, ending]

@@ -1,0 +1,1065 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HireSense - 智能模拟面试平台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: {
+                50: "#ecfeff",
+                100: "#cffafe",
+                200: "#a5f3fc",
+                300: "#67e8f9",
+                400: "#22d3ee",
+                500: "#06b6d4",
+                600: "#0891b2",
+                700: "#0e7490",
+                800: "#155e75",
+                900: "#164e63",
+              },
+              surface: {
+                900: "#0f172a",
+                800: "#1e293b",
+                700: "#334155",
+                600: "#475569",
+              },
+            },
+            fontFamily: {
+              sans: ["Inter", "system-ui", "sans-serif"],
+              display: ["Poppins", "sans-serif"],
+            },
+          },
+        },
+      };
+    </script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <style>
+      * {
+        font-family: "Inter", sans-serif;
+      }
+      .font-display {
+        font-family: "Poppins", sans-serif;
+      }
+
+      .glass {
+        background: rgba(30, 41, 59, 0.6);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .glass-light {
+        background: rgba(51, 65, 85, 0.4);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+      }
+
+      .glow {
+        box-shadow: 0 0 40px rgba(6, 182, 212, 0.15);
+      }
+
+      .glow-sm {
+        box-shadow: 0 0 20px rgba(6, 182, 212, 0.1);
+      }
+
+      .sidebar-item {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      .sidebar-item:hover {
+        background: rgba(6, 182, 212, 0.1);
+        border-left-color: #06b6d4;
+      }
+
+      .progress-ring {
+        transform: rotate(-90deg);
+      }
+
+      .notification-badge {
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.6;
+        }
+      }
+
+      @keyframes slideIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .animate-slide-in {
+        animation: slideIn 0.4s ease-out forwards;
+      }
+
+      @keyframes progressFill {
+        from {
+          stroke-dashoffset: 283;
+        }
+      }
+
+      .progress-animate {
+        animation: progressFill 1.5s ease-out forwards;
+      }
+
+      .dropdown-menu {
+        transform-origin: top right;
+        transition: all 0.2s ease-out;
+      }
+
+      .dropdown-menu.hidden {
+        opacity: 0;
+        transform: scale(0.95);
+        pointer-events: none;
+      }
+
+      .dropdown-menu.show {
+        opacity: 1;
+        transform: scale(1);
+        pointer-events: auto;
+      }
+
+      .card-hover {
+        transition: all 0.3s ease;
+      }
+
+      .card-hover:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      }
+
+      ::-webkit-scrollbar {
+        width: 6px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: rgba(30, 41, 59, 0.5);
+        border-radius: 3px;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: rgba(6, 182, 212, 0.3);
+        border-radius: 3px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: rgba(6, 182, 212, 0.5);
+      }
+    </style>
+  </head>
+  <body
+    class="bg-gradient-to-br from-surface-900 via-surface-800 to-slate-900 min-h-screen text-white overflow-x-hidden"
+  >
+    <!-- 背景装饰 -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+      <div class="absolute top-0 right-0 w-96 h-96 bg-primary-500/10 rounded-full blur-3xl"></div>
+      <div class="absolute bottom-0 left-0 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl"></div>
+      <div
+        class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary-600/5 rounded-full blur-3xl"
+      ></div>
+    </div>
+
+    <!-- 顶部导航栏 -->
+    <header class="fixed top-0 left-0 right-0 z-50 glass border-b border-white/5">
+      <div class="flex items-center justify-between px-6 py-4">
+        <!-- Logo -->
+        <div class="flex items-center gap-3">
+          <div
+            class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center glow-sm"
+          >
+            <i class="fas fa-brain text-white text-lg"></i>
+          </div>
+          <div>
+            <h1 class="font-display font-bold text-xl text-white">HireSense</h1>
+            <p class="text-xs text-slate-400">智能模拟面试平台</p>
+          </div>
+        </div>
+
+        <!-- 右侧操作区 -->
+        <div class="flex items-center gap-4">
+          <!-- 个性化设置按钮 -->
+          <button
+            id="settingsBtn"
+            class="flex items-center gap-2 px-4 py-2.5 rounded-xl glass-light hover:bg-primary-500/20 transition-all group"
+          >
+            <i
+              class="fas fa-sliders text-primary-400 group-hover:rotate-90 transition-transform duration-300"
+            ></i>
+            <span class="text-sm font-medium text-slate-300 group-hover:text-white"
+              >个性化设置</span
+            >
+          </button>
+
+          <!-- 通知按钮 -->
+          <button
+            id="notificationBtn"
+            class="relative w-10 h-10 rounded-xl glass-light hover:bg-primary-500/20 transition-all flex items-center justify-center"
+          >
+            <i class="fas fa-bell text-slate-300"></i>
+            <span
+              class="notification-badge absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-xs flex items-center justify-center font-semibold"
+              >3</span
+            >
+          </button>
+
+          <!-- 用户头像 -->
+          <div class="relative">
+            <button
+              id="avatarBtn"
+              class="flex items-center gap-3 px-3 py-2 rounded-xl glass-light hover:bg-primary-500/20 transition-all"
+            >
+              <div
+                class="w-9 h-9 rounded-full bg-gradient-to-br from-primary-400 to-blue-500 flex items-center justify-center"
+              >
+                <i class="fas fa-user text-white text-sm"></i>
+              </div>
+              <div class="text-left hidden sm:block">
+                <p class="text-sm font-medium text-white">张明</p>
+                <p class="text-xs text-slate-400">产品经理</p>
+              </div>
+              <i class="fas fa-chevron-down text-xs text-slate-400 ml-1"></i>
+            </button>
+
+            <!-- 用户下拉菜单 -->
+            <div
+              id="avatarDropdown"
+              class="dropdown-menu hidden absolute right-0 top-full mt-2 w-56 glass rounded-2xl overflow-hidden shadow-2xl"
+            >
+              <div class="p-4 border-b border-white/5">
+                <p class="font-medium text-white">张明</p>
+                <p class="text-sm text-slate-400">zhangming@email.com</p>
+              </div>
+              <div class="p-2">
+                <a
+                  href="#"
+                  class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors"
+                >
+                  <i class="fas fa-user-circle text-primary-400 w-5"></i>
+                  <span class="text-sm text-slate-300">个人成长中心</span>
+                </a>
+                <a
+                  href="#"
+                  class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors"
+                >
+                  <i class="fas fa-chart-line text-primary-400 w-5"></i>
+                  <span class="text-sm text-slate-300">能力分析报告</span>
+                </a>
+                <a
+                  href="#"
+                  class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-white/5 transition-colors"
+                >
+                  <i class="fas fa-cog text-primary-400 w-5"></i>
+                  <span class="text-sm text-slate-300">账号设置</span>
+                </a>
+              </div>
+              <div class="p-2 border-t border-white/5">
+                <a
+                  href="#"
+                  class="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-500/10 transition-colors text-red-400"
+                >
+                  <i class="fas fa-sign-out-alt w-5"></i>
+                  <span class="text-sm">退出登录</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- 主体内容 -->
+    <div class="flex pt-20 min-h-screen">
+      <!-- 左侧边栏 - 历史面试记录 -->
+      <aside
+        id="sidebar"
+        class="fixed left-0 top-20 bottom-0 w-72 glass border-r border-white/5 overflow-hidden flex flex-col z-40 transition-all duration-300"
+      >
+        <div class="p-4 border-b border-white/5">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="font-display font-semibold text-white">历史面试记录</h2>
+            <span class="text-xs text-slate-400 bg-surface-700 px-2 py-1 rounded-full">12次</span>
+          </div>
+          <div class="relative">
+            <input
+              type="text"
+              placeholder="搜索面试记录..."
+              class="w-full bg-surface-700/50 border border-white/5 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-primary-500/50 transition-colors"
+            />
+            <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
+          </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-3 space-y-2">
+          <!-- 面试记录项 -->
+          <div
+            class="sidebar-item p-4 rounded-xl border-l-2 border-transparent cursor-pointer group animate-slide-in"
+            style="animation-delay: 0.1s"
+          >
+            <div class="flex items-start justify-between mb-2">
+              <span class="text-xs text-primary-400 bg-primary-500/10 px-2 py-1 rounded-lg"
+                >产品经理</span
+              >
+              <span class="text-xs text-slate-500">今天 14:30</span>
+            </div>
+            <h3
+              class="font-medium text-white text-sm mb-1 group-hover:text-primary-300 transition-colors"
+            >
+              字节跳动 - 一面
+            </h3>
+            <p class="text-xs text-slate-400">行为面试 + 产品设计题</p>
+            <div class="flex items-center gap-2 mt-3">
+              <div class="flex items-center gap-1">
+                <i class="fas fa-star text-yellow-400 text-xs"></i>
+                <span class="text-xs text-slate-300">85分</span>
+              </div>
+              <span class="text-xs text-slate-500">|</span>
+              <span class="text-xs text-green-400">已生成报告</span>
+            </div>
+          </div>
+
+          <div
+            class="sidebar-item p-4 rounded-xl border-l-2 border-transparent cursor-pointer group animate-slide-in"
+            style="animation-delay: 0.15s"
+          >
+            <div class="flex items-start justify-between mb-2">
+              <span class="text-xs text-blue-400 bg-blue-500/10 px-2 py-1 rounded-lg"
+                >产品经理</span
+              >
+              <span class="text-xs text-slate-500">昨天 10:00</span>
+            </div>
+            <h3
+              class="font-medium text-white text-sm mb-1 group-hover:text-primary-300 transition-colors"
+            >
+              阿里巴巴 - 二面
+            </h3>
+            <p class="text-xs text-slate-400">系统设计 + 深度追问</p>
+            <div class="flex items-center gap-2 mt-3">
+              <div class="flex items-center gap-1">
+                <i class="fas fa-star text-yellow-400 text-xs"></i>
+                <span class="text-xs text-slate-300">78分</span>
+              </div>
+              <span class="text-xs text-slate-500">|</span>
+              <span class="text-xs text-green-400">已生成报告</span>
+            </div>
+          </div>
+
+          <div
+            class="sidebar-item p-4 rounded-xl border-l-2 border-transparent cursor-pointer group animate-slide-in"
+            style="animation-delay: 0.2s"
+          >
+            <div class="flex items-start justify-between mb-2">
+              <span class="text-xs text-purple-400 bg-purple-500/10 px-2 py-1 rounded-lg"
+                >产品经理</span
+              >
+              <span class="text-xs text-slate-500">3天前</span>
+            </div>
+            <h3
+              class="font-medium text-white text-sm mb-1 group-hover:text-primary-300 transition-colors"
+            >
+              腾讯 - 群面模拟
+            </h3>
+            <p class="text-xs text-slate-400">无领导小组讨论</p>
+            <div class="flex items-center gap-2 mt-3">
+              <div class="flex items-center gap-1">
+                <i class="fas fa-star text-yellow-400 text-xs"></i>
+                <span class="text-xs text-slate-300">92分</span>
+              </div>
+              <span class="text-xs text-slate-500">|</span>
+              <span class="text-xs text-green-400">已生成报告</span>
+            </div>
+          </div>
+
+          <div
+            class="sidebar-item p-4 rounded-xl border-l-2 border-transparent cursor-pointer group animate-slide-in"
+            style="animation-delay: 0.25s"
+          >
+            <div class="flex items-start justify-between mb-2">
+              <span class="text-xs text-orange-400 bg-orange-500/10 px-2 py-1 rounded-lg"
+                >产品经理</span
+              >
+              <span class="text-xs text-slate-500">5天前</span>
+            </div>
+            <h3
+              class="font-medium text-white text-sm mb-1 group-hover:text-primary-300 transition-colors"
+            >
+              美团 - HR面
+            </h3>
+            <p class="text-xs text-slate-400">行为面试 + 薪资谈判</p>
+            <div class="flex items-center gap-2 mt-3">
+              <div class="flex items-center gap-1">
+                <i class="fas fa-star text-yellow-400 text-xs"></i>
+                <span class="text-xs text-slate-300">88分</span>
+              </div>
+              <span class="text-xs text-slate-500">|</span>
+              <span class="text-xs text-green-400">已生成报告</span>
+            </div>
+          </div>
+
+          <div
+            class="sidebar-item p-4 rounded-xl border-l-2 border-transparent cursor-pointer group animate-slide-in"
+            style="animation-delay: 0.3s"
+          >
+            <div class="flex items-start justify-between mb-2">
+              <span class="text-xs text-teal-400 bg-teal-500/10 px-2 py-1 rounded-lg"
+                >产品经理</span
+              >
+              <span class="text-xs text-slate-500">1周前</span>
+            </div>
+            <h3
+              class="font-medium text-white text-sm mb-1 group-hover:text-primary-300 transition-colors"
+            >
+              京东 - 专业面
+            </h3>
+            <p class="text-xs text-slate-400">业务分析 + 数据解读</p>
+            <div class="flex items-center gap-2 mt-3">
+              <div class="flex items-center gap-1">
+                <i class="fas fa-star text-yellow-400 text-xs"></i>
+                <span class="text-xs text-slate-300">81分</span>
+              </div>
+              <span class="text-xs text-slate-500">|</span>
+              <span class="text-xs text-green-400">已生成报告</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 开始新面试按钮 -->
+        <div class="p-4 border-t border-white/5">
+          <button
+            class="w-full py-3 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-400 hover:to-primary-500 text-white font-medium transition-all glow-sm hover:glow flex items-center justify-center gap-2"
+          >
+            <i class="fas fa-plus"></i>
+            <span>开始新面试</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- 主内容区 -->
+      <main class="flex-1 ml-72 p-6 space-y-6">
+        <!-- 欢迎横幅 -->
+        <div class="glass rounded-2xl p-6 glow relative overflow-hidden">
+          <div
+            class="absolute top-0 right-0 w-64 h-64 bg-primary-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"
+          ></div>
+          <div class="relative flex items-center justify-between">
+            <div>
+              <h2 class="font-display text-2xl font-bold text-white mb-2">下午好，张明</h2>
+              <p class="text-slate-400">
+                继续你的面试准备之旅，距离目标还有
+                <span class="text-primary-400 font-semibold">3次</span> 模拟面试
+              </p>
+            </div>
+            <div class="hidden md:flex items-center gap-4">
+              <div class="text-center">
+                <p class="text-3xl font-bold text-white">12</p>
+                <p class="text-xs text-slate-400">总面试次数</p>
+              </div>
+              <div class="w-px h-12 bg-white/10"></div>
+              <div class="text-center">
+                <p class="text-3xl font-bold text-primary-400">85</p>
+                <p class="text-xs text-slate-400">平均分数</p>
+              </div>
+              <div class="w-px h-12 bg-white/10"></div>
+              <div class="text-center">
+                <p class="text-3xl font-bold text-green-400">+12%</p>
+                <p class="text-xs text-slate-400">进步幅度</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 仪表盘区域 -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <!-- 能力雷达图 -->
+          <div class="lg:col-span-2 glass rounded-2xl p-6 card-hover">
+            <div class="flex items-center justify-between mb-6">
+              <h3 class="font-display font-semibold text-lg text-white">能力分析雷达</h3>
+              <span class="text-xs text-slate-400 bg-surface-700 px-3 py-1 rounded-full"
+                >基于最近5次面试</span
+              >
+            </div>
+            <div class="flex items-center justify-center">
+              <svg width="320" height="280" viewBox="0 0 320 280">
+                <!-- 背景网格 -->
+                <g transform="translate(160, 140)">
+                  <polygon
+                    points="0,-100 86.6,-50 86.6,50 0,100 -86.6,50 -86.6,-50"
+                    fill="none"
+                    stroke="rgba(255,255,255,0.05)"
+                    stroke-width="1"
+                  />
+                  <polygon
+                    points="0,-75 65,-37.5 65,37.5 0,75 -65,37.5 -65,-37.5"
+                    fill="none"
+                    stroke="rgba(255,255,255,0.05)"
+                    stroke-width="1"
+                  />
+                  <polygon
+                    points="0,-50 43.3,-25 43.3,25 0,50 -43.3,25 -43.3,-25"
+                    fill="none"
+                    stroke="rgba(255,255,255,0.05)"
+                    stroke-width="1"
+                  />
+                  <polygon
+                    points="0,-25 21.6,-12.5 21.6,12.5 0,25 -21.6,12.5 -21.6,-12.5"
+                    fill="none"
+                    stroke="rgba(255,255,255,0.05)"
+                    stroke-width="1"
+                  />
+                  <!-- 轴线 -->
+                  <line
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="-100"
+                    stroke="rgba(255,255,255,0.1)"
+                    stroke-width="1"
+                  />
+                  <line
+                    x1="0"
+                    y1="0"
+                    x2="86.6"
+                    y2="-50"
+                    stroke="rgba(255,255,255,0.1)"
+                    stroke-width="1"
+                  />
+                  <line
+                    x1="0"
+                    y1="0"
+                    x2="86.6"
+                    y2="50"
+                    stroke="rgba(255,255,255,0.1)"
+                    stroke-width="1"
+                  />
+                  <line
+                    x1="0"
+                    y1="0"
+                    x2="0"
+                    y2="100"
+                    stroke="rgba(255,255,255,0.1)"
+                    stroke-width="1"
+                  />
+                  <line
+                    x1="0"
+                    y1="0"
+                    x2="-86.6"
+                    y2="50"
+                    stroke="rgba(255,255,255,0.1)"
+                    stroke-width="1"
+                  />
+                  <line
+                    x1="0"
+                    y1="0"
+                    x2="-86.6"
+                    y2="-50"
+                    stroke="rgba(255,255,255,0.1)"
+                    stroke-width="1"
+                  />
+                  <!-- 数据区域 -->
+                  <polygon
+                    class="radar-area"
+                    points="0,-85 69.3,-35 78,40 0,70 -52,35 -60.6,-42.5"
+                    fill="rgba(6,182,212,0.2)"
+                    stroke="#06b6d4"
+                    stroke-width="2"
+                  />
+                  <!-- 数据点 -->
+                  <circle cx="0" cy="-85" r="4" fill="#06b6d4" />
+                  <circle cx="69.3" cy="-35" r="4" fill="#06b6d4" />
+                  <circle cx="78" cy="40" r="4" fill="#06b6d4" />
+                  <circle cx="0" cy="70" r="4" fill="#06b6d4" />
+                  <circle cx="-52" cy="35" r="4" fill="#06b6d4" />
+                  <circle cx="-60.6" cy="-42.5" r="4" fill="#06b6d4" />
+                </g>
+                <!-- 标签 -->
+                <text x="160" y="20" text-anchor="middle" fill="#94a3b8" font-size="12">
+                  产品思维
+                </text>
+                <text x="280" y="95" text-anchor="start" fill="#94a3b8" font-size="12">
+                  数据分析
+                </text>
+                <text x="280" y="195" text-anchor="start" fill="#94a3b8" font-size="12">
+                  沟通表达
+                </text>
+                <text x="160" y="270" text-anchor="middle" fill="#94a3b8" font-size="12">
+                  系统设计
+                </text>
+                <text x="40" y="195" text-anchor="end" fill="#94a3b8" font-size="12">行为面试</text>
+                <text x="40" y="95" text-anchor="end" fill="#94a3b8" font-size="12">技术理解</text>
+              </svg>
+            </div>
+          </div>
+
+          <!-- 综合评分 -->
+          <div class="glass rounded-2xl p-6 card-hover">
+            <h3 class="font-display font-semibold text-lg text-white mb-6">综合评分</h3>
+            <div class="flex flex-col items-center">
+              <div class="relative w-36 h-36 mb-4">
+                <svg class="w-full h-full progress-ring" viewBox="0 0 100 100">
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="45"
+                    fill="none"
+                    stroke="rgba(255,255,255,0.05)"
+                    stroke-width="8"
+                  />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="45"
+                    fill="none"
+                    stroke="url(#gradient)"
+                    stroke-width="8"
+                    stroke-linecap="round"
+                    stroke-dasharray="283"
+                    stroke-dashoffset="42"
+                    class="progress-animate"
+                  />
+                  <defs>
+                    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stop-color="#06b6d4" />
+                      <stop offset="100%" stop-color="#22d3ee" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                  <span class="text-4xl font-bold text-white">85</span>
+                  <span class="text-xs text-slate-400">综合分</span>
+                </div>
+              </div>
+              <div class="w-full space-y-3">
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-slate-400">排名</span>
+                  <span class="text-sm font-medium text-primary-400">前15%</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-slate-400">等级</span>
+                  <span class="text-sm font-medium text-yellow-400">优秀</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-slate-400">趋势</span>
+                  <span class="text-sm font-medium text-green-400"
+                    ><i class="fas fa-arrow-up mr-1"></i>上升中</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 个性化建议 -->
+        <div class="glass rounded-2xl p-6 card-hover">
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="font-display font-semibold text-lg text-white">个性化提升建议</h3>
+            <span
+              class="text-xs text-primary-400 bg-primary-500/10 px-3 py-1 rounded-full cursor-pointer hover:bg-primary-500/20 transition-colors"
+              >查看全部</span
+            >
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="glass-light rounded-xl p-4 border-l-2 border-yellow-400">
+              <div class="flex items-center gap-2 mb-3">
+                <i class="fas fa-lightbulb text-yellow-400"></i>
+                <span class="text-sm font-medium text-white">重点提升</span>
+              </div>
+              <p class="text-sm text-slate-400 mb-3">
+                系统设计能力相对薄弱，建议增加架构设计类题目练习
+              </p>
+              <div class="flex items-center gap-2">
+                <div class="flex-1 h-2 bg-surface-700 rounded-full overflow-hidden">
+                  <div class="h-full bg-yellow-400 rounded-full" style="width: 65%"></div>
+                </div>
+                <span class="text-xs text-slate-400">65%</span>
+              </div>
+            </div>
+
+            <div class="glass-light rounded-xl p-4 border-l-2 border-green-400">
+              <div class="flex items-center gap-2 mb-3">
+                <i class="fas fa-check-circle text-green-400"></i>
+                <span class="text-sm font-medium text-white">保持优势</span>
+              </div>
+              <p class="text-sm text-slate-400 mb-3">
+                沟通表达能力表现优秀，继续保持清晰的表达逻辑
+              </p>
+              <div class="flex items-center gap-2">
+                <div class="flex-1 h-2 bg-surface-700 rounded-full overflow-hidden">
+                  <div class="h-full bg-green-400 rounded-full" style="width: 92%"></div>
+                </div>
+                <span class="text-xs text-slate-400">92%</span>
+              </div>
+            </div>
+
+            <div class="glass-light rounded-xl p-4 border-l-2 border-primary-400">
+              <div class="flex items-center gap-2 mb-3">
+                <i class="fas fa-tasks text-primary-400"></i>
+                <span class="text-sm font-medium text-white">推荐练习</span>
+              </div>
+              <p class="text-sm text-slate-400 mb-3">基于目标岗位，推荐进行3次技术深度面试</p>
+              <button
+                class="w-full py-2 rounded-lg bg-primary-500/20 text-primary-400 text-sm font-medium hover:bg-primary-500/30 transition-colors"
+              >
+                开始练习
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 面试报告通知栏 -->
+        <div class="glass rounded-2xl p-6 card-hover">
+          <div class="flex items-center justify-between mb-6">
+            <h3 class="font-display font-semibold text-lg text-white">面试报告通知</h3>
+            <div class="flex items-center gap-2">
+              <span class="notification-badge w-2 h-2 bg-red-500 rounded-full"></span>
+              <span class="text-xs text-slate-400">3条新通知</span>
+            </div>
+          </div>
+          <div class="space-y-3">
+            <div
+              class="glass-light rounded-xl p-4 flex items-center gap-4 cursor-pointer hover:bg-primary-500/10 transition-colors group"
+            >
+              <div
+                class="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center flex-shrink-0"
+              >
+                <i class="fas fa-file-alt text-green-400 text-lg"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-sm font-medium text-white">字节跳动一面报告已生成</span>
+                  <span class="text-xs text-green-400 bg-green-500/10 px-2 py-0.5 rounded">新</span>
+                </div>
+                <p class="text-xs text-slate-400 truncate">
+                  综合评分85分，发现3个待改进点，2个亮点表现
+                </p>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-xs text-slate-500">2分钟前</span>
+                <i
+                  class="fas fa-chevron-right text-slate-500 group-hover:text-primary-400 transition-colors"
+                ></i>
+              </div>
+            </div>
+
+            <div
+              class="glass-light rounded-xl p-4 flex items-center gap-4 cursor-pointer hover:bg-primary-500/10 transition-colors group"
+            >
+              <div
+                class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center flex-shrink-0"
+              >
+                <i class="fas fa-chart-pie text-blue-400 text-lg"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-sm font-medium text-white">能力分析周报已更新</span>
+                  <span class="text-xs text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded">周报</span>
+                </div>
+                <p class="text-xs text-slate-400 truncate">
+                  本周完成4次面试，整体进步12%，系统设计能力提升明显
+                </p>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-xs text-slate-500">1小时前</span>
+                <i
+                  class="fas fa-chevron-right text-slate-500 group-hover:text-primary-400 transition-colors"
+                ></i>
+              </div>
+            </div>
+
+            <div
+              class="glass-light rounded-xl p-4 flex items-center gap-4 cursor-pointer hover:bg-primary-500/10 transition-colors group"
+            >
+              <div
+                class="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center flex-shrink-0"
+              >
+                <i class="fas fa-trophy text-purple-400 text-lg"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-sm font-medium text-white">恭喜！获得"持续进步"成就</span>
+                  <span class="text-xs text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded"
+                    >成就</span
+                  >
+                </div>
+                <p class="text-xs text-slate-400 truncate">连续7天进行面试练习，坚持就是胜利！</p>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-xs text-slate-500">昨天</span>
+                <i
+                  class="fas fa-chevron-right text-slate-500 group-hover:text-primary-400 transition-colors"
+                ></i>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- 个性化设置弹窗 -->
+    <div
+      id="settingsModal"
+      class="fixed inset-0 z-50 hidden items-center justify-center p-4"
+      style="background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(8px)"
+    >
+      <div class="glass rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-slide-in">
+        <div class="p-6 border-b border-white/5 flex items-center justify-between">
+          <h3 class="font-display font-semibold text-xl text-white">个性化设置</h3>
+          <button
+            id="closeSettings"
+            class="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center transition-colors"
+          >
+            <i class="fas fa-times text-slate-400"></i>
+          </button>
+        </div>
+        <div class="p-6 space-y-6">
+          <!-- 岗位选择 -->
+          <div>
+            <label class="block text-sm font-medium text-white mb-3">目标岗位</label>
+            <div class="grid grid-cols-2 gap-3">
+              <button
+                class="p-3 rounded-xl glass-light border-2 border-primary-500 text-left transition-all"
+              >
+                <div class="flex items-center gap-2 mb-1">
+                  <i class="fas fa-briefcase text-primary-400"></i>
+                  <span class="text-sm font-medium text-white">产品经理</span>
+                </div>
+                <p class="text-xs text-slate-400">互联网/科技</p>
+              </button>
+              <button
+                class="p-3 rounded-xl glass-light border-2 border-transparent hover:border-white/20 text-left transition-all"
+              >
+                <div class="flex items-center gap-2 mb-1">
+                  <i class="fas fa-code text-slate-400"></i>
+                  <span class="text-sm font-medium text-white">前端开发</span>
+                </div>
+                <p class="text-xs text-slate-400">互联网/科技</p>
+              </button>
+              <button
+                class="p-3 rounded-xl glass-light border-2 border-transparent hover:border-white/20 text-left transition-all"
+              >
+                <div class="flex items-center gap-2 mb-1">
+                  <i class="fas fa-chart-bar text-slate-400"></i>
+                  <span class="text-sm font-medium text-white">数据分析</span>
+                </div>
+                <p class="text-xs text-slate-400">互联网/金融</p>
+              </button>
+              <button
+                class="p-3 rounded-xl glass-light border-2 border-transparent hover:border-white/20 text-left transition-all"
+              >
+                <div class="flex items-center gap-2 mb-1">
+                  <i class="fas fa-paint-brush text-slate-400"></i>
+                  <span class="text-sm font-medium text-white">UI设计师</span>
+                </div>
+                <p class="text-xs text-slate-400">互联网/创意</p>
+              </button>
+            </div>
+          </div>
+
+          <!-- 考官设置 -->
+          <div>
+            <label class="block text-sm font-medium text-white mb-3">AI考官风格</label>
+            <div class="space-y-3">
+              <div class="flex items-center justify-between p-4 rounded-xl glass-light">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center"
+                  >
+                    <i class="fas fa-user-tie text-white text-sm"></i>
+                  </div>
+                  <div>
+                    <p class="text-sm font-medium text-white">专业严谨型</p>
+                    <p class="text-xs text-slate-400">追问深入，注重细节</p>
+                  </div>
+                </div>
+                <div
+                  class="w-5 h-5 rounded-full border-2 border-primary-500 flex items-center justify-center"
+                >
+                  <div class="w-2.5 h-2.5 rounded-full bg-primary-500"></div>
+                </div>
+              </div>
+              <div
+                class="flex items-center justify-between p-4 rounded-xl glass-light cursor-pointer hover:bg-white/5 transition-colors"
+              >
+                <div class="flex items-center gap-3">
+                  <div
+                    class="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center"
+                  >
+                    <i class="fas fa-smile text-white text-sm"></i>
+                  </div>
+                  <div>
+                    <p class="text-sm font-medium text-white">亲和友善型</p>
+                    <p class="text-xs text-slate-400">氛围轻松，循序渐进</p>
+                  </div>
+                </div>
+                <div class="w-5 h-5 rounded-full border-2 border-slate-500"></div>
+              </div>
+              <div
+                class="flex items-center justify-between p-4 rounded-xl glass-light cursor-pointer hover:bg-white/5 transition-colors"
+              >
+                <div class="flex items-center gap-3">
+                  <div
+                    class="w-10 h-10 rounded-full bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center"
+                  >
+                    <i class="fas fa-fire text-white text-sm"></i>
+                  </div>
+                  <div>
+                    <p class="text-sm font-medium text-white">压力挑战型</p>
+                    <p class="text-xs text-slate-400">高压环境，实战模拟</p>
+                  </div>
+                </div>
+                <div class="w-5 h-5 rounded-full border-2 border-slate-500"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 难度设置 -->
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <label class="text-sm font-medium text-white">面试难度</label>
+              <span class="text-sm text-primary-400">中等</span>
+            </div>
+            <div class="relative h-2 bg-surface-700 rounded-full">
+              <div
+                class="absolute left-0 top-0 h-full w-1/2 bg-gradient-to-r from-primary-500 to-primary-400 rounded-full"
+              ></div>
+              <div
+                class="absolute top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full shadow-lg cursor-pointer"
+              ></div>
+            </div>
+            <div class="flex justify-between mt-2">
+              <span class="text-xs text-slate-500">简单</span>
+              <span class="text-xs text-slate-500">困难</span>
+            </div>
+          </div>
+        </div>
+        <div class="p-6 border-t border-white/5 flex gap-3">
+          <button
+            id="cancelSettings"
+            class="flex-1 py-3 rounded-xl glass-light text-slate-300 font-medium hover:bg-white/10 transition-colors"
+          >
+            取消
+          </button>
+          <button
+            class="flex-1 py-3 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 text-white font-medium hover:from-primary-400 hover:to-primary-500 transition-all"
+          >
+            保存设置
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // 用户头像下拉菜单
+      const avatarBtn = document.getElementById("avatarBtn");
+      const avatarDropdown = document.getElementById("avatarDropdown");
+
+      avatarBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        avatarDropdown.classList.toggle("hidden");
+        avatarDropdown.classList.toggle("show");
+      });
+
+      // 个性化设置弹窗
+      const settingsBtn = document.getElementById("settingsBtn");
+      const settingsModal = document.getElementById("settingsModal");
+      const closeSettings = document.getElementById("closeSettings");
+      const cancelSettings = document.getElementById("cancelSettings");
+
+      settingsBtn.addEventListener("click", () => {
+        settingsModal.classList.remove("hidden");
+        settingsModal.classList.add("flex");
+      });
+
+      closeSettings.addEventListener("click", () => {
+        settingsModal.classList.add("hidden");
+        settingsModal.classList.remove("flex");
+      });
+
+      cancelSettings.addEventListener("click", () => {
+        settingsModal.classList.add("hidden");
+        settingsModal.classList.remove("flex");
+      });
+
+      settingsModal.addEventListener("click", (e) => {
+        if (e.target === settingsModal) {
+          settingsModal.classList.add("hidden");
+          settingsModal.classList.remove("flex");
+        }
+      });
+
+      // 点击其他地方关闭下拉菜单
+      document.addEventListener("click", () => {
+        avatarDropdown.classList.add("hidden");
+        avatarDropdown.classList.remove("show");
+      });
+
+      // 侧边栏历史记录点击效果
+      const sidebarItems = document.querySelectorAll(".sidebar-item");
+      sidebarItems.forEach((item) => {
+        item.addEventListener("click", function () {
+          sidebarItems.forEach((i) =>
+            i.classList.remove("bg-primary-500/10", "border-l-primary-400"),
+          );
+          this.classList.add("bg-primary-500/10", "border-l-primary-400");
+        });
+      });
+
+      // 岗位选择切换
+      const jobButtons = document.querySelectorAll("#settingsModal .grid button");
+      jobButtons.forEach((btn) => {
+        btn.addEventListener("click", function () {
+          jobButtons.forEach((b) => {
+            b.classList.remove("border-primary-500");
+            b.classList.add("border-transparent");
+            b.querySelector("i").classList.remove("text-primary-400");
+            b.querySelector("i").classList.add("text-slate-400");
+          });
+          this.classList.remove("border-transparent");
+          this.classList.add("border-primary-500");
+          this.querySelector("i").classList.remove("text-slate-400");
+          this.querySelector("i").classList.add("text-primary-400");
+        });
+      });
+
+      // 考官风格选择
+      const interviewerOptions = document.querySelectorAll("#settingsModal .space-y-3 > div");
+      interviewerOptions.forEach((option) => {
+        option.addEventListener("click", function () {
+          interviewerOptions.forEach((o) => {
+            o.classList.remove("border-primary-500");
+            const circle = o.querySelector(".w-5");
+            circle.classList.remove("border-primary-500");
+            circle.classList.add("border-slate-500");
+            circle.innerHTML = "";
+          });
+          this.classList.add("border-primary-500");
+          const circle = this.querySelector(".w-5");
+          circle.classList.remove("border-slate-500");
+          circle.classList.add("border-primary-500");
+          circle.innerHTML = '<div class="w-2.5 h-2.5 rounded-full bg-primary-500"></div>';
+        });
+      });
+    </script>
+  </body>
+</html>
