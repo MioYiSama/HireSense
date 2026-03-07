@@ -2,4 +2,7 @@ openapi: 3.1.0
 info:
   version: 1.0.0
   title: HireSense (知聘) - Backend
+servers:
+  - http://127.0.0.1:8080
 paths: {}
+components: {}
