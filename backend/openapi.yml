@@ -3,6 +3,59 @@ info:
   version: 1.0.0
   title: HireSense (知聘) - Backend
 servers:
-  - http://127.0.0.1:8080
-paths: {}
+  - url: http://127.0.0.1:8080
+tags:
+  - name: Authentication
+    description: 认证
+  - name: User
+    description: 用户
+  - name: Interview
+    description: 面试
+paths:
+  /api/auth/signin:
+    post:
+      tags: [Authentication]
+      summary: 登录
+  /api/auth/signup:
+    post:
+      tags: [Authentication]
+      summary: 注册
+  /api/auth/signout:
+    post:
+      tags: [Authentication]
+      summary: 注销
+
+  /api/user/profile:
+    get:
+      tags: [User]
+      summary: 获取用户档案
+    put:
+      tags: [User]
+      summary: 更新用户档案
+  /api/user/interviews:
+    get:
+      tags: [User]
+      summary: 获取所有历史面试记录
+
+  /api/interview:
+    get:
+      tags: [Interview]
+      summary: 获取此次面试的详细信息
+  /api/interview/report:
+    get:
+      tags: [Interview]
+      summary: 获取此次面试的报告
+  /api/interview/start:
+    post:
+      tags: [Interview]
+      summary: 开始一场面试
+  /api/interview/stop:
+    post:
+      tags: [Interview]
+      summary: 结束一场面试
+  /api/interview/reply:
+    post:
+      tags: [Interview]
+      summary: 生成面试官回复
+
 components: {}

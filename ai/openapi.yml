@@ -3,6 +3,125 @@ info:
   version: 1.0.0
   title: HireSense (知聘) - AI
 servers:
-  - http://127.0.0.1:8081
-paths: {}
-components: {}
+  - url: http://127.0.0.1:8081
+tags:
+  - name: Interview
+    description: 面试
+paths:
+  /api/interview/start:
+    post:
+      tags: [ Interview ]
+      summary: 开始一场面试
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InterviewStartRequest" }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InterviewStatusResponse" }
+  /api/interview/stop:
+    post:
+      tags: [ Interview ]
+      summary: 结束一场面试
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InterviewStopRequest" }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InterviewStatusResponse" }
+  /api/interview/reply:
+    post:
+      tags: [ Interview ]
+      summary: 生成面试官回复
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InterviewReplyRequest" }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InterviewReplyResponse" }
+  /api/interview/report:
+    get:
+      tags: [ Interview ]
+      summary: 获取面试报告
+      parameters:
+        - name: id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InterviewReportResponse" }
+components:
+  schemas:
+    InterviewStartRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: 面试ID
+        resume:
+          type: string
+          description: 用户简历
+        personalization:
+          type: string
+          description: 个性化面试官风格
+      required: [ id, resume, personalization ]
+    InterviewStopRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: 面试ID
+      required: [ id ]
+    InterviewReplyRequest:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: 面试ID
+        input:
+          oneOf:
+            - type: object
+              properties:
+                type: { const: "text" }
+                content: { type: string }
+              required: [ type, content ]
+            - type: object
+              properties:
+                type: { const: "transcript" }
+                content: { type: object } # TODO
+              required: [ type, content ]
+      required: [ id, input ]
+    InterviewStatusResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+      required: [ success ]
+    InterviewReplyResponse:
+      type: object
+      properties:
+        reply: { type: string }
+      required: [ reply ]
+    InterviewReportResponse:
+      type: object
+      properties:
+        report: { type: [ "string", "null" ] }
