@@ -1,0 +1,88 @@
+# yaml-language-server: $schema=https://schema.buildwithfern.dev/docs-yml.json
+
+instances:
+  - url: hire-sense-v1.docs.buildwithfern.com # update this to {yourorg}.docs.buildwithfern.com
+    # custom-domain: plantstore.dev # specify your custom domain when you are ready to go live
+
+ai-examples:
+  enabled: false
+
+title: HireSense 知聘 文档
+
+layout:
+  searchbar-placement: header
+  page-width: full
+  tabs-placement: header
+
+tabs:
+  # home:
+  #   display-name: Docs
+  #   icon: home
+  API Reference:
+    display-name: API参考
+    icon: puzzle
+
+navigation:
+  # - tab: home
+  #   layout:
+  #     - section: Get started
+  #       contents:
+  #         - page: Welcome
+  #           path: docs/pages/welcome.mdx
+  #           icon: fa-duotone fa-house
+  #         - page: Edit your docs
+  #           path: docs/pages/editing-your-docs.mdx
+  #           icon: fa-duotone fa-pen-to-square
+  #         - page: Write content
+  #           path: docs/pages/writing-content.mdx
+  #           icon: fa-duotone fa-file-lines
+  #         - page: Set up navigation
+  #           path: docs/pages/navigation.mdx
+  #           icon: fa-duotone fa-sitemap
+  #         - page: Customize your docs
+  #           path: docs/pages/customization.mdx
+  #           icon: fa-duotone fa-palette
+  #         - page: Support
+  #           path: docs/pages/support.mdx
+  #           icon: fa-duotone fa-headset
+  #     - section: Changelog
+  #       contents:
+  #         - changelog: docs/changelog
+  - tab: API Reference
+    layout:
+      - api: 后端 API
+        api-name: backend-api
+      - api: AI端 API
+        api-name: ai-api
+
+navbar-links:
+  # - type: minimal
+  #   text: Fork this repo
+  #   url: https://github.com/fern-api/docs-starter
+  # - type: filled
+  #   text: Dashboard
+  #   url: https://dashboard.buildwithfern.com
+  # - type: github
+  #   value: https://github.com/MioYiSama/HireSense
+
+colors:
+  accent-primary:
+    dark: "#70E155"
+    light: "#008700"
+  background:
+    dark: "#111113"
+    light: "#FFFFFF"
+
+theme:
+  page-actions: toolbar
+  footer-nav: minimal
+
+logo:
+  light: docs/assets/logo.png
+  dark: docs/assets/logo.png
+  height: 48
+  href: https://buildwithfern.com
+
+favicon: docs/assets/favicon.png
+
+# css: styles.css
