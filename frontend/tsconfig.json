@@ -32,7 +32,7 @@
     "allowJs": false,
 
     // Interop Constraints
-    "erasableSyntaxOnly": true,
+    "erasableSyntaxOnly": false,
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
 
