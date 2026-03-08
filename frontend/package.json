@@ -1,0 +1,28 @@
+{
+  "name": "hire-sense",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite dev",
+    "preview": "vite preview",
+    "lint": "oxlint --type-aware",
+    "format": "oxfmt"
+  },
+  "dependencies": {
+    "@iconify-json/lucide": "^1.2.96",
+    "daisyui": "^5.5.19",
+    "tailwindcss": "^4.2.1",
+    "vue": "^3.5.29",
+    "vue-router": "^5.0.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.2.1",
+    "@vitejs/plugin-vue": "^6.0.4",
+    "oxfmt": "^0.36.0",
+    "oxlint": "^1.51.0",
+    "oxlint-tsgolint": "^0.16.0",
+    "typescript": "^5.9.3",
+    "unplugin-icons": "^23.0.1",
+    "vite": "8.0.0-beta.16"
+  }
+}
