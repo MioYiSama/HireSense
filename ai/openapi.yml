@@ -144,7 +144,7 @@ components:
     InterviewStartRequest:
       description: 请求开始新面试的核心参数体
       type: object
-      required: [id, personalization, resume]
+      required: [id, job]
       properties:
         id:
           type: string
@@ -152,6 +152,10 @@ components:
           description: 新创建的面试场次唯一标识 ID
           examples:
             - "123e4567-e89b-12d3-a456-426614174000"
+        job:
+          type: string
+          enum: ["frontend", "backend"]
+          description: 本次面试对应的岗位
         personalization:
           type: string
           description: 设定的面试官个人风格及面试侧重点配置（Prompt/Persona Config）

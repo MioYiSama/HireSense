@@ -114,16 +114,24 @@ export interface Profile {
     /**
      * 投递或期望的职位角色
      */
-    'job': string;
+    'job': ProfileJobEnum;
     /**
      * 结构化的简历文本
      */
-    'resume': string;
+    'resume'?: string;
     /**
      * 专门下达给 AI 面试官的人设或追问偏好指令
      */
-    'personalization': string;
+    'personalization'?: string;
 }
+
+export const ProfileJobEnum = {
+    Frontend: 'frontend',
+    Backend: 'backend'
+} as const;
+
+export type ProfileJobEnum = typeof ProfileJobEnum[keyof typeof ProfileJobEnum];
+
 export interface ProfileResponse {
     'success': boolean;
     'message': string;

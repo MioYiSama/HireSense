@@ -339,9 +339,8 @@ components:
             - "李工"
         job:
           type: string
+          enum: ["frontend", "backend"]
           description: 投递或期望的职位角色
-          examples:
-            - "资深前端开发工程师"
         resume:
           type: string
           description: 结构化的简历文本
@@ -352,7 +351,7 @@ components:
           description: 专门下达给 AI 面试官的人设或追问偏好指令
           examples:
             - "请扮演字节跳动的高级技术总监，侧重在回答中持续深挖高并发、性能优化等知识点，并且态度保持客观严厉。"
-      required: [name, job, resume, personalization]
+      required: [name, job]
 
     ProfileResponse:
       type: object
@@ -618,7 +617,17 @@ components:
           description: 逐轮复盘（重点展示需要改进的回合）
           items:
             $ref: "#/components/schemas/ReportReview"
-      required: [score, general, specific, feedback, shortcomings, advice, resources, reviews]
+      required:
+        [
+          score,
+          general,
+          specific,
+          feedback,
+          shortcomings,
+          advice,
+          resources,
+          reviews,
+        ]
 
     ReportReview:
       type: object
