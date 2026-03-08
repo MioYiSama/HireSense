@@ -1,0 +1,4 @@
+interface:
+  display_name: "Fiber v3"
+  short_description: "Build and migrate GoFiber v3 services"
+  default_prompt: "Use $fiber-v3 to migrate this GoFiber v2 service to Fiber v3 and update handlers, binding, and middleware APIs safely."
