@@ -2,8 +2,10 @@ openapi: 3.1.0
 info:
   version: 1.0.0
   title: HireSense (知聘) - Backend
+  description: HireSense 后端接口，涵盖了用户鉴权、档案管理、实时沉浸式面试交互以及多维度面试报告生成等核心能力。
 servers:
   - url: http://127.0.0.1:8080
+    description: 本地开发环境的服务地址
 security:
   - bearerAuth: []
 tags:
@@ -13,12 +15,16 @@ tags:
     description: 用户
   - name: Interview
     description: 面试
+
 paths:
+  # ==========================================
   # Auth
+  # ==========================================
   /api/auth/signin:
     post:
       tags: [Authentication]
       summary: 登录
+      description: 使用已注册的账号密码进行身份验证，换取 JWT。
       security: []
       requestBody:
         content:
@@ -26,14 +32,16 @@ paths:
             schema: { $ref: "#/components/schemas/SignInRequest" }
       responses:
         "200":
-          description: 成功
+          description: 登录成功，下发 Token
           content:
             application/json:
               schema: { $ref: "#/components/schemas/SignInResponse" }
+
   /api/auth/signup:
     post:
       tags: [Authentication]
       summary: 注册
+      description: 提交基本信息创建 HireSense 平台账号。
       security: []
       requestBody:
         content:
@@ -41,124 +49,147 @@ paths:
             schema: { $ref: "#/components/schemas/SignUpRequest" }
       responses:
         "200":
-          description: 成功
+          description: 注册成功，并返回鉴权 Token
           content:
             application/json:
               schema: { $ref: "#/components/schemas/SignUpResponse" }
+
   /api/auth/signout:
     post:
       tags: [Authentication]
       summary: 注销
+      description: 吊销当前 Token，安全退出账号体系。
       responses:
         "200":
-          description: 成功
+          description: 注销成功
           content:
             application/json:
               schema: { $ref: "#/components/schemas/SignOutResponse" }
 
+  # ==========================================
   # User
+  # ==========================================
   /api/user/password:
     put:
       tags: [User]
       summary: 修改密码
+      description: 更新当前登录用户的账户密码。
       requestBody:
         content:
           application/json:
             schema: { $ref: "#/components/schemas/UserPasswordRequest" }
       responses:
         "200":
-          description: 成功
+          description: 密码修改成功
           content:
             application/json:
               schema: { $ref: "#/components/schemas/UserPasswordResponse" }
+
   /api/user/profile:
     get:
       tags: [User]
       summary: 获取用户档案
+      description: 读取当前求职者的基本信息、简历内容以及 AI 面试官倾向设置。
       responses:
         "200":
-          description: 成功
+          description: 获取档案成功
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ProfileResponse" }
     put:
       tags: [User]
       summary: 更新用户档案
+      description: 覆写求职者档案，例如更新期望岗位、打磨后的简历以及面试难度配置。
       requestBody:
         content:
           application/json:
             schema: { $ref: "#/components/schemas/Profile" }
       responses:
         "200":
-          description: 成功
+          description: 档案更新成功
           content:
             application/json:
               schema: { $ref: "#/components/schemas/PutProfileResponse" }
+
   /api/user/interviews:
     get:
       tags: [User]
       summary: 获取所有历史面试记录
+      description: 列出过去参与的所有 AI 面试场次、报告状态及简要概览。
       responses:
         "200":
-          description: 成功
+          description: 成功返回面试列表数据
           content:
             application/json:
               schema: { $ref: "#/components/schemas/InterviewsResponse" }
 
+  # ==========================================
   # Interview
+  # ==========================================
   /api/interview/start:
     post:
       tags: [Interview]
       summary: 开始一场面试
+      description: 基于用户当前档案数据生成并启动一个新的 AI 面试会话，并获取首个提问。
       responses:
         "200":
-          description: 成功
+          description: 面试正式启动并返回该场面试 ID
           content:
             application/json:
               schema: { $ref: "#/components/schemas/InterviewStartResponse" }
+
   /api/interview/stop:
     post:
       tags: [Interview]
       summary: 结束一场面试
+      description: 候选人主动放弃或时间耗尽时调用，停止计费并中止本次会话进程。（通常在系统判断回答 ending=true 时无需显式调用）
       requestBody:
         content:
           application/json:
             schema: { $ref: "#/components/schemas/InterviewStopRequest" }
       responses:
         "200":
-          description: 成功
+          description: 成功阻断当前面试场次
           content:
             application/json:
               schema: { $ref: "#/components/schemas/InterviewStopResponse" }
+
   /api/interview/reply:
     post:
       tags: [Interview]
       summary: 生成面试官回复
+      description: 提交候选人录制的音频流或者直接提交文本，AI面试官会进行意图分析并进行下一轮追问。
       parameters:
         - name: id
           in: query
           required: true
+          description: 当前进行的面试场次唯一 ID
           schema:
             type: string
             format: uuid
+            examples:
+              - "550e8400-e29b-41d4-a716-446655440000"
       requestBody:
         content:
           application/json:
             schema: { $ref: "#/components/schemas/InterviewReplyRequest" }
           audio/wav:
             schema:
+              description: 直接上传用户作答时的音频流
               type: string
               format: binary
       responses:
         "200":
-          description: 成功
+          description: AI 已生成针对本次问答的反馈与下个问题
           content:
             application/json:
               schema: { $ref: "#/components/schemas/InterviewReplyResponse" }
+
   /api/interview/report:
     put:
       tags: [Interview]
       summary: 添加面试的报告
+      description: AI 完成总结后通过系统级通讯向该条目补充完整的评估报告记录。（供内部微服务/Webhooks通信专用）
       security: []
       requestBody:
         content:
@@ -166,7 +197,7 @@ paths:
             schema: { $ref: "#/components/schemas/PutReportRequest" }
       responses:
         "200":
-          description: 成功
+          description: 报告归档注入成功
           content:
             application/json:
               schema: { $ref: "#/components/schemas/PutReportResponse" }
@@ -177,244 +208,440 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+      description: "传递形式: `Authorization: Bearer <Your_Token>`"
+
   schemas:
-    # Auth
+    # ---------------------------------------------
+    # 鉴权相关结构 (Auth Schemas)
+    # ---------------------------------------------
     SignInRequest:
       type: object
+      description: 登录请求实体
       properties:
-        account: { type: string }
-        password: { type: string }
+        account:
+          type: string
+          description: 账号
+          examples:
+            - "coder_li@example.com"
+        password:
+          type: string
+          description: 密码
+          examples:
+            - "Str0ng@Pass!"
       required: [account, password]
-    SignUpRequest:
-      type: object
-      properties:
-        name: { type: string }
-        account: { type: string }
-        password: { type: string }
-      required: [name, account, password]
+
     SignInResponse:
       type: object
       properties:
-        success: { type: boolean }
-        message: { type: string }
+        success:
+          type: boolean
+          examples:
+            - true
+        message:
+          type: string
+          examples:
+            - "登录成功"
         data:
           type: string
           description: Access Token
+          examples:
+            - "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
       required: [success, message, data]
+
+    SignUpRequest:
+      type: object
+      description: 注册请求体
+      properties:
+        account:
+          type: string
+          description: 账号
+          examples:
+            - "coder_li@example.com"
+        name:
+          type: string
+          description: 用户名
+          examples:
+            - "李工"
+        password:
+          type: string
+          description: 密码
+          examples:
+            - "Str0ng@Pass!"
+      required: [account, name, password]
+
     SignUpResponse:
       type: object
       properties:
-        success: { type: boolean }
-        message: { type: string }
+        success:
+          type: boolean
+          examples:
+            - true
+        message:
+          type: string
+          examples:
+            - "注册成功"
         data:
           type: string
           description: Access Token
+          examples:
+            - "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
       required: [success, message, data]
+
     SignOutResponse:
       type: object
       properties:
-        success: { type: boolean }
-        message: { type: string }
+        success:
+          type: boolean
+          examples:
+            - true
+        message:
+          type: string
+          examples:
+            - "注销成功"
         data: {}
       required: [success, message, data]
 
-    # User
+    # ---------------------------------------------
+    # 用户及个人档案结构 (User Schemas)
+    # ---------------------------------------------
     UserPasswordRequest:
       type: object
       properties:
-        password: { type: string }
+        password:
+          type: string
+          description: 新密码
+          examples:
+            - "N3wStrong!P@ss"
       required: [password]
+
     UserPasswordResponse:
       type: object
       properties:
-        success: { type: boolean }
-        message: { type: string }
+        success:
+          type: boolean
+          examples:
+            - true
+        message:
+          type: string
+          examples:
+            - "密码修改成功"
         data: {}
       required: [success, message, data]
+
     Profile:
       type: object
+      description: 用户详细职业档案和 AI 调优设定
       properties:
-        name: { type: string }
-        job: { type: string }
-        resume: { type: string }
-        personalization: { type: string }
+        name:
+          type: string
+          description: 姓名
+          examples:
+            - "李工"
+        job:
+          type: string
+          description: 投递或期望的职位角色
+          examples:
+            - "资深前端开发工程师"
+        resume:
+          type: string
+          description: 结构化的简历文本
+          examples:
+            - "5 年开发经验。精通 React/Vue 生态体系，曾主导并重构千万级 PV 的大型后台系统。熟悉 Webpack 等工程化构建体系。"
+        personalization:
+          type: string
+          description: 专门下达给 AI 面试官的人设或追问偏好指令
+          examples:
+            - "请扮演字节跳动的高级技术总监，侧重在回答中持续深挖高并发、性能优化等知识点，并且态度保持客观严厉。"
+      required: [name, job, resume, personalization]
+
     ProfileResponse:
       type: object
       properties:
-        success: { type: boolean }
-        message: { type: string }
-        data: { $ref: "#/components/schemas/Profile" }
+        success:
+          type: boolean
+          examples:
+            - true
+        message:
+          type: string
+          examples:
+            - "读取档案成功"
+        data:
+          $ref: "#/components/schemas/Profile"
       required: [success, message, data]
+
     PutProfileResponse:
       type: object
       properties:
-        success: { type: boolean }
-        message: { type: string }
+        success:
+          type: boolean
+          examples:
+            - true
+        message:
+          type: string
+          examples:
+            - "档案覆写成功"
         data: {}
       required: [success, message, data]
+
+    InterviewsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          examples:
+            - true
+        message:
+          type: string
+          examples:
+            - "拉取面试纪要成功"
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Interview"
+      required: [success, message, data]
+
+    # ---------------------------------------------
+    # 面试元数据及操作相关结构 (Interview Schemas)
+    # ---------------------------------------------
     Interview:
       type: object
+      description: 单场面试的模型表示
       properties:
         id:
           type: string
           format: uuid
-        created_at:
-          type: number
-          description: 时间戳（毫秒）
+          description: 场次唯一 ID
+          examples:
+            - "550e8400-e29b-41d4-a716-446655440000"
         status:
           type: string
+          description: 当前面试所处的流程状态
           enum: ["started", "stopped"]
+          examples:
+            - "stopped"
+        created_at:
+          type: number
+          description: 开启面试的时间戳（毫秒）
+          examples:
+            - 1690000000000
         report:
+          description: 面试一旦完成后附加的总结评估分析，若未结束可能为空
           $ref: "#/components/schemas/Report"
-      required: [id, created_at, status] # Report 可能为空
-    InterviewsResponse:
-      type: object
-      properties:
-        success: { type: boolean }
-        message: { type: string }
-        data:
-          type: array
-          items: { $ref: "#/components/schemas/Interview" }
-      required: [success, message, data]
+      required: [id, created_at, status]
 
-    # Interview
     InterviewStartResponse:
       type: object
       properties:
-        success: { type: boolean }
-        message: { type: string }
+        success:
+          type: boolean
+          examples:
+            - true
+        message:
+          type: string
+          examples:
+            - "AI 面试官已就绪"
         data:
           type: object
           properties:
             id:
               type: string
               format: uuid
+              description: 新创建的本次面试 ID
+              examples:
+                - "550e8400-e29b-41d4-a716-446655440000"
           required: [id]
       required: [success, message, data]
+
     InterviewStopRequest:
       type: object
       properties:
         id:
           type: string
           format: uuid
+          description: 需要终止的面试 ID
+          examples:
+            - "550e8400-e29b-41d4-a716-446655440000"
       required: [id]
+
     InterviewStopResponse:
       type: object
       properties:
-        success: { type: boolean }
-        message: { type: string }
+        success:
+          type: boolean
+          examples:
+            - true
+        message:
+          type: string
+          examples:
+            - "已被强制标记为停止"
         data: {}
       required: [success, message, data]
+
     InterviewReplyRequest:
       type: object
+      description: 候选人的面试回答
       properties:
-        text: { type: string }
+        text:
+          type: string
+          description: 针对上一轮面试官提问的用户答案
+          examples:
+            - "关于 React 的优化，我平时会经常使用 React.memo 和 useMemo 来防止组件的非必要渲染..."
       required: [text]
+
     InterviewReplyResponse:
       type: object
       properties:
-        success: { type: boolean }
-        message: { type: string }
+        success:
+          type: boolean
+          examples:
+            - true
+        message:
+          type: string
+          examples:
+            - "交互成功"
         data:
           type: object
           properties:
-            reply: { type: string }
+            reply:
+              type: string
+              description: AI 面试官作出的回应以及下一轮追问
+              examples:
+                - "思路清晰！既然提到了 useMemo，你能顺便讲讲什么情况下过度滥用会导致反效果吗？"
             ending:
               type: boolean
-              description: "面试是否结束"
+              description: 面试是否结束
+              examples:
+                - false
           required: [reply, ending]
       required: [success, message, data]
+
     PutReportRequest:
       type: object
+      description: 添加面试报告请求体
       properties:
-        secret: { type: "string" }
-        id: { type: string, format: uuid }
-        report: { $ref: "#/components/schemas/Report" }
+        secret:
+          type: string
+          description: 后端系统的服务间通信校验密钥
+          examples:
+            - "internal-super-secret-key"
+        id:
+          type: string
+          format: uuid
+          description: 面试 ID
+          examples:
+            - "550e8400-e29b-41d4-a716-446655440000"
+        report:
+          $ref: "#/components/schemas/Report"
       required: [secret, id, report]
+
     PutReportResponse:
       type: object
       properties:
-        success: { type: boolean }
-        message: { type: string }
+        success:
+          type: boolean
+          examples:
+            - true
+        message:
+          type: string
+          examples:
+            - "报告归档并生成成功"
         data: {}
       required: [success, message, data]
+
+    # ---------------------------------------------
+    # 面试报告结构 (Report Schemas)
+    # ---------------------------------------------
     Report:
       type: object
+      description: AI 面试综合复盘报告
       properties:
         score:
           type: number
-          description: "总评分"
+          description: 总评分（百分制）
           examples:
             - 82.5
         general:
           type: object
+          description: 通用能力评分评估（十分制）
           additionalProperties:
             type: number
-          description: "通用能力评分"
           examples:
-            - "逻辑思维": 8
+            - "逻辑思维": 8.0
               "沟通表达": 7.5
               "应变能力": 8.5
-              "自信度": 8
+              "自信度": 8.0
               "学习能力": 7.5
-              "团队协同": 6
+              "团队协同": 6.0
         specific:
           type: object
+          description: 专业能力硬性技能打分（十分制）
           additionalProperties:
             type: number
-          description: "专业能力评分"
           examples:
-            - "设计": 7
+            - "设计": 7.0
               "性能": 6.5
-              "工程化": 8
+              "工程化": 8.0
               "组件化": 7.5
               "数据流": 7.5
               "安全": 7.5
         feedback:
           type: string
-          description: "面试表现反馈"
+          description: 面试表现综合反馈
           examples:
             - "候选人整体表现良好，沟通清晰，能够解释自己的思路。编程基础较扎实，但在系统设计和复杂问题拆解方面还有提升空间。"
         shortcomings:
           type: array
-          items: { type: string }
-          description: "短板"
+          description: 短板与不足总结
+          items:
+            type: string
           examples:
-            - - 系统设计经验不足
-              - 复杂问题拆解不够结构化
-              - 对边界情况考虑不够全面
+            - - "系统设计经验和思考不足"
+              - "结合复杂问题拆解不够结构化"
+              - "对边界情况考虑不够全面"
         advice:
           type: string
-          description: "改进建议"
+          description: 后续改进建议
           examples:
-            - "建议加强系统设计方面的学习，多做大型系统案例分析，并在算法题练习中刻意训练问题拆解与边界情况分析能力。"
+            - "后续建议侧重补充系统设计和架构演变方面的学习，多做大型系统方案分析，并在日常编码中刻意训练边界情况防御设计能力。"
         resources:
           type: array
-          items: { type: string }
-          description: "学习资源"
+          description: 推荐学习资源
+          items:
+            type: string
           examples:
-            - - "Designing Data-Intensive Applications"
-              - "LeetCode"
+            - - "《Designing Data-Intensive Applications》"
+              - "LeetCode 高频边界题库"
               - "System Design Primer (GitHub)"
               - "Cracking the Coding Interview"
         reviews:
           type: array
+          description: 逐轮复盘（重点展示需要改进的回合）
           items:
-            type: object
-            properties:
-              interviewer: { type: string }
-              interviewee: { type: string }
-              score: { type: number }
-              advice: { type: string }
-            required: [interviewer, interviewee, score, advice]
-            description: "逐轮复盘（只展示低于75分的问题）"
-            examples:
-              - - "interviewer": "请解释一下哈希表在处理冲突时常见的策略，并比较它们的优缺点。"
-                  "interviewee": "可以使用链地址法或者开放寻址法。链地址法是每个桶存一个链表，冲突元素放在链表中；开放寻址法则是通过探测寻找下一个空位，比如线性探测。"
-                  "score": 72
-                  "advice": "回答基本正确，但缺少对时间复杂度退化情况以及不同探测策略（如二次探测、双重哈希）的补充说明。"
-                - "interviewer": "如果需要设计一个高并发的短链接服务，你会如何设计整体架构？"
-                  "interviewee": "可以用一个数据库存储短链接映射，然后用应用服务器处理请求，通过缓存来加速查询。"
-                  "score": 68
-                  "advice": "答案较为概括。需要进一步说明ID生成策略、缓存一致性、热点问题处理以及扩展性设计。"
+            $ref: "#/components/schemas/ReportReview"
       required: [score, general, specific, feedback, shortcomings, advice, resources, reviews]
+
+    ReportReview:
+      type: object
+      description: 单轮问答微观复盘详情
+      properties:
+        interviewer:
+          type: string
+          description: 面试官问题
+          examples:
+            - "请解释一下哈希表在处理冲突时常见的策略，并比较它们的优缺点。"
+        interviewee:
+          type: string
+          description: 求职者的实际回答
+          examples:
+            - "可以使用链地址法或者开放寻址法。链地址法是每个桶存一个链表，冲突元素放在链表中；开放寻址法则是通过探测寻找下一个空位，比如线性探测。"
+        score:
+          type: number
+          description: 该轮得分
+          examples:
+            - 72
+        advice:
+          type: string
+          description: AI 点评与纠误建议
+          examples:
+            - "回答基本正确，但缺少对极速退化情况（例如哈希表性能降为O(N)）以及不同探测策略（如二次探测、双重哈希）的补充说明与对比考量。"
+      required: [interviewer, interviewee, score, advice]

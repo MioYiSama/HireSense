@@ -2,147 +2,91 @@ openapi: 3.1.0
 info:
   version: 1.0.0
   title: HireSense (知聘) - AI
+  description: HireSense AI端接口，主要用于处理面试的初始化、实时对话流转以及面试完结处理。
 servers:
   - url: http://127.0.0.1:8081
+    description: 本地开发服务器
 tags:
   - name: Interview
-    description: 面试
+    description: 面试核心生命周期 API
 paths:
   /api/interview/start:
     post:
       tags: [Interview]
       summary: 开始面试
-      description: 开始面试，由后端提供ID、简历、面试官个性化设置
+      description: 初始化面试场次，由后端提供本次面试的唯一ID、候选人简历内容以及面试官个性化设定参数（如语气、重点考察维度等）。
       requestBody:
+        required: true
         content:
           application/json:
             schema: { $ref: "#/components/schemas/InterviewStartRequest" }
       responses:
         "200":
-          description: 是否成功开始面试
+          description: 成功开始面试，返回初始化状态
           content:
             application/json:
               schema: { $ref: "#/components/schemas/InterviewStatusResponse" }
-  /api/interview/stop:
-    post:
-      tags: [Interview]
-      summary: 结束面试
-      description: 结束面试
-      requestBody:
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/InterviewStopRequest" }
-      responses:
-        "200":
-          description: 是否成功结束面试
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/InterviewStatusResponse" }
+
   /api/interview/reply:
     post:
       tags: [Interview]
       summary: 生成面试官回复
-      description: 后端提供文本或转录后的文本，生成面试官回复
+      description: 在面试进行中，接收用户的纯文本或语音转录文本，由 AI 大模型依据当前上下文生成面试官的下一轮回复追问或阶段评价。
       requestBody:
+        required: true
         content:
           application/json:
             schema: { $ref: "#/components/schemas/InterviewReplyRequest" }
       responses:
         "200":
-          description: 成功生成面试官回复
+          description: 成功生成面试官回复及面试是否结束的标识
           content:
             application/json:
               schema: { $ref: "#/components/schemas/InterviewReplyResponse" }
+
+  /api/interview/stop:
+    post:
+      tags: [Interview]
+      summary: 结束面试
+      description: 强制或主动结束指定的面试场次，用于释放相关上下文和对话资源，结束该次考核。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InterviewStopRequest" }
+      responses:
+        "200":
+          description: 成功结束面试，返回完结状态
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InterviewStatusResponse" }
+
 components:
   schemas:
-    InterviewStartRequest:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: 面试场次ID
-        resume:
-          type: string
-          description: 用户简历
-        personalization:
-          type: string
-          description: 个性化面试官风格
-      required: [id, resume, personalization]
-      description: 开始面试的请求体
-    InterviewStopRequest:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: 面试场次ID
-      required: [id]
-      description: 结束面试的请求体
-    InterviewStatusResponse:
-      type: object
-      properties:
-        success:
-          type: boolean
-          description: 是否成功开始/结束面试
-      required: [success]
-      description: 开始/结束面试的响应体
-
-    InterviewReplyRequest:
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: 面试场次ID
-        input:
-          type: object
-          discriminator: { propertyName: type }
-          oneOf:
-            - $ref: "#/components/schemas/InputText"
-            - $ref: "#/components/schemas/InputTranscript"
-          description: 用户输入
-      required: [id, input]
-      description: 生成回复的请求体
-    InterviewReplyResponse:
-      type: object
-      properties:
-        reply:
-          type: string
-          description: 面试官的回复
-        ending:
-          type: boolean
-          description: 面试官是否表明结束面试
-      required: [reply, ending]
-      description: 生成回复的响应体
-
     InputText:
+      description: 用户输入的纯文本格式载体
       type: object
+      required: [content, type]
       properties:
-        type:
-          const: "text"
-          description: 输入类型为文本
         content:
           type: string
-          description: 输入类型为文本
+          description: 具体的文本内容
           examples:
             - 可以用一个数据库存储短链接映射，然后用应用服务器处理请求，通过缓存来加速查询。
-      required: [type, content]
-      description: 用户输入的文本
-    InputTranscript:
-      type: object
-      properties:
         type:
-          const: "transcript"
-          description: 输入类型为转录稿
+          const: "text"
+          description: 输入类型固定为文本
+
+    InputTranscript:
+      description: 用户输入音频的转录文本格式载体
+      type: object
+      required: [content, type]
+      properties:
         content:
           type: object
+          description: 音频转录后的结构化数据负载
+          required: [duration, segments, text]
           properties:
-            text:
-              type: string
-              description: 转录后的文本内容
-              examples:
-                - "And so, my fellow Americans, ask not what your country can\n do for you, ask what you can do for your country.\n"
             duration:
               type: number
               description: 整段音频的总时长（单位：秒）
@@ -150,45 +94,140 @@ components:
                 - 11.0
             segments:
               type: array
-              description: 各段文本的详细信息
-              items:
-                type: object
-                properties:
-                  text:
-                    type: string
-                    description: 文本内容
-                    examples:
-                      - And so, my fellow Americans, ask not what your country can
-                  start:
-                    type: number
-                    description: 开始的时间戳（单位：秒）
-                    examples:
-                      - 0.0
-                  end:
-                    type: number
-                    description: 结束的时间戳（单位：秒）
-                    examples:
-                      - 6.54
-                  words:
-                    type: array
-                    description: 各个单词的详细信息
-                    items:
-                      type: object
-                      properties:
-                        word:
-                          type: string
-                          description: 文本内容
-                          examples:
-                            - And
-                        start:
-                          type: number
-                          description: 开始的时间戳（单位：秒）
-                          examples:
-                            - 0.1
-                        end:
-                          type: number
-                          description: 结束的时间戳（单位：秒）
-                          examples:
-                            - 0.24
-      required: [type, content]
-      description: 用户输入音频的转录文本
+              description: 音频分段转录的详细信息列表
+              items: { $ref: "#/components/schemas/TranscriptSegment" }
+            text:
+              type: string
+              description: 完整的音频转录纯文本内容
+              examples:
+                - "And so, my fellow Americans, ask not what your country can\n do for you, ask what you can do for your country.\n"
+        type:
+          const: "transcript"
+          description: 输入类型固定为转录稿
+
+    InterviewReplyRequest:
+      description: 请求生成面试官回复的参数体
+      type: object
+      required: [id, input]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: 关联的面试场次唯一标识 ID
+          examples:
+            - "123e4567-e89b-12d3-a456-426614174001"
+        input:
+          type: object
+          description: 用户的当前回答输入内容，使用多态支持纯文本或语音转录稿
+          discriminator: { propertyName: type }
+          oneOf:
+            - $ref: "#/components/schemas/InputText"
+            - $ref: "#/components/schemas/InputTranscript"
+
+    InterviewReplyResponse:
+      description: 面试官生成的回复结果响应体
+      type: object
+      required: [ending, reply]
+      properties:
+        ending:
+          type: boolean
+          description: 标识面试官是否认为面试已经可以结束
+          examples:
+            - false
+            - true
+        reply:
+          type: string
+          description: 面试官针对当前候选人表现生成的回复内容或提出的新问题
+          examples:
+            - "你的思路总体很清晰。那么如果在极端高并发的情况下，缓存被打穿，你会采取什么预案？"
+
+    InterviewStartRequest:
+      description: 请求开始新面试的核心参数体
+      type: object
+      required: [id, personalization, resume]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: 新创建的面试场次唯一标识 ID
+          examples:
+            - "123e4567-e89b-12d3-a456-426614174000"
+        personalization:
+          type: string
+          description: 设定的面试官个人风格及面试侧重点配置（Prompt/Persona Config）
+          examples:
+            - "资深后端架构师，风格严厉死板，喜欢压哨刨根问底，重点考察高并发系统设计能力和计算机网络底层原理。"
+        resume:
+          type: string
+          description: 候选人的完整简历文案，用作 AI 汲取背景信息并按阶段提问的素材基底
+          examples:
+            - "姓名：张三\n学历：清华大学 计算机硕士\n经验：5年Java开发经验，曾主导设计千万级DAU的消息推送系统..."
+
+    InterviewStatusResponse:
+      description: 面试状态（如开始、结束）的通用响应体
+      type: object
+      required: [success]
+      properties:
+        success:
+          type: boolean
+          description: 标识当前操作（开始或结束面试）的最终执行结果是否成功
+          examples:
+            - true
+
+    InterviewStopRequest:
+      description: 请求销毁/结束面试的参数体
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: 需要结束的面试场次唯一标识 ID
+          examples:
+            - "123e4567-e89b-12d3-a456-426614174000"
+
+    TranscriptSegment:
+      description: 语音转录文本的切割分段信息
+      type: object
+      required: [end, start, text, words]
+      properties:
+        start:
+          type: number
+          description: 该语音段落开始的相对时间戳（单位：秒）
+          examples:
+            - 0.0
+        end:
+          type: number
+          description: 该语音段落结束的相对时间戳（单位：秒）
+          examples:
+            - 6.54
+        text:
+          type: string
+          description: 该时间段内的具体整段文本内容
+          examples:
+            - "And so, my fellow Americans, ask not what your country can"
+        words:
+          type: array
+          description: 组成该段落的逐字/词及其时间戳级别的详细信息
+          items: { $ref: "#/components/schemas/TranscriptWord" }
+
+    TranscriptWord:
+      description: 语音转录文本中的单个单词级别元数据
+      type: object
+      required: [end, start, word]
+      properties:
+        word:
+          type: string
+          description: 识别出的具体单词内容
+          examples:
+            - "And"
+        start:
+          type: number
+          description: 单词开始的相对时间戳（单位：秒）
+          examples:
+            - 0.1
+        end:
+          type: number
+          description: 单词结束的相对时间戳（单位：秒）
+          examples:
+            - 0.24
