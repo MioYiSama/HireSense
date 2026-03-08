@@ -11,28 +11,30 @@ paths:
   /api/interview/start:
     post:
       tags: [Interview]
-      summary: 开始一场面试
+      summary: 开始面试
+      description: 开始面试，由后端提供ID、简历、面试官个性化设置
       requestBody:
         content:
           application/json:
             schema: { $ref: "#/components/schemas/InterviewStartRequest" }
       responses:
         "200":
-          description: 成功
+          description: 是否成功开始面试
           content:
             application/json:
               schema: { $ref: "#/components/schemas/InterviewStatusResponse" }
   /api/interview/stop:
     post:
       tags: [Interview]
-      summary: 结束一场面试
+      summary: 结束面试
+      description: 结束面试
       requestBody:
         content:
           application/json:
             schema: { $ref: "#/components/schemas/InterviewStopRequest" }
       responses:
         "200":
-          description: 成功
+          description: 是否成功结束面试
           content:
             application/json:
               schema: { $ref: "#/components/schemas/InterviewStatusResponse" }
@@ -40,13 +42,14 @@ paths:
     post:
       tags: [Interview]
       summary: 生成面试官回复
+      description: 后端提供文本或转录后的文本，生成面试官回复
       requestBody:
         content:
           application/json:
             schema: { $ref: "#/components/schemas/InterviewReplyRequest" }
       responses:
         "200":
-          description: 成功
+          description: 成功生成面试官回复
           content:
             application/json:
               schema: { $ref: "#/components/schemas/InterviewReplyResponse" }
@@ -58,6 +61,7 @@ components:
         id:
           type: string
           format: uuid
+          description: 面试场次ID
         resume:
           type: string
           description: 用户简历
@@ -65,48 +69,126 @@ components:
           type: string
           description: 个性化面试官风格
       required: [id, resume, personalization]
+      description: 开始面试的请求体
     InterviewStopRequest:
       type: object
       properties:
         id:
           type: string
           format: uuid
+          description: 面试场次ID
       required: [id]
+      description: 结束面试的请求体
     InterviewStatusResponse:
       type: object
       properties:
-        success: { type: boolean }
+        success:
+          type: boolean
+          description: 是否成功开始/结束面试
       required: [success]
-    InputText:
-      type: object
-      properties:
-        type: { const: "text" }
-        content: { type: string }
-      required: [type, content]
-    InputTranscript:
-      type: object
-      properties:
-        type: { const: "transcript" }
-        content: { type: object } # TODO
-      required: [type, content]
+      description: 开始/结束面试的响应体
+
     InterviewReplyRequest:
       type: object
       properties:
         id:
           type: string
           format: uuid
+          description: 面试场次ID
         input:
           type: object
           discriminator: { propertyName: type }
           oneOf:
             - $ref: "#/components/schemas/InputText"
             - $ref: "#/components/schemas/InputTranscript"
+          description: 用户输入
       required: [id, input]
+      description: 生成回复的请求体
     InterviewReplyResponse:
       type: object
       properties:
-        reply: { type: string }
+        reply:
+          type: string
+          description: 面试官的回复
         ending:
           type: boolean
-          description: "面试是否结束"
+          description: 面试官是否表明结束面试
       required: [reply, ending]
+      description: 生成回复的响应体
+
+    InputText:
+      type: object
+      properties:
+        type:
+          const: "text"
+          description: 输入类型为文本
+        content:
+          type: string
+          description: 输入类型为文本
+          examples:
+            - 可以用一个数据库存储短链接映射，然后用应用服务器处理请求，通过缓存来加速查询。
+      required: [type, content]
+      description: 用户输入的文本
+    InputTranscript:
+      type: object
+      properties:
+        type:
+          const: "transcript"
+          description: 输入类型为转录稿
+        content:
+          type: object
+          properties:
+            text:
+              type: string
+              description: 转录后的文本内容
+              examples:
+                - "And so, my fellow Americans, ask not what your country can\n do for you, ask what you can do for your country.\n"
+            duration:
+              type: number
+              description: 整段音频的总时长（单位：秒）
+              examples:
+                - 11.0
+            segments:
+              type: array
+              description: 各段文本的详细信息
+              items:
+                type: object
+                properties:
+                  text:
+                    type: string
+                    description: 文本内容
+                    examples:
+                      - And so, my fellow Americans, ask not what your country can
+                  start:
+                    type: number
+                    description: 开始的时间戳（单位：秒）
+                    examples:
+                      - 0.0
+                  end:
+                    type: number
+                    description: 结束的时间戳（单位：秒）
+                    examples:
+                      - 6.54
+                  words:
+                    type: array
+                    description: 各个单词的详细信息
+                    items:
+                      type: object
+                      properties:
+                        word:
+                          type: string
+                          description: 文本内容
+                          examples:
+                            - And
+                        start:
+                          type: number
+                          description: 开始的时间戳（单位：秒）
+                          examples:
+                            - 0.1
+                        end:
+                          type: number
+                          description: 结束的时间戳（单位：秒）
+                          examples:
+                            - 0.24
+      required: [type, content]
+      description: 用户输入音频的转录文本
