@@ -1,28 +1,58 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useRouter } from "vue-router";
+import { authApi } from "@/lib/api";
+import type { SignUpRequest } from "@/api";
 
 const router = useRouter();
 const account = ref("");
+const name = ref("");
 const password = ref("");
 const confirmPassword = ref("");
+const loading = ref(false);
+const error = ref("");
 
-const handleSignup = () => {
-  // 验证密码是否一致
-  if (password.value !== confirmPassword.value) {
-    alert("两次输入的密码不一致");
+const handleSignup = async () => {
+  // 表单验证
+  if (!account.value || !name.value || !password.value) {
+    error.value = "请填写所有必填字段";
     return;
   }
 
-  // 注册逻辑待添加...
+  if (password.value !== confirmPassword.value) {
+    error.value = "两次输入的密码不一致";
+    return;
+  }
 
-  console.log("注册信息:", {
-    account: account.value,
-    password: password.value,
-  });
+  loading.value = true;
+  error.value = "";
 
-  // 注册成功，自动登录
-  router.push("/dashboard");
+  try {
+    const signUpRequest: SignUpRequest = {
+      account: account.value,
+      name: name.value,
+      password: password.value,
+    };
+
+    const response = await authApi.apiAuthSignupPost(signUpRequest);
+    const data = response.data;
+
+    if (data.success) {
+      // 注册成功，保存 Token
+      localStorage.setItem("ACCESS_TOKEN", data.data);
+      console.log("注册成功:", data.message);
+      // 跳转到仪表盘
+      router.push("/dashboard");
+    } else {
+      // 注册失败
+      error.value = data.message || "注册失败，请稍后重试";
+    }
+  } catch (err: any) {
+    console.error("注册错误:", err);
+    error.value = err.response?.data?.message || "网络错误，请稍后重试";
+  } finally {
+    loading.value = false;
+  }
 };
 
 const goToSignin = () => {
@@ -69,16 +99,40 @@ const goToHome = () => {
       >
         <h2 class="text-2xl font-bold text-center text-white mb-8">用户注册</h2>
 
+        <!-- 错误提示 -->
+        <div
+          v-if="error"
+          class="mb-6 p-3 bg-red-500/20 border border-red-500/30 rounded-lg"
+        >
+          <p class="text-red-400 text-sm text-center">{{ error }}</p>
+        </div>
+
         <div class="space-y-6">
           <div class="form-control">
             <label class="label mb-2">
-              <span class="label-text text-gray-300 font-medium">邮箱</span>
+              <span class="label-text text-gray-300 font-medium">账号</span>
             </label>
             <input
               v-model="account"
               type="text"
-              placeholder="请输入邮箱"
+              placeholder="请输入账号"
               class="input input-bordered bg-gray-800/50 border-gray-600 text-white placeholder-gray-400 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 w-full px-4 py-3 rounded-lg transition-all duration-300 hover:border-gray-500"
+              :disabled="loading"
+              @keyup.enter="handleSignup"
+            />
+          </div>
+
+          <div class="form-control">
+            <label class="label mb-2">
+              <span class="label-text text-gray-300 font-medium">用户名</span>
+            </label>
+            <input
+              v-model="name"
+              type="text"
+              placeholder="请输入用户名"
+              class="input input-bordered bg-gray-800/50 border-gray-600 text-white placeholder-gray-400 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 w-full px-4 py-3 rounded-lg transition-all duration-300 hover:border-gray-500"
+              :disabled="loading"
+              @keyup.enter="handleSignup"
             />
           </div>
 
@@ -91,6 +145,8 @@ const goToHome = () => {
               type="password"
               placeholder="请输入密码"
               class="input input-bordered bg-gray-800/50 border-gray-600 text-white placeholder-gray-400 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 w-full px-4 py-3 rounded-lg transition-all duration-300 hover:border-gray-500"
+              :disabled="loading"
+              @keyup.enter="handleSignup"
             />
           </div>
 
@@ -103,15 +159,22 @@ const goToHome = () => {
               type="password"
               placeholder="请再次输入密码"
               class="input input-bordered bg-gray-800/50 border-gray-600 text-white placeholder-gray-400 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 w-full px-4 py-3 rounded-lg transition-all duration-300 hover:border-gray-500"
+              :disabled="loading"
+              @keyup.enter="handleSignup"
             />
           </div>
 
           <div class="form-control mt-8">
             <button
               @click="handleSignup"
-              class="btn bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-none shadow-lg shadow-blue-500/20 transition-all duration-300 w-full py-3 rounded-lg hover:shadow-xl hover:shadow-blue-500/30 transform hover:-translate-y-0.5"
+              :disabled="loading"
+              class="btn bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-none shadow-lg shadow-blue-500/20 transition-all duration-300 w-full py-3 rounded-lg hover:shadow-xl hover:shadow-blue-500/30 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              注册
+              <span
+                v-if="loading"
+                class="loading loading-spinner loading-sm mr-2"
+              ></span>
+              {{ loading ? "注册中..." : "注册" }}
             </button>
           </div>
 
