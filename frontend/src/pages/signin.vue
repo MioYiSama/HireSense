@@ -1,21 +1,50 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useRouter } from "vue-router";
+import { authApi } from "@/lib/api";
+import type { SignInRequest } from "@/api";
 
 const router = useRouter();
 const account = ref("");
 const password = ref("");
+const loading = ref(false);
+const error = ref("");
 
-const handleLogin = () => {
-  // 登录逻辑待添加...
+const handleLogin = async () => {
+  // 表单验证
+  if (!account.value || !password.value) {
+    error.value = "请输入账号和密码";
+    return;
+  }
 
-  console.log("登录信息:", {
-    account: account.value,
-    password: password.value,
-  });
+  loading.value = true;
+  error.value = "";
 
-  // 登录成功
-  router.push("/dashboard");
+  try {
+    const signInRequest: SignInRequest = {
+      account: account.value,
+      password: password.value,
+    };
+
+    const response = await authApi.apiAuthSigninPost(signInRequest);
+    const data = response.data;
+
+    if (data.success) {
+      // 登录成功，保存 Token
+      localStorage.setItem("ACCESS_TOKEN", data.data);
+      console.log("登录成功:", data.message);
+      // 跳转到仪表盘
+      router.push("/dashboard");
+    } else {
+      // 登录失败
+      error.value = data.message || "登录失败，请检查账号密码";
+    }
+  } catch (err: any) {
+    console.error("登录错误:", err);
+    error.value = err.response?.data?.message || "网络错误，请稍后重试";
+  } finally {
+    loading.value = false;
+  }
 };
 
 const goToSignup = () => {
@@ -62,6 +91,14 @@ const goToHome = () => {
       >
         <h2 class="text-2xl font-bold text-center text-white mb-8">用户登录</h2>
 
+        <!-- 错误提示 -->
+        <div
+          v-if="error"
+          class="mb-6 p-3 bg-red-500/20 border border-red-500/30 rounded-lg"
+        >
+          <p class="text-red-400 text-sm text-center">{{ error }}</p>
+        </div>
+
         <div class="space-y-6">
           <div class="form-control">
             <label class="label mb-2">
@@ -72,6 +109,8 @@ const goToHome = () => {
               type="text"
               placeholder="请输入账号"
               class="input input-bordered bg-gray-800/50 border-gray-600 text-white placeholder-gray-400 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 w-full px-4 py-3 rounded-lg transition-all duration-300 hover:border-gray-500"
+              :disabled="loading"
+              @keyup.enter="handleLogin"
             />
           </div>
 
@@ -84,15 +123,22 @@ const goToHome = () => {
               type="password"
               placeholder="请输入密码"
               class="input input-bordered bg-gray-800/50 border-gray-600 text-white placeholder-gray-400 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 w-full px-4 py-3 rounded-lg transition-all duration-300 hover:border-gray-500"
+              :disabled="loading"
+              @keyup.enter="handleLogin"
             />
           </div>
 
           <div class="form-control mt-8">
             <button
               @click="handleLogin"
-              class="btn bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-none shadow-lg shadow-blue-500/20 transition-all duration-300 w-full py-3 rounded-lg hover:shadow-xl hover:shadow-blue-500/30 transform hover:-translate-y-0.5"
+              :disabled="loading"
+              class="btn bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-none shadow-lg shadow-blue-500/20 transition-all duration-300 w-full py-3 rounded-lg hover:shadow-xl hover:shadow-blue-500/30 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              登录
+              <span
+                v-if="loading"
+                class="loading loading-spinner loading-sm mr-2"
+              ></span>
+              {{ loading ? "登录中..." : "登录" }}
             </button>
           </div>
 

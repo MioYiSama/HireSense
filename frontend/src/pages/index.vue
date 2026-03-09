@@ -182,7 +182,7 @@ const scrollToSection = (sectionId: string) => {
 
     <!-- Hero 区 -->
     <section id="hero" class="relative min-h-screen flex items-center">
-      <!-- 背景渐变效果 -->
+      <!-- 背景 -->
       <div
         class="absolute inset-0 bg-gradient-to-br from-gray-900 via-blue-950 to-gray-900"
       ></div>
@@ -220,6 +220,30 @@ const scrollToSection = (sectionId: string) => {
           <div class="md:w-1/2 relative pl-4">
             <Projector />
           </div>
+        </div>
+      </div>
+
+      <!-- 箭头引导 -->
+      <div
+        class="absolute bottom-12 left-1/2 -translate-x-1/2 flex justify-center animate-bounce"
+      >
+        <div
+          class="w-10 h-10 rounded-full bg-gray-800/50 border border-gray-700 flex items-center justify-center cursor-pointer hover:bg-gray-700/50 transition-all duration-300 animate-pulse-slow"
+          @click="scrollToSection('features')"
+        >
+          <svg
+            class="w-6 h-6 text-blue-400"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 14l-7 7m0 0l-7-7m7 7V3"
+            />
+          </svg>
         </div>
       </div>
     </section>
@@ -445,3 +469,19 @@ const scrollToSection = (sectionId: string) => {
     </footer>
   </div>
 </template>
+
+<style scoped>
+@keyframes pulse-slow {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 2s ease-in-out infinite;
+}
+</style>
