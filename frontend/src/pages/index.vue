@@ -205,7 +205,7 @@ const scrollToSection = (sectionId: string) => {
             </p>
             <div class="flex flex-col sm:flex-row gap-4">
               <button @click="goToSignup" class="btn btn-lg btn-primary">
-                Get Started
+                立即开始
               </button>
               <button
                 @click="scrollToSection('features')"
@@ -228,11 +228,11 @@ const scrollToSection = (sectionId: string) => {
         class="absolute bottom-12 left-1/2 -translate-x-1/2 flex justify-center animate-bounce"
       >
         <div
-          class="w-10 h-10 rounded-full bg-gray-800/50 border border-gray-700 flex items-center justify-center cursor-pointer hover:bg-gray-700/50 transition-all duration-300 animate-pulse-slow"
+          class="w-16 h-16 rounded-full bg-gray-800/50 border border-gray-700 flex items-center justify-center cursor-pointer hover:bg-gray-700/50 transition-all duration-300 animate-pulse-slow"
           @click="scrollToSection('features')"
         >
           <svg
-            class="w-6 h-6 text-blue-400"
+            class="w-8 h-8 text-blue-400"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -411,9 +411,9 @@ const scrollToSection = (sectionId: string) => {
               <LucideBriefcase class="w-16 h-16 text-blue-400" />
             </div>
             <div class="p-6">
-              <h3 class="text-xl font-semibold mb-3">社招跳槽</h3>
+              <h3 class="text-xl font-semibold mb-3">实习面试准备</h3>
               <p class="text-gray-400 mb-4">
-                为有工作经验的求职者提供针对性面试准备，提升跳槽成功率
+                为大学生提供实习面试模拟，提前熟悉面试流程，增加实习机会
               </p>
               <button class="btn btn-sm btn-primary">了解更多</button>
             </div>

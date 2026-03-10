@@ -2,6 +2,7 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { authApi } from "@/lib/api";
+import { setAccessToken } from "@/utils/token";
 import type { SignInRequest } from "@/api";
 
 const router = useRouter();
@@ -31,7 +32,7 @@ const handleLogin = async () => {
 
     if (data.success) {
       // 登录成功，保存 Token
-      localStorage.setItem("ACCESS_TOKEN", data.data);
+      setAccessToken(data.data);
       console.log("登录成功:", data.message);
       // 跳转到仪表盘
       router.push("/dashboard");
@@ -58,7 +59,7 @@ const goToHome = () => {
 
 <template>
   <div
-    class="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 relative overflow-hidden"
+    class="min-h-screen flex items-center justify-center bg-linear-to-br from-gray-900 via-gray-800 to-gray-900 relative overflow-hidden"
   >
     <!-- 背景 -->
     <div
@@ -132,7 +133,7 @@ const goToHome = () => {
             <button
               @click="handleLogin"
               :disabled="loading"
-              class="btn bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-none shadow-lg shadow-blue-500/20 transition-all duration-300 w-full py-3 rounded-lg hover:shadow-xl hover:shadow-blue-500/30 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+              class="btn bg-linear-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-none shadow-lg shadow-blue-500/20 transition-all duration-300 w-full py-3 rounded-lg hover:shadow-xl hover:shadow-blue-500/30 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span
                 v-if="loading"
