@@ -33,7 +33,7 @@ const slides = [
 <template>
   <div class="relative w-full">
     <!-- 投影仪 -->
-    <div class="absolute -left-16 top-1/2 -translate-y-1/2 z-30">
+    <div class="absolute -left-3 lg:-left-5 top-1/2 -translate-y-1/2 z-30">
       <div class="relative">
         <div
           class="relative w-16 h-24 bg-gradient-to-b from-gray-700 via-gray-800 to-gray-900 rounded-lg shadow-2xl border border-gray-600 flex flex-col items-center justify-center"
@@ -96,7 +96,7 @@ const slides = [
 
     <!-- 投影光束 -->
     <div
-      class="absolute left-0 top-1/2 -translate-y-1/2 w-56 h-24 z-20 pointer-events-none animate-pulse-slow"
+      class="absolute left-10 lg:left-5 top-1/2 -translate-y-1/2 w-44 lg:w-52 h-24 z-20 pointer-events-none animate-pulse-slow"
     >
       <div
         class="absolute inset-0 animate-wave"
