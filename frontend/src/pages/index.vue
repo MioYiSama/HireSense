@@ -15,6 +15,7 @@ import Projector from "../components/Projector.vue";
 const router = useRouter();
 const scrolled = ref(false);
 const activeSection = ref("hero");
+let animationStyle: HTMLStyleElement | null = null;
 
 onMounted(() => {
   window.addEventListener("scroll", handleScroll);
@@ -23,6 +24,10 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener("scroll", handleScroll);
+  // 清理样式标签
+  if (animationStyle && animationStyle.parentNode) {
+    animationStyle.parentNode.removeChild(animationStyle);
+  }
 });
 
 const handleScroll = () => {
@@ -57,8 +62,8 @@ const checkScrollAnimations = () => {
 
 const initAnimations = () => {
   // 初始化动画类
-  const style = document.createElement("style");
-  style.textContent = `
+  animationStyle = document.createElement("style");
+  animationStyle.textContent = `
     .animate-on-scroll {
       opacity: 0;
       transform: translateY(20px);
@@ -83,7 +88,7 @@ const initAnimations = () => {
       transform: translateY(0);
     }
   `;
-  document.head.appendChild(style);
+  document.head.appendChild(animationStyle);
 };
 
 const goToSignin = () => {
