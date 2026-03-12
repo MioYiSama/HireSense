@@ -1,20 +1,67 @@
 <script setup lang="ts">
+import { ref, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
+import { removeAccessToken } from "@/utils/token";
 
 const router = useRouter();
+const showDropdown = ref(false);
+let hideTimeout: number | null = null;
+
+const name = ref("奶龙");
 
 const handleLogout = () => {
-  // 登出逻辑待添加...
-
+  // 清除 token
+  removeAccessToken();
   console.log("用户登出");
-
-  // 登出后跳转到宣传页
-  router.push("/");
+  // 登出后跳转到登录页面
+  router.push("/signin");
 };
 
 const goToHome = () => {
   router.push("/");
 };
+
+const goToProfile = () => {
+  // 跳转到个人中心页面
+  router.push("/profile");
+};
+
+const showMenu = () => {
+  // 清除定时器
+  if (hideTimeout) {
+    clearTimeout(hideTimeout);
+    hideTimeout = null;
+  }
+  showDropdown.value = true;
+};
+
+const hideMenu = () => {
+  hideTimeout = window.setTimeout(() => {
+    showDropdown.value = false;
+  }, 200);
+};
+
+const handleClickOutside = (event: MouseEvent) => {
+  const target = event.target as HTMLElement;
+  if (!target.closest(".user-menu")) {
+    showDropdown.value = false;
+    if (hideTimeout) {
+      clearTimeout(hideTimeout);
+      hideTimeout = null;
+    }
+  }
+};
+
+onMounted(() => {
+  document.addEventListener("click", handleClickOutside);
+});
+
+onUnmounted(() => {
+  document.removeEventListener("click", handleClickOutside);
+  if (hideTimeout) {
+    clearTimeout(hideTimeout);
+  }
+});
 </script>
 
 <template>
@@ -42,65 +89,67 @@ const goToHome = () => {
         </button>
       </div>
       <div class="flex-none">
-        <button
-          @click="handleLogout"
-          class="btn bg-gray-800/50 hover:bg-gray-700/50 text-gray-300 border border-gray-600 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10"
-        >
-          退出登录
-        </button>
-      </div>
-    </div>
-
-    <!-- 主内容 -->
-    <div class="container mx-auto p-8 relative z-10">
-      <h1 class="text-3xl font-bold mb-8 text-white">欢迎来到 HireSense</h1>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- 用户菜单 -->
         <div
-          class="bg-gray-900/60 backdrop-blur-md border border-gray-700/50 rounded-2xl shadow-2xl shadow-blue-500/10 p-6 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/20 hover:-translate-y-1"
+          class="user-menu relative"
+          @mouseenter="showMenu"
+          @mouseleave="hideMenu"
         >
-          <div class="flex flex-col h-full">
-            <h2 class="text-xl font-bold text-white mb-2">开始面试</h2>
-            <p class="text-gray-300 mb-4">选择岗位，开始AI模拟面试</p>
-            <div class="mt-auto">
-              <button
-                class="btn bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-none shadow-lg shadow-blue-500/20 transition-all duration-300 w-full py-2 rounded-lg hover:shadow-xl hover:shadow-blue-500/30 transform hover:-translate-y-0.5"
-              >
-                开始
-              </button>
+          <button
+            class="flex items-center justify-center w-10 h-10 rounded-full bg-gray-800/50 hover:bg-gray-700/50 border border-gray-600 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10 cursor-pointer"
+          >
+            <div
+              class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-medium"
+            >
+              {{ name?.[0] || "用" }}
             </div>
-          </div>
-        </div>
+          </button>
 
-        <div
-          class="bg-gray-900/60 backdrop-blur-md border border-gray-700/50 rounded-2xl shadow-2xl shadow-blue-500/10 p-6 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/20 hover:-translate-y-1"
-        >
-          <div class="flex flex-col h-full">
-            <h2 class="text-xl font-bold text-white mb-2">面试历史</h2>
-            <p class="text-gray-300 mb-4">查看你的面试记录和报告</p>
-            <div class="mt-auto">
-              <button
-                class="btn bg-gray-800/50 hover:bg-gray-700/50 text-gray-300 border border-gray-600 transition-all duration-300 w-full py-2 rounded-lg hover:shadow-lg hover:shadow-blue-500/10"
+          <!-- 下拉菜单 -->
+          <div
+            v-if="showDropdown"
+            class="absolute right-0 mt-1 w-48 bg-gray-900/95 backdrop-blur-md border border-gray-700/50 rounded-xl shadow-2xl shadow-blue-500/10 py-2 z-50 transition-all duration-300 transform origin-top-right"
+            @mouseenter="showMenu"
+            @mouseleave="hideMenu"
+          >
+            <button
+              @click="goToProfile"
+              class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-800/50 transition-colors duration-200 flex items-center gap-2"
+            >
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                查看
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div
-          class="bg-gray-900/60 backdrop-blur-md border border-gray-700/50 rounded-2xl shadow-2xl shadow-blue-500/10 p-6 transition-all duration-300 hover:shadow-xl hover:shadow-blue-500/20 hover:-translate-y-1"
-        >
-          <div class="flex flex-col h-full">
-            <h2 class="text-xl font-bold text-white mb-2">个人档案</h2>
-            <p class="text-gray-300 mb-4">管理你的个人信息和设置</p>
-            <div class="mt-auto">
-              <button
-                class="btn bg-gray-800/50 hover:bg-gray-700/50 text-gray-300 border border-gray-600 transition-all duration-300 w-full py-2 rounded-lg hover:shadow-lg hover:shadow-blue-500/10"
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                />
+              </svg>
+              个人中心
+            </button>
+            <button
+              @click="handleLogout"
+              class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-800/50 transition-colors duration-200 flex items-center gap-2"
+            >
+              <svg
+                class="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                编辑
-              </button>
-            </div>
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                />
+              </svg>
+              退出登录
+            </button>
           </div>
         </div>
       </div>
