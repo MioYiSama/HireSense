@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
-import { removeAccessToken } from "@/utils/token";
+import { getUserInfo, setUserInfo, clearAll } from "@/utils/token";
 import { userApi, authApi } from "@/lib/api";
 import type { Profile, ProfileJobEnum } from "@/api";
 import ConfirmDialog from "@/components/ConfirmDialog.vue";
@@ -17,6 +17,12 @@ const resumeFileName = ref("");
 const personalization = ref({
   interviewerStyle: "default",
 });
+
+// 从localStorage获取用户信息
+const userInfo = getUserInfo();
+if (userInfo && userInfo.name) {
+  name.value = userInfo.name;
+}
 
 const interviewerStyles = [
   { value: "default", label: "默认" },
@@ -39,6 +45,13 @@ const handleLogout = async () => {
   showLogoutDialog.value = true;
 };
 
+const handleSignout = () => {
+  // 退出登录
+  clearAll();
+  console.log("用户退出登录");
+  router.push("/signin");
+};
+
 const confirmLogout = async () => {
   showLogoutDialog.value = false;
 
@@ -49,8 +62,8 @@ const confirmLogout = async () => {
 
     if (data.success) {
       console.log("注销成功:", data.message);
-      // 清除 token
-      removeAccessToken();
+      // 清除所有用户信息
+      clearAll();
       // 跳转到登录页面
       router.push("/signin");
     } else {
@@ -136,26 +149,12 @@ const handleSave = async () => {
   saveMessage.value = "";
 
   try {
-    let personalizationStr = "";
-    if (personalization.value.interviewerStyle === "custom") {
-      personalizationStr = customStyle.value;
-    } else {
-      const styleMap: Record<string, string> = {
-        default: "默认风格",
-        professional: "专业严肃风格",
-        friendly: "亲和温和风格",
-        challenging: "挑战性风格",
-      };
-      personalizationStr =
-        styleMap[personalization.value.interviewerStyle] || "";
-    }
-
     // 构建请求体
     const profile: Profile = {
       name: name.value,
       job: job.value,
       // resume 字段暂时不传，因为 API 需要结构化简历文本，而我们只有文件上传
-      // personalization: personalizationStr || undefined
+      //personalization: personalization.value,
     };
 
     // 发送 PUT 请求
@@ -166,6 +165,8 @@ const handleSave = async () => {
       saveMessage.value = data.message || "档案更新成功";
       saveSuccess.value = true;
       console.log("档案更新成功:", data);
+      // 更新localStorage中的用户信息
+      setUserInfo({ ...getUserInfo(), name: name.value, job: job.value });
     } else {
       saveMessage.value = data.message || "档案更新失败";
       saveSuccess.value = false;
@@ -259,7 +260,7 @@ onUnmounted(() => {
               个人中心
             </button>
             <button
-              @click="handleLogout"
+              @click="handleSignout"
               class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-800/50 transition-colors duration-200 flex items-center gap-2"
             >
               <svg

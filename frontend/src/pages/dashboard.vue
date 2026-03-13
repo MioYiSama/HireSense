@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
-import { removeAccessToken } from "@/utils/token";
+import { getUserInfo, clearAll } from "@/utils/token";
 
 const router = useRouter();
 const showDropdown = ref(false);
@@ -9,9 +9,17 @@ let hideTimeout: number | null = null;
 
 const name = ref("奶龙");
 
+// 从localStorage获取用户信息
+onMounted(() => {
+  const userInfo = getUserInfo();
+  if (userInfo && userInfo.name) {
+    name.value = userInfo.name;
+  }
+});
+
 const handleLogout = () => {
-  // 清除 token
-  removeAccessToken();
+  // 清除所有用户信息
+  clearAll();
   console.log("用户登出");
   // 登出后跳转到登录页面
   router.push("/signin");
