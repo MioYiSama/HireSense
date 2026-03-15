@@ -8,10 +8,11 @@ import (
 )
 
 type Dependencies struct {
-	Store           *database.Store
-	AuthService     *authpkg.Service
-	TokenManager    *authpkg.TokenManager
-	PutReportSecret string
+	Store            *database.Store
+	AuthService      *authpkg.Service
+	TokenManager     *authpkg.TokenManager
+	PutReportSecret  string
+	InterviewService *InterviewService
 }
 
 func RegisterRoutes(app *fiber.App, deps Dependencies) {
@@ -27,8 +28,9 @@ func RegisterRoutes(app *fiber.App, deps Dependencies) {
 	registerUserRoutes(userGroup, deps)
 
 	interviewHandler := interviewHandler{
-		store:           deps.Store,
-		putReportSecret: deps.PutReportSecret,
+		store:            deps.Store,
+		putReportSecret:  deps.PutReportSecret,
+		interviewService: deps.InterviewService,
 	}
 	apiGroup.Put("/interview/report", interviewHandler.putReport)
 

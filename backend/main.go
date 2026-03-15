@@ -32,6 +32,14 @@ func main() {
 		log.Fatal(err)
 	}
 
+	interviewService, err := api.NewInterviewService(api.InterviewServiceConfig{
+		AIURL:      cfg.AIURL,
+		WhisperURL: cfg.WhisperURL,
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	app := fiber.New(fiber.Config{
 		PassLocalsToContext: true,
 		ErrorHandler:        api.ErrorHandler,
@@ -56,10 +64,11 @@ func main() {
 	}))
 
 	api.RegisterRoutes(app, api.Dependencies{
-		Store:           store,
-		AuthService:     auth.NewService(store, tokenManager),
-		TokenManager:    tokenManager,
-		PutReportSecret: cfg.PutReportSecret,
+		Store:            store,
+		AuthService:      auth.NewService(store, tokenManager),
+		TokenManager:     tokenManager,
+		PutReportSecret:  cfg.PutReportSecret,
+		InterviewService: interviewService,
 	})
 
 	log.Printf("backend listening on %s", cfg.AppAddress)

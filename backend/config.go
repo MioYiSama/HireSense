@@ -15,6 +15,8 @@ type Config struct {
 	JWTIssuer       string
 	JWTTTL          time.Duration
 	PutReportSecret string
+	WhisperURL      string
+	AIURL           string
 }
 
 func LoadConfig() (Config, error) {
@@ -39,6 +41,8 @@ func LoadConfig() (Config, error) {
 		JWTIssuer:       getEnv("JWT_ISSUER", "hiresense-backend"),
 		JWTTTL:          ttl,
 		PutReportSecret: strings.TrimSpace(os.Getenv("PUT_REPORT_SECRET")),
+		WhisperURL:      strings.TrimSpace(os.Getenv("WHISPER_URL")),
+		AIURL:           strings.TrimSpace(os.Getenv("AI_URL")),
 	}
 
 	switch {
