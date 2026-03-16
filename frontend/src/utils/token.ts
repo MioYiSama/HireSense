@@ -1,5 +1,6 @@
 const ACCESS_TOKEN_KEY = "ACCESS_TOKEN";
 const USER_INFO_KEY = "USER_INFO";
+const INTERVIEW_ID_KEY = "INTERVIEW_ID";
 
 export function getAccessToken(): string {
   return localStorage.getItem(ACCESS_TOKEN_KEY) ?? "";
@@ -26,7 +27,20 @@ export function removeUserInfo(): void {
   localStorage.removeItem(USER_INFO_KEY);
 }
 
+export function getInterviewId(): string {
+  return localStorage.getItem(INTERVIEW_ID_KEY) ?? "";
+}
+
+export function setInterviewId(interviewId: string): void {
+  localStorage.setItem(INTERVIEW_ID_KEY, interviewId);
+}
+
+export function removeInterviewId(): void {
+  localStorage.removeItem(INTERVIEW_ID_KEY);
+}
+
 export function clearAll(): void {
   removeAccessToken();
   removeUserInfo();
+  removeInterviewId();
 }

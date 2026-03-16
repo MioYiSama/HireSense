@@ -3,6 +3,7 @@ import { ref, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { getUserInfo, setUserInfo, clearAll } from "@/utils/token";
 import { userApi, authApi } from "@/lib/api";
+import { parseFile } from "@/utils/fileParser";
 import type { Profile, ProfileJobEnum } from "@/api";
 import ConfirmDialog from "@/components/ConfirmDialog.vue";
 
@@ -14,6 +15,9 @@ const name = ref("奶龙");
 const job = ref<ProfileJobEnum>("frontend");
 const resumeFile = ref<File | null>(null);
 const resumeFileName = ref("");
+const resumeText = ref("");
+const parseLoading = ref(false);
+const parseError = ref("");
 const personalization = ref({
   interviewerStyle: "default",
 });
@@ -119,14 +123,34 @@ const handleClickOutside = (event: MouseEvent) => {
   }
 };
 
-const handleFileUpload = (event: Event) => {
+const handleFileUpload = async (event: Event) => {
   const target = event.target as HTMLInputElement;
   if (target.files && target.files.length > 0) {
     const file = target.files[0];
     if (file) {
       resumeFile.value = file;
       resumeFileName.value = file.name;
+      parseError.value = "";
+      parseLoading.value = true;
+
       console.log("上传的文件:", file);
+
+      try {
+        const result = await parseFile(file);
+
+        if (result.success) {
+          resumeText.value = result.text;
+          console.log("文件解析成功，文本长度:", result.text.length);
+        } else {
+          parseError.value = result.error || "文件解析失败";
+          console.error("文件解析失败:", result.error);
+        }
+      } catch (error) {
+        parseError.value = "文件解析过程中发生错误";
+        console.error("文件解析异常:", error);
+      } finally {
+        parseLoading.value = false;
+      }
     }
   }
 };
@@ -134,6 +158,8 @@ const handleFileUpload = (event: Event) => {
 const handleRemoveFile = () => {
   resumeFile.value = null;
   resumeFileName.value = "";
+  resumeText.value = "";
+  parseError.value = "";
   console.log("移除文件");
 };
 
@@ -153,8 +179,8 @@ const handleSave = async () => {
     const profile: Profile = {
       name: name.value,
       job: job.value,
-      // resume 字段暂时不传，因为 API 需要结构化简历文本，而我们只有文件上传
-      //personalization: personalization.value,
+      // 如果有解析后的简历文本
+      ...(resumeText.value && { resume: resumeText.value }),
     };
 
     // 发送 PUT 请求
@@ -242,10 +268,10 @@ onUnmounted(() => {
           >
             <button
               @click="goToProfile"
-              class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-800/50 transition-colors duration-200 flex items-center gap-2"
+              class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700/50 hover:text-white transition-all duration-200 flex items-center gap-2 rounded-lg hover:translate-x-1"
             >
               <svg
-                class="w-4 h-4"
+                class="w-4 h-4 transition-transform duration-200 hover:scale-110"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -261,10 +287,10 @@ onUnmounted(() => {
             </button>
             <button
               @click="handleSignout"
-              class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-800/50 transition-colors duration-200 flex items-center gap-2"
+              class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700/50 hover:text-white transition-all duration-200 flex items-center gap-2 rounded-lg hover:translate-x-1"
             >
               <svg
-                class="w-4 h-4"
+                class="w-4 h-4 transition-transform duration-200 hover:scale-110"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -372,6 +398,44 @@ onUnmounted(() => {
               <span class="label-text text-gray-300 font-medium">上传简历</span>
             </label>
 
+            <!-- 解析错误提示 -->
+            <div
+              v-if="parseError"
+              class="mb-4 p-3 bg-red-500/20 border border-red-500/30 rounded-lg"
+            >
+              <p class="text-red-400 text-sm">{{ parseError }}</p>
+            </div>
+
+            <!-- 解析加载状态 -->
+            <div
+              v-if="parseLoading"
+              class="mb-4 p-4 bg-blue-500/20 border border-blue-500/30 rounded-lg"
+            >
+              <div class="flex items-center gap-3">
+                <svg
+                  class="animate-spin h-5 w-5 text-blue-400"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  ></circle>
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                <p class="text-blue-400 text-sm">正在解析文件...</p>
+              </div>
+            </div>
+
             <!-- 未上传时的提示 -->
             <div
               v-if="!resumeFileName"
@@ -379,14 +443,16 @@ onUnmounted(() => {
             >
               <input
                 type="file"
-                accept=".pdf,.doc,.docx,.txt"
+                accept=".doc,.docx,.txt"
                 class="hidden"
                 id="resume-upload"
                 @change="handleFileUpload"
+                :disabled="parseLoading"
               />
               <label
                 for="resume-upload"
                 class="cursor-pointer flex flex-col items-center justify-center gap-3"
+                :class="{ 'opacity-50 cursor-not-allowed': parseLoading }"
               >
                 <svg
                   class="w-12 h-12 text-gray-400"
@@ -404,7 +470,7 @@ onUnmounted(() => {
                 <div>
                   <p class="text-gray-400">简历为空，请上传您的简历</p>
                   <p class="text-xs text-gray-500 mt-1">
-                    支持 PDF、Word、TXT 格式
+                    支持 Word（.docx）、TXT 格式
                   </p>
                 </div>
               </label>
@@ -437,12 +503,16 @@ onUnmounted(() => {
                         ? (resumeFile.size / 1024).toFixed(1) + " KB"
                         : ""
                     }}
+                    <span v-if="resumeText" class="text-green-400 ml-2">
+                      ✓ 已解析 ({{ resumeText.length }} 字符)
+                    </span>
                   </p>
                 </div>
               </div>
               <button
                 @click="handleRemoveFile"
-                class="text-red-400 hover:text-red-300 transition-colors duration-200"
+                :disabled="parseLoading"
+                class="text-red-400 hover:text-red-300 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <svg
                   class="w-5 h-5"
@@ -458,6 +528,18 @@ onUnmounted(() => {
                   />
                 </svg>
               </button>
+            </div>
+
+            <!-- 解析后文本预览 -->
+            <div v-if="resumeText" class="mt-4">
+              <h3 class="text-sm font-medium text-gray-300 mb-2">
+                解析结果预览
+              </h3>
+              <div
+                class="bg-gray-800/50 border border-gray-600 rounded-lg p-4 max-h-60 overflow-y-auto text-sm text-gray-300"
+              >
+                <pre class="whitespace-pre-wrap">{{ resumeText }}</pre>
+              </div>
             </div>
           </div>
         </div>
