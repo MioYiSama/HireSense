@@ -21,6 +21,20 @@ const parseError = ref("");
 const personalization = ref({
   interviewerStyle: "default",
 });
+let messageTimeout: number | null = null;
+
+// 错误消息处理函数
+const showMessage = (message: string, isSuccess: boolean = false) => {
+  if (messageTimeout) {
+    clearTimeout(messageTimeout);
+  }
+  saveMessage.value = message;
+  saveSuccess.value = isSuccess;
+  messageTimeout = window.setTimeout(() => {
+    saveMessage.value = "";
+    messageTimeout = null;
+  }, 3000);
+};
 
 // 从localStorage获取用户信息
 const userInfo = getUserInfo();
@@ -49,38 +63,33 @@ const handleLogout = async () => {
   showLogoutDialog.value = true;
 };
 
-const handleSignout = () => {
-  // 退出登录
-  clearAll();
-  console.log("用户退出登录");
-  router.push("/signin");
-};
-
 const confirmLogout = async () => {
   showLogoutDialog.value = false;
 
+  // 清除之前的定时器
+  if (messageTimeout) {
+    clearTimeout(messageTimeout);
+    messageTimeout = null;
+  }
+
   try {
-    // 调用注销 API
+    // 调用退出登录 API
     const response = await authApi.apiAuthSignoutPost();
     const data = response.data;
 
     if (data.success) {
-      console.log("注销成功:", data.message);
+      console.log("退出登录成功:", data.message);
       // 清除所有用户信息
       clearAll();
       // 跳转到登录页面
       router.push("/signin");
     } else {
-      console.error("注销失败:", data.message);
-      // 显示错误提示
-      saveMessage.value = data.message || "注销失败";
-      saveSuccess.value = false;
+      console.error("退出登录失败:", data.message);
+      showMessage(data.message || "退出登录失败");
     }
   } catch (err: any) {
-    console.error("注销错误:", err);
-    // 显示错误提示
-    saveMessage.value = err.response?.data?.message || "网络错误，请稍后重试";
-    saveSuccess.value = false;
+    console.error("退出登录错误:", err);
+    showMessage(err.response?.data?.message || "网络错误，请稍后重试");
   }
 };
 
@@ -90,6 +99,10 @@ const cancelLogout = () => {
 
 const goToHome = () => {
   router.push("/");
+};
+
+const goToDashboard = () => {
+  router.push("/dashboard");
 };
 
 const goToProfile = () => {
@@ -164,10 +177,15 @@ const handleRemoveFile = () => {
 };
 
 const handleSave = async () => {
+  // 清除之前的定时器
+  if (messageTimeout) {
+    clearTimeout(messageTimeout);
+    messageTimeout = null;
+  }
+
   // 表单验证
   if (!name.value || !job.value) {
-    saveMessage.value = "请填写姓名和期望职位";
-    saveSuccess.value = false;
+    showMessage("请填写姓名和期望职位");
     return;
   }
 
@@ -175,12 +193,19 @@ const handleSave = async () => {
   saveMessage.value = "";
 
   try {
+    // 从localStorage获取完整的用户信息
+    const currentUserInfo = getUserInfo();
+
     // 构建请求体
     const profile: Profile = {
       name: name.value,
       job: job.value,
       // 如果有解析后的简历文本
       ...(resumeText.value && { resume: resumeText.value }),
+      // 保留原有的personalization设置
+      ...(currentUserInfo?.personalization && {
+        personalization: currentUserInfo.personalization,
+      }),
     };
 
     // 发送 PUT 请求
@@ -188,19 +213,21 @@ const handleSave = async () => {
     const data = response.data;
 
     if (data.success) {
-      saveMessage.value = data.message || "档案更新成功";
-      saveSuccess.value = true;
+      showMessage(data.message || "档案更新成功", true);
       console.log("档案更新成功:", data);
       // 更新localStorage中的用户信息
-      setUserInfo({ ...getUserInfo(), name: name.value, job: job.value });
+      setUserInfo({
+        ...currentUserInfo,
+        name: name.value,
+        job: job.value,
+        resume: resumeText.value || currentUserInfo?.resume,
+      });
     } else {
-      saveMessage.value = data.message || "档案更新失败";
-      saveSuccess.value = false;
+      showMessage(data.message || "档案更新失败");
     }
   } catch (err: any) {
     console.error("更新档案错误:", err);
-    saveMessage.value = err.response?.data?.message || "网络错误，请稍后重试";
-    saveSuccess.value = false;
+    showMessage(err.response?.data?.message || "网络错误，请稍后重试");
   } finally {
     loading.value = false;
   }
@@ -215,12 +242,15 @@ onUnmounted(() => {
   if (hideTimeout) {
     clearTimeout(hideTimeout);
   }
+  if (messageTimeout) {
+    clearTimeout(messageTimeout);
+  }
 });
 </script>
 
 <template>
   <div
-    class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 relative overflow-hidden"
+    class="min-h-screen bg-linear-to-br from-gray-900 via-gray-800 to-gray-900 relative overflow-hidden"
   >
     <!-- 背景 -->
     <div
@@ -234,12 +264,31 @@ onUnmounted(() => {
     <div
       class="navbar bg-gray-900/60 backdrop-blur-md border-b border-gray-700/50 shadow-lg relative z-10"
     >
-      <div class="flex-1">
+      <div class="flex-1 flex items-center gap-4">
         <button
           @click="goToHome"
           class="flex items-center gap-2 transition-all duration-300 hover:scale-105 hover:opacity-90 cursor-pointer"
         >
           <img src="/logo-long.png" alt="HireSense" class="h-6 rounded-md" />
+        </button>
+        <button
+          @click="goToDashboard"
+          class="flex items-center gap-2 px-4 py-2 bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700/50 rounded-lg text-sm text-gray-300 hover:text-white transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10 cursor-pointer"
+        >
+          <svg
+            class="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M10 19l-7-7m0 0l7-7m-7 7h18"
+            />
+          </svg>
+          返回面试中心
         </button>
       </div>
       <div class="flex-none">
@@ -253,7 +302,7 @@ onUnmounted(() => {
             class="flex items-center justify-center w-10 h-10 rounded-full bg-gray-800/50 hover:bg-gray-700/50 border border-gray-600 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10 cursor-pointer"
           >
             <div
-              class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-medium"
+              class="w-8 h-8 rounded-full bg-linear-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-medium"
             >
               {{ name?.[0] || "用" }}
             </div>
@@ -286,7 +335,7 @@ onUnmounted(() => {
               个人中心
             </button>
             <button
-              @click="handleSignout"
+              @click="handleLogout"
               class="w-full text-left px-4 py-2 text-sm text-gray-300 hover:bg-gray-700/50 hover:text-white transition-all duration-200 flex items-center gap-2 rounded-lg hover:translate-x-1"
             >
               <svg
@@ -348,7 +397,7 @@ onUnmounted(() => {
                 v-model="name"
                 type="text"
                 placeholder="请输入姓名"
-                class="input input-bordered bg-gray-800/50 border-gray-600 text-white placeholder-gray-400 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 w-full px-4 py-3 rounded-lg transition-all duration-300 hover:border-gray-500 min-h-[3.5rem]"
+                class="input input-bordered bg-gray-800/50 border-gray-600 text-white placeholder-gray-400 focus:border-blue-400 focus:ring-1 focus:ring-blue-400 w-full px-4 py-3 rounded-lg transition-all duration-300 hover:border-gray-500 min-h-14"
               />
             </div>
 
@@ -360,7 +409,7 @@ onUnmounted(() => {
               </label>
               <select
                 v-model="job"
-                class="select select-bordered bg-gray-800/50 border-gray-600 text-white focus:border-blue-400 focus:ring-1 focus:ring-blue-400 w-full px-4 py-3 rounded-lg transition-all duration-300 hover:border-gray-500 min-h-[3.5rem]"
+                class="select select-bordered bg-gray-800/50 border-gray-600 text-white focus:border-blue-400 focus:ring-1 focus:ring-blue-400 w-full px-4 py-3 rounded-lg transition-all duration-300 hover:border-gray-500 min-h-14"
               >
                 <option value="frontend">前端开发</option>
                 <option value="backend">后端开发</option>
@@ -611,31 +660,18 @@ onUnmounted(() => {
 
         <!-- 保存按钮和消息 -->
         <div class="space-y-4">
-          <!-- 保存消息提示 -->
-          <div
-            v-if="saveMessage"
-            :class="[
-              'p-4 rounded-lg text-center',
-              saveSuccess
-                ? 'bg-green-500/20 border border-green-500/50 text-green-400'
-                : 'bg-red-500/20 border border-red-500/50 text-red-400',
-            ]"
-          >
-            {{ saveMessage }}
-          </div>
-
           <!-- 保存按钮 -->
           <div class="flex justify-between items-center">
             <button
               @click="handleLogout"
-              class="btn bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white border-none shadow-lg shadow-red-500/20 transition-all duration-300 px-8 py-3 rounded-lg hover:shadow-xl hover:shadow-red-500/30 transform hover:-translate-y-0.5"
+              class="btn bg-linear-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white border-none shadow-lg shadow-red-500/20 transition-all duration-300 px-8 py-3 rounded-lg hover:shadow-xl hover:shadow-red-500/30 transform hover:-translate-y-0.5"
             >
-              注销用户
+              退出登录
             </button>
             <button
               @click="handleSave"
               :disabled="loading"
-              class="btn bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-none shadow-lg shadow-blue-500/20 transition-all duration-300 px-8 py-3 rounded-lg hover:shadow-xl hover:shadow-blue-500/30 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              class="btn bg-linear-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-none shadow-lg shadow-blue-500/20 transition-all duration-300 px-8 py-3 rounded-lg hover:shadow-xl hover:shadow-blue-500/30 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <svg
                 v-if="loading"
@@ -665,15 +701,28 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- 注销确认对话框 -->
+    <!-- 退出登录确认对话框 -->
     <ConfirmDialog
       :show="showLogoutDialog"
-      title="确认注销"
-      message="确定要注销用户吗？此操作将删除您的所有个人信息和档案，且无法恢复。"
-      confirm-text="确认注销"
+      title="确认退出登录"
+      message="确定要退出登录吗？"
+      confirm-text="确认退出"
       cancel-text="取消"
       @confirm="confirmLogout"
       @cancel="cancelLogout"
     />
+
+    <!-- 错误消息提示 -->
+    <div
+      v-if="saveMessage"
+      :class="[
+        'fixed top-20 left-1/2 transform -translate-x-1/2 p-4 rounded-lg shadow-lg z-50 transition-all duration-300 max-w-md w-full mx-4',
+        saveSuccess
+          ? 'bg-green-500/20 border border-green-500/50 text-green-400'
+          : 'bg-red-500/20 border border-red-500/50 text-red-400',
+      ]"
+    >
+      {{ saveMessage }}
+    </div>
   </div>
 </template>

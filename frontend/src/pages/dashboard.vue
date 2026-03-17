@@ -7,12 +7,31 @@ import {
   setInterviewId,
   clearAll,
 } from "@/utils/token";
+import { authApi } from "@/lib/api";
+import ConfirmDialog from "@/components/ConfirmDialog.vue";
 
 const router = useRouter();
 const showDropdown = ref(false);
 let hideTimeout: number | null = null;
 
 const name = ref("奶龙");
+const showLogoutDialog = ref(false);
+const saveMessage = ref("");
+const saveSuccess = ref(false);
+let messageTimeout: number | null = null;
+
+// 通用错误消息处理函数
+const showMessage = (message: string, isSuccess: boolean = false) => {
+  if (messageTimeout) {
+    clearTimeout(messageTimeout);
+  }
+  saveMessage.value = message;
+  saveSuccess.value = isSuccess;
+  messageTimeout = window.setTimeout(() => {
+    saveMessage.value = "";
+    messageTimeout = null;
+  }, 3000);
+};
 
 // 从localStorage获取用户信息
 onMounted(() => {
@@ -23,11 +42,42 @@ onMounted(() => {
 });
 
 const handleLogout = () => {
-  // 清除所有用户信息
-  clearAll();
-  console.log("用户登出");
-  // 登出后跳转到登录页面
-  router.push("/signin");
+  // 显示确认对话框
+  showLogoutDialog.value = true;
+};
+
+const confirmLogout = async () => {
+  showLogoutDialog.value = false;
+
+  // 清除之前的定时器
+  if (messageTimeout) {
+    clearTimeout(messageTimeout);
+    messageTimeout = null;
+  }
+
+  try {
+    // 调用退出登录 API
+    const response = await authApi.apiAuthSignoutPost();
+    const data = response.data;
+
+    if (data.success) {
+      console.log("退出登录成功:", data.message);
+      // 清除所有用户信息
+      clearAll();
+      // 跳转到登录页面
+      router.push("/signin");
+    } else {
+      console.error("退出登录失败:", data.message);
+      showMessage(data.message || "退出登录失败");
+    }
+  } catch (err: any) {
+    console.error("退出登录错误:", err);
+    showMessage(err.response?.data?.message || "网络错误，请稍后重试");
+  }
+};
+
+const cancelLogout = () => {
+  showLogoutDialog.value = false;
 };
 
 const goToHome = () => {
@@ -54,6 +104,9 @@ const startNewInterview = async () => {
     if (!token) {
       errorMessage.value = "请先登录";
       isLoading.value = false;
+      setTimeout(() => {
+        errorMessage.value = "";
+      }, 3000);
       return;
     }
 
@@ -82,10 +135,16 @@ const startNewInterview = async () => {
       router.push("/interview");
     } else {
       errorMessage.value = data.message || "启动面试失败";
+      setTimeout(() => {
+        errorMessage.value = "";
+      }, 3000);
     }
   } catch (error) {
     console.error("启动面试失败:", error);
     errorMessage.value = "网络错误，请稍后重试";
+    setTimeout(() => {
+      errorMessage.value = "";
+    }, 3000);
   } finally {
     // 隐藏加载状态
     isLoading.value = false;
@@ -127,12 +186,15 @@ onUnmounted(() => {
   if (hideTimeout) {
     clearTimeout(hideTimeout);
   }
+  if (messageTimeout) {
+    clearTimeout(messageTimeout);
+  }
 });
 </script>
 
 <template>
   <div
-    class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 relative overflow-hidden"
+    class="min-h-screen bg-linear-to-br from-gray-900 via-gray-800 to-gray-900 relative overflow-hidden"
   >
     <!-- 背景 -->
     <div
@@ -165,7 +227,7 @@ onUnmounted(() => {
             class="flex items-center justify-center w-10 h-10 rounded-full bg-gray-800/50 hover:bg-gray-700/50 border border-gray-600 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10 cursor-pointer"
           >
             <div
-              class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-medium"
+              class="w-8 h-8 rounded-full bg-linear-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-medium"
             >
               {{ name?.[0] || "用" }}
             </div>
@@ -616,7 +678,7 @@ onUnmounted(() => {
           <button
             @click="startNewInterview"
             :disabled="isLoading"
-            class="w-full py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 text-white font-medium transition-all shadow-lg hover:shadow-blue-500/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            class="w-full py-3 rounded-xl bg-linear-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 text-white font-medium transition-all shadow-lg hover:shadow-blue-500/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <svg
               v-if="!isLoading"
@@ -677,6 +739,30 @@ onUnmounted(() => {
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- 退出登录确认对话框 -->
+    <ConfirmDialog
+      :show="showLogoutDialog"
+      title="确认退出登录"
+      message="确定要退出登录吗？"
+      confirm-text="确认退出"
+      cancel-text="取消"
+      @confirm="confirmLogout"
+      @cancel="cancelLogout"
+    />
+
+    <!-- 错误消息提示 -->
+    <div
+      v-if="saveMessage"
+      :class="[
+        'fixed top-20 left-1/2 transform -translate-x-1/2 p-4 rounded-lg shadow-lg z-50 transition-all duration-300 max-w-md w-full mx-4',
+        saveSuccess
+          ? 'bg-green-500/20 border border-green-500/50 text-green-400'
+          : 'bg-red-500/20 border border-red-500/50 text-red-400',
+      ]"
+    >
+      {{ saveMessage }}
     </div>
   </div>
 </template>

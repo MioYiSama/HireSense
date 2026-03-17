@@ -7,6 +7,7 @@ import {
   removeInterviewId,
 } from "@/utils/token";
 import ConfirmDialog from "@/components/ConfirmDialog.vue";
+import InterviewInput from "@/components/InterviewInput.vue";
 
 const router = useRouter();
 const showConfirmDialog = ref(false);
@@ -15,6 +16,16 @@ const timerInterval = ref<number | null>(null);
 const isLoading = ref(false);
 const errorMessage = ref("");
 const interviewId = ref(getInterviewId());
+
+// 录音状态
+const isRecording = ref(false);
+const recordingTime = ref(0);
+const recordingInterval = ref<number | null>(null);
+const mediaRecorder = ref<MediaRecorder | null>(null);
+const audioChunks = ref<Blob[]>([]);
+const isCancelingRecording = ref(false);
+const answerCountdown = ref(60);
+const countdownInterval = ref<number | null>(null);
 
 // 定义消息类型
 interface Message {
@@ -28,7 +39,53 @@ interface Message {
 const messages = ref<Message[]>([]);
 const userInput = ref("");
 const isSubmitting = ref(false);
+
+// 处理输入消息
+const handleInputMessage = (message: string) => {
+  userInput.value = message;
+  sendMessage();
+};
 const isInitialLoading = ref(true);
+
+// API请求函数
+const sendInterviewReply = async (payload: { text: string } | FormData) => {
+  const token = getAccessToken();
+  const id = getInterviewId();
+  const url = `http://127.0.0.1:8080/api/interview/reply?id=${id}`;
+
+  const options = {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+
+      ...(payload instanceof FormData
+        ? {}
+        : { "Content-Type": "application/json" }),
+    },
+    body: payload instanceof FormData ? payload : JSON.stringify(payload),
+  };
+
+  const response = await fetch(url, options);
+  const data = await response.json();
+
+  if (data.success) {
+    // 添加AI回复
+    const aiMessage = {
+      id: Date.now() + 1,
+      role: "ai" as const,
+      content: data.data.reply,
+      timestamp: new Date().toLocaleTimeString(),
+    };
+    messages.value.push(aiMessage);
+
+    // 检查是否面试结束
+    if (data.data.ending) {
+      console.log("面试已结束");
+    }
+  } else {
+    throw new Error(data.message || "API请求失败");
+  }
+};
 
 const sendMessage = async () => {
   if (!userInput.value.trim() || isSubmitting.value) return;
@@ -48,19 +105,23 @@ const sendMessage = async () => {
 
   console.log("用户输入:", inputContent);
 
-  // 先模拟AI回复
+  // 发送请求获取AI回复
   isSubmitting.value = true;
-  setTimeout(() => {
-    const aiMessage = {
+  try {
+    await sendInterviewReply({ text: inputContent });
+  } catch (error) {
+    console.error("发送消息失败:", error);
+    // 添加错误提示消息
+    const errorMessage = {
       id: Date.now() + 1,
       role: "ai" as const,
-      content:
-        "感谢你的回答。这是一个模拟的AI回复。在实际应用中，这里会发送API请求获取真实的AI面试官回复。",
+      content: "抱歉，我暂时无法回复，请稍后再试。",
       timestamp: new Date().toLocaleTimeString(),
     };
-    messages.value.push(aiMessage);
+    messages.value.push(errorMessage);
+  } finally {
     isSubmitting.value = false;
-  }, 1000);
+  }
 };
 
 const formatTime = (seconds: number) => {
@@ -95,6 +156,16 @@ onUnmounted(() => {
   // 清除计时器
   if (timerInterval.value) {
     clearInterval(timerInterval.value);
+  }
+
+  // 清除录音计时器
+  if (recordingInterval.value) {
+    clearInterval(recordingInterval.value);
+  }
+
+  // 停止录音
+  if (mediaRecorder.value && isRecording.value) {
+    mediaRecorder.value.stop();
   }
 });
 
@@ -168,11 +239,254 @@ const cancelEndInterview = () => {
   // 取消结束面试
   showConfirmDialog.value = false;
 };
+
+// WAV音频编码器
+class WavEncoder {
+  private sampleRate: number;
+
+  constructor(sampleRate: number = 44100) {
+    this.sampleRate = sampleRate;
+  }
+
+  async encode(audioBuffer: AudioBuffer): Promise<Blob> {
+    const numberOfChannels = audioBuffer.numberOfChannels;
+    const length = audioBuffer.length * numberOfChannels * 2 + 44;
+    const buffer = new ArrayBuffer(length);
+    const view = new DataView(buffer);
+
+    // WAV文件头
+    const writeString = (offset: number, string: string) => {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    };
+
+    writeString(0, "RIFF");
+    view.setUint32(4, 36 + audioBuffer.length * numberOfChannels * 2, true);
+    writeString(8, "WAVE");
+    writeString(12, "fmt ");
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, numberOfChannels, true);
+    view.setUint32(24, this.sampleRate, true);
+    view.setUint32(28, this.sampleRate * numberOfChannels * 2, true);
+    view.setUint16(32, numberOfChannels * 2, true);
+    view.setUint16(34, 16, true);
+    writeString(36, "data");
+    view.setUint32(40, audioBuffer.length * numberOfChannels * 2, true);
+
+    // 写入音频数据
+    const channels: Float32Array[] = [];
+    for (let i = 0; i < numberOfChannels; i++) {
+      channels.push(audioBuffer.getChannelData(i));
+    }
+
+    let offset = 44;
+    for (let i = 0; i < audioBuffer.length; i++) {
+      for (let channel = 0; channel < numberOfChannels; channel++) {
+        const channelData = channels[channel];
+        if (channelData && i < channelData.length) {
+          const sampleValue = channelData[i];
+          if (sampleValue !== undefined) {
+            let sample = Math.max(-1, Math.min(1, sampleValue));
+            sample = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
+            view.setInt16(offset, sample, true);
+            offset += 2;
+          }
+        }
+      }
+    }
+
+    return new Blob([buffer], { type: "audio/wav" });
+  }
+}
+
+// 开始录音
+const startRecording = async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder.value = new MediaRecorder(stream, { mimeType: "audio/webm" });
+    audioChunks.value = [];
+
+    mediaRecorder.value.ondataavailable = (event) => {
+      if (event.data.size > 0 && !isCancelingRecording.value) {
+        audioChunks.value.push(event.data);
+      }
+    };
+
+    mediaRecorder.value.onstop = async () => {
+      // 检查是否有录音数据
+      if (audioChunks.value.length === 0) {
+        console.log("录音被中断，没有数据");
+        // 重置取消标志
+        isCancelingRecording.value = false;
+        return;
+      }
+
+      const audioBlob = new Blob(audioChunks.value, { type: "audio/webm" });
+      console.log("录音完成，音频数据:", audioBlob);
+      console.log("音频大小:", audioBlob.size, "bytes");
+
+      // 将WebM转换为WAV格式
+      try {
+        const audioContext = new AudioContext();
+        const arrayBuffer = await audioBlob.arrayBuffer();
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+        const encoder = new WavEncoder(audioBuffer.sampleRate);
+        const wavBlob = await encoder.encode(audioBuffer);
+
+        console.log("WAV文件生成成功:", wavBlob);
+        console.log("WAV文件大小:", wavBlob.size, "bytes");
+
+        // 发送录音消息到聊天界面
+        await sendAudioMessage(wavBlob, recordingTime.value);
+
+        // 可以在这里将WAV文件发送到服务器或进行其他处理
+        const wavUrl = URL.createObjectURL(wavBlob);
+        console.log("WAV文件URL:", wavUrl);
+
+        // 清理URL对象
+        setTimeout(() => URL.revokeObjectURL(wavUrl), 1000);
+      } catch (error) {
+        console.error("WAV转换失败:", error);
+      }
+
+      // 清空录音数据
+      audioChunks.value = [];
+      recordingTime.value = 0;
+      // 重置取消标志
+      isCancelingRecording.value = false;
+    };
+
+    mediaRecorder.value.start();
+    isRecording.value = true;
+    recordingTime.value = 0;
+    answerCountdown.value = 60;
+
+    // 开始录音计时
+    recordingInterval.value = window.setInterval(() => {
+      recordingTime.value++;
+    }, 1000);
+
+    // 开始作答倒计时
+    countdownInterval.value = window.setInterval(() => {
+      if (answerCountdown.value > 0) {
+        answerCountdown.value--;
+      } else {
+        // 倒计时结束，自动停止录音
+        stopRecording();
+      }
+    }, 1000);
+
+    console.log("开始录音");
+  } catch (error) {
+    console.error("录音失败:", error);
+    alert("无法访问麦克风，请确保已授予权限");
+  }
+};
+
+// 停止录音
+const stopRecording = () => {
+  if (mediaRecorder.value && isRecording.value) {
+    mediaRecorder.value.stop();
+    isRecording.value = false;
+
+    // 停止计时
+    if (recordingInterval.value) {
+      clearInterval(recordingInterval.value);
+      recordingInterval.value = null;
+    }
+
+    // 停止倒计时
+    if (countdownInterval.value) {
+      clearInterval(countdownInterval.value);
+      countdownInterval.value = null;
+    }
+
+    console.log("停止录音，录音时长:", recordingTime.value, "秒");
+  }
+};
+
+// 中断录音
+const cancelRecording = () => {
+  if (mediaRecorder.value && isRecording.value) {
+    // 设置取消标志，这样ondataavailable事件就不会添加数据
+    isCancelingRecording.value = true;
+
+    // 清空录音数据
+    audioChunks.value = [];
+
+    // 停止录音
+    mediaRecorder.value.stop();
+    isRecording.value = false;
+
+    // 停止计时
+    if (recordingInterval.value) {
+      clearInterval(recordingInterval.value);
+      recordingInterval.value = null;
+    }
+
+    // 停止倒计时
+    if (countdownInterval.value) {
+      clearInterval(countdownInterval.value);
+      countdownInterval.value = null;
+    }
+
+    // 重置录音时间
+    recordingTime.value = 0;
+    answerCountdown.value = 60;
+
+    console.log("中断录音");
+  }
+};
+
+// 发送录音消息
+const sendAudioMessage = async (audioBlob: Blob, duration: number) => {
+  // 添加用户消息
+  const id = Date.now();
+  const newMessage: Message = {
+    id,
+    role: "user",
+    content: `[语音消息] ${formatRecordingTime(duration)}`,
+    timestamp: new Date().toLocaleTimeString(),
+  };
+  messages.value.push(newMessage);
+
+  // 发送请求获取AI回复
+  isSubmitting.value = true;
+  try {
+    const formData = new FormData();
+    formData.append("audio", audioBlob, "recording.wav");
+    formData.append("text", `[语音消息] ${formatRecordingTime(duration)}`);
+
+    await sendInterviewReply(formData);
+  } catch (error) {
+    console.error("发送语音消息失败:", error);
+    // 添加错误提示消息
+    const errorMessage = {
+      id: Date.now() + 1,
+      role: "ai" as const,
+      content: "抱歉，我暂时无法处理语音消息，请稍后再试。",
+      timestamp: new Date().toLocaleTimeString(),
+    };
+    messages.value.push(errorMessage);
+  } finally {
+    isSubmitting.value = false;
+  }
+};
+
+// 格式化录音时间
+const formatRecordingTime = (seconds: number) => {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+};
 </script>
 
 <template>
   <div
-    class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 relative overflow-hidden"
+    class="min-h-screen bg-linear-to-br from-gray-900 via-gray-800 to-gray-900 relative overflow-hidden"
   >
     <!-- 背景 -->
     <div
@@ -221,7 +535,7 @@ const cancelEndInterview = () => {
         <!-- 结束面试按钮 -->
         <button
           @click="endInterview"
-          class="group px-4 py-1.5 rounded-xl bg-gradient-to-r from-red-500/20 to-red-600/20 hover:from-red-500 hover:to-red-600 text-red-400 hover:text-white font-semibold transition-all duration-300 border border-red-500/40 hover:border-red-500 shadow-lg shadow-red-500/10 hover:shadow-red-500/30 cursor-pointer flex items-center gap-2 hover:scale-105 active:scale-95"
+          class="group px-4 py-1.5 rounded-xl bg-linear-to-r from-red-500/20 to-red-600/20 hover:from-red-500 hover:to-red-600 text-red-400 hover:text-white font-semibold transition-all duration-300 border border-red-500/40 hover:border-red-500 shadow-lg shadow-red-500/10 hover:shadow-red-500/30 cursor-pointer flex items-center gap-2 hover:scale-105 active:scale-95"
         >
           <div class="relative">
             <svg
@@ -304,7 +618,7 @@ const cancelEndInterview = () => {
                 class="flex items-start gap-3 max-w-[80%]"
               >
                 <div
-                  class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0"
+                  class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0"
                 >
                   <svg
                     class="w-5 h-5 text-blue-400"
@@ -340,7 +654,7 @@ const cancelEndInterview = () => {
               <!-- 用户消息 -->
               <div v-else class="flex items-start gap-3 max-w-[80%]">
                 <div
-                  class="bg-gradient-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 rounded-2xl rounded-tr-none p-4 shadow-lg"
+                  class="bg-linear-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 rounded-2xl rounded-tr-none p-4 shadow-lg"
                 >
                   <div class="flex items-center justify-between mb-2">
                     <span class="text-sm font-medium text-blue-300">你</span>
@@ -353,7 +667,7 @@ const cancelEndInterview = () => {
                   </p>
                 </div>
                 <div
-                  class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0"
+                  class="w-10 h-10 rounded-full bg-linear-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0"
                 >
                   <span class="text-white font-medium text-sm">你</span>
                 </div>
@@ -364,7 +678,7 @@ const cancelEndInterview = () => {
             <div v-if="isSubmitting" class="flex justify-start">
               <div class="flex items-start gap-3 max-w-[80%]">
                 <div
-                  class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0"
+                  class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0"
                 >
                   <svg
                     class="w-5 h-5 text-blue-400 animate-spin"
@@ -405,87 +719,16 @@ const cancelEndInterview = () => {
 
         <!-- 底部输入区域 -->
         <div class="border-t border-gray-700/50 p-4 bg-gray-900/80">
-          <div class="flex items-center gap-2">
-            <button
-              class="p-2 rounded-xl bg-gray-800/50 hover:bg-gray-700/50 text-gray-400 hover:text-white transition-all"
-            >
-              <svg
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-            </button>
-            <button
-              class="p-2 rounded-xl bg-gray-800/50 hover:bg-gray-700/50 text-gray-400 hover:text-white transition-all"
-            >
-              <svg
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </button>
-            <button
-              class="p-2 rounded-xl bg-gray-800/50 hover:bg-gray-700/50 text-gray-400 hover:text-white transition-all"
-            >
-              <svg
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
-                />
-              </svg>
-            </button>
-            <div class="flex-1 relative">
-              <input
-                v-model="userInput"
-                type="text"
-                placeholder="输入你的回答..."
-                class="w-full bg-gray-800/50 border border-gray-700/50 rounded-xl px-4 py-3 text-gray-300 placeholder-gray-500 focus:outline-none focus:border-blue-500/50 transition-colors"
-                @keyup.enter="sendMessage"
-              />
-            </div>
-            <button
-              @click="sendMessage"
-              :disabled="!userInput.trim() || isSubmitting"
-              class="p-3 rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <svg
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"
-                />
-              </svg>
-            </button>
-          </div>
+          <InterviewInput
+            :is-recording="isRecording"
+            :is-submitting="isSubmitting"
+            :recording-time="recordingTime"
+            :answer-countdown="answerCountdown"
+            @send-message="handleInputMessage"
+            @start-recording="startRecording"
+            @stop-recording="stopRecording"
+            @cancel-recording="cancelRecording"
+          />
         </div>
       </div>
     </div>

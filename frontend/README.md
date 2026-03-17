@@ -8,7 +8,6 @@
 - `/dashboard` - 仪表盘
 - `/interview` - 面试页
 - `/profile` - 个人档案/设置
-- `/interviews` - 面试历史记录
 - `/interview/:id/report` - 面试报告
 
 ## 认证

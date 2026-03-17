@@ -133,7 +133,7 @@ const typeStyles = {
         <button
           @click="$emit('confirm')"
           :disabled="loading"
-          class="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r text-white font-semibold transition-all shadow-lg transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+          class="flex-1 py-2.5 px-4 rounded-xl bg-linear-to-r text-white font-semibold transition-all shadow-lg transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
           :class="typeStyles[type].confirmBtn"
         >
           <svg
