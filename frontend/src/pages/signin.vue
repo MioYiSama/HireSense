@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useRouter } from "vue-router";
-import { authApi } from "@/lib/api";
-import { setAccessToken } from "@/utils/token";
+import { authApi, userApi } from "@/lib/api";
+import { setAccessToken, setUserInfo } from "@/utils/token";
 import type { SignInRequest } from "@/api";
 
 const router = useRouter();
@@ -34,6 +34,17 @@ const handleLogin = async () => {
       // 登录成功，保存 Token
       setAccessToken(data.data);
       console.log("登录成功:", data.message);
+
+      // 获取用户信息并保存
+      try {
+        const profileResponse = await userApi.apiUserProfileGet();
+        if (profileResponse.data.success) {
+          setUserInfo(profileResponse.data.data);
+        }
+      } catch (err) {
+        console.error("获取用户信息失败:", err);
+      }
+
       // 跳转到仪表盘
       router.push("/dashboard");
     } else {

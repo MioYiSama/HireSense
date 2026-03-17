@@ -171,24 +171,30 @@
     </style>
   </head>
   <body
-    class="bg-gradient-to-br from-surface-900 via-surface-800 to-slate-900 min-h-screen text-white overflow-x-hidden"
+    class="bg-linear-to-br from-surface-900 via-surface-800 to-slate-900 min-h-screen text-white overflow-x-hidden"
   >
     <!-- 背景装饰 -->
     <div class="fixed inset-0 overflow-hidden pointer-events-none">
-      <div class="absolute top-0 right-0 w-96 h-96 bg-primary-500/10 rounded-full blur-3xl"></div>
-      <div class="absolute bottom-0 left-0 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl"></div>
       <div
-        class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary-600/5 rounded-full blur-3xl"
+        class="absolute top-0 right-0 w-96 h-96 bg-primary-500/10 rounded-full blur-3xl"
+      ></div>
+      <div
+        class="absolute bottom-0 left-0 w-80 h-80 bg-blue-500/10 rounded-full blur-3xl"
+      ></div>
+      <div
+        class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-150 h-150 bg-primary-600/5 rounded-full blur-3xl"
       ></div>
     </div>
 
     <!-- 顶部导航栏 -->
-    <header class="fixed top-0 left-0 right-0 z-50 glass border-b border-white/5">
+    <header
+      class="fixed top-0 left-0 right-0 z-50 glass border-b border-white/5"
+    >
       <div class="flex items-center justify-between px-6 py-4">
         <!-- Logo -->
         <div class="flex items-center gap-3">
           <div
-            class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center glow-sm"
+            class="w-10 h-10 rounded-xl bg-linear-to-br from-primary-400 to-primary-600 flex items-center justify-center glow-sm"
           >
             <i class="fas fa-brain text-white text-lg"></i>
           </div>
@@ -208,7 +214,8 @@
             <i
               class="fas fa-sliders text-primary-400 group-hover:rotate-90 transition-transform duration-300"
             ></i>
-            <span class="text-sm font-medium text-slate-300 group-hover:text-white"
+            <span
+              class="text-sm font-medium text-slate-300 group-hover:text-white"
               >个性化设置</span
             >
           </button>
@@ -232,7 +239,7 @@
               class="flex items-center gap-3 px-3 py-2 rounded-xl glass-light hover:bg-primary-500/20 transition-all"
             >
               <div
-                class="w-9 h-9 rounded-full bg-gradient-to-br from-primary-400 to-blue-500 flex items-center justify-center"
+                class="w-9 h-9 rounded-full bg-linear-to-br from-primary-400 to-blue-500 flex items-center justify-center"
               >
                 <i class="fas fa-user text-white text-sm"></i>
               </div>
@@ -300,7 +307,10 @@
         <div class="p-4 border-b border-white/5">
           <div class="flex items-center justify-between mb-3">
             <h2 class="font-display font-semibold text-white">历史面试记录</h2>
-            <span class="text-xs text-slate-400 bg-surface-700 px-2 py-1 rounded-full">12次</span>
+            <span
+              class="text-xs text-slate-400 bg-surface-700 px-2 py-1 rounded-full"
+              >12次</span
+            >
           </div>
           <div class="relative">
             <input
@@ -308,7 +318,9 @@
               placeholder="搜索面试记录..."
               class="w-full bg-surface-700/50 border border-white/5 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-primary-500/50 transition-colors"
             />
-            <i class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
+            <i
+              class="fas fa-search absolute right-3 top-1/2 -translate-y-1/2 text-slate-500"
+            ></i>
           </div>
         </div>
 
@@ -319,7 +331,8 @@
             style="animation-delay: 0.1s"
           >
             <div class="flex items-start justify-between mb-2">
-              <span class="text-xs text-primary-400 bg-primary-500/10 px-2 py-1 rounded-lg"
+              <span
+                class="text-xs text-primary-400 bg-primary-500/10 px-2 py-1 rounded-lg"
                 >产品经理</span
               >
               <span class="text-xs text-slate-500">今天 14:30</span>
@@ -345,7 +358,8 @@
             style="animation-delay: 0.15s"
           >
             <div class="flex items-start justify-between mb-2">
-              <span class="text-xs text-blue-400 bg-blue-500/10 px-2 py-1 rounded-lg"
+              <span
+                class="text-xs text-blue-400 bg-blue-500/10 px-2 py-1 rounded-lg"
                 >产品经理</span
               >
               <span class="text-xs text-slate-500">昨天 10:00</span>
@@ -371,7 +385,8 @@
             style="animation-delay: 0.2s"
           >
             <div class="flex items-start justify-between mb-2">
-              <span class="text-xs text-purple-400 bg-purple-500/10 px-2 py-1 rounded-lg"
+              <span
+                class="text-xs text-purple-400 bg-purple-500/10 px-2 py-1 rounded-lg"
                 >产品经理</span
               >
               <span class="text-xs text-slate-500">3天前</span>
@@ -397,7 +412,8 @@
             style="animation-delay: 0.25s"
           >
             <div class="flex items-start justify-between mb-2">
-              <span class="text-xs text-orange-400 bg-orange-500/10 px-2 py-1 rounded-lg"
+              <span
+                class="text-xs text-orange-400 bg-orange-500/10 px-2 py-1 rounded-lg"
                 >产品经理</span
               >
               <span class="text-xs text-slate-500">5天前</span>
@@ -423,7 +439,8 @@
             style="animation-delay: 0.3s"
           >
             <div class="flex items-start justify-between mb-2">
-              <span class="text-xs text-teal-400 bg-teal-500/10 px-2 py-1 rounded-lg"
+              <span
+                class="text-xs text-teal-400 bg-teal-500/10 px-2 py-1 rounded-lg"
                 >产品经理</span
               >
               <span class="text-xs text-slate-500">1周前</span>
@@ -448,7 +465,7 @@
         <!-- 开始新面试按钮 -->
         <div class="p-4 border-t border-white/5">
           <button
-            class="w-full py-3 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-400 hover:to-primary-500 text-white font-medium transition-all glow-sm hover:glow flex items-center justify-center gap-2"
+            class="w-full py-3 rounded-xl bg-linear-to-r from-primary-500 to-primary-600 hover:from-primary-400 hover:to-primary-500 text-white font-medium transition-all glow-sm hover:glow flex items-center justify-center gap-2"
           >
             <i class="fas fa-plus"></i>
             <span>开始新面试</span>
@@ -465,7 +482,9 @@
           ></div>
           <div class="relative flex items-center justify-between">
             <div>
-              <h2 class="font-display text-2xl font-bold text-white mb-2">下午好，张明</h2>
+              <h2 class="font-display text-2xl font-bold text-white mb-2">
+                下午好，张明
+              </h2>
               <p class="text-slate-400">
                 继续你的面试准备之旅，距离目标还有
                 <span class="text-primary-400 font-semibold">3次</span> 模拟面试
@@ -495,8 +514,11 @@
           <!-- 能力雷达图 -->
           <div class="lg:col-span-2 glass rounded-2xl p-6 card-hover">
             <div class="flex items-center justify-between mb-6">
-              <h3 class="font-display font-semibold text-lg text-white">能力分析雷达</h3>
-              <span class="text-xs text-slate-400 bg-surface-700 px-3 py-1 rounded-full"
+              <h3 class="font-display font-semibold text-lg text-white">
+                能力分析雷达
+              </h3>
+              <span
+                class="text-xs text-slate-400 bg-surface-700 px-3 py-1 rounded-full"
                 >基于最近5次面试</span
               >
             </div>
@@ -594,27 +616,69 @@
                   <circle cx="-60.6" cy="-42.5" r="4" fill="#06b6d4" />
                 </g>
                 <!-- 标签 -->
-                <text x="160" y="20" text-anchor="middle" fill="#94a3b8" font-size="12">
+                <text
+                  x="160"
+                  y="20"
+                  text-anchor="middle"
+                  fill="#94a3b8"
+                  font-size="12"
+                >
                   产品思维
                 </text>
-                <text x="280" y="95" text-anchor="start" fill="#94a3b8" font-size="12">
+                <text
+                  x="280"
+                  y="95"
+                  text-anchor="start"
+                  fill="#94a3b8"
+                  font-size="12"
+                >
                   数据分析
                 </text>
-                <text x="280" y="195" text-anchor="start" fill="#94a3b8" font-size="12">
+                <text
+                  x="280"
+                  y="195"
+                  text-anchor="start"
+                  fill="#94a3b8"
+                  font-size="12"
+                >
                   沟通表达
                 </text>
-                <text x="160" y="270" text-anchor="middle" fill="#94a3b8" font-size="12">
+                <text
+                  x="160"
+                  y="270"
+                  text-anchor="middle"
+                  fill="#94a3b8"
+                  font-size="12"
+                >
                   系统设计
                 </text>
-                <text x="40" y="195" text-anchor="end" fill="#94a3b8" font-size="12">行为面试</text>
-                <text x="40" y="95" text-anchor="end" fill="#94a3b8" font-size="12">技术理解</text>
+                <text
+                  x="40"
+                  y="195"
+                  text-anchor="end"
+                  fill="#94a3b8"
+                  font-size="12"
+                >
+                  行为面试
+                </text>
+                <text
+                  x="40"
+                  y="95"
+                  text-anchor="end"
+                  fill="#94a3b8"
+                  font-size="12"
+                >
+                  技术理解
+                </text>
               </svg>
             </div>
           </div>
 
           <!-- 综合评分 -->
           <div class="glass rounded-2xl p-6 card-hover">
-            <h3 class="font-display font-semibold text-lg text-white mb-6">综合评分</h3>
+            <h3 class="font-display font-semibold text-lg text-white mb-6">
+              综合评分
+            </h3>
             <div class="flex flex-col items-center">
               <div class="relative w-36 h-36 mb-4">
                 <svg class="w-full h-full progress-ring" viewBox="0 0 100 100">
@@ -639,13 +703,21 @@
                     class="progress-animate"
                   />
                   <defs>
-                    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <linearGradient
+                      id="gradient"
+                      x1="0%"
+                      y1="0%"
+                      x2="100%"
+                      y2="0%"
+                    >
                       <stop offset="0%" stop-color="#06b6d4" />
                       <stop offset="100%" stop-color="#22d3ee" />
                     </linearGradient>
                   </defs>
                 </svg>
-                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <div
+                  class="absolute inset-0 flex flex-col items-center justify-center"
+                >
                   <span class="text-4xl font-bold text-white">85</span>
                   <span class="text-xs text-slate-400">综合分</span>
                 </div>
@@ -653,7 +725,9 @@
               <div class="w-full space-y-3">
                 <div class="flex items-center justify-between">
                   <span class="text-sm text-slate-400">排名</span>
-                  <span class="text-sm font-medium text-primary-400">前15%</span>
+                  <span class="text-sm font-medium text-primary-400"
+                    >前15%</span
+                  >
                 </div>
                 <div class="flex items-center justify-between">
                   <span class="text-sm text-slate-400">等级</span>
@@ -673,14 +747,18 @@
         <!-- 个性化建议 -->
         <div class="glass rounded-2xl p-6 card-hover">
           <div class="flex items-center justify-between mb-6">
-            <h3 class="font-display font-semibold text-lg text-white">个性化提升建议</h3>
+            <h3 class="font-display font-semibold text-lg text-white">
+              个性化提升建议
+            </h3>
             <span
               class="text-xs text-primary-400 bg-primary-500/10 px-3 py-1 rounded-full cursor-pointer hover:bg-primary-500/20 transition-colors"
               >查看全部</span
             >
           </div>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div class="glass-light rounded-xl p-4 border-l-2 border-yellow-400">
+            <div
+              class="glass-light rounded-xl p-4 border-l-2 border-yellow-400"
+            >
               <div class="flex items-center gap-2 mb-3">
                 <i class="fas fa-lightbulb text-yellow-400"></i>
                 <span class="text-sm font-medium text-white">重点提升</span>
@@ -689,8 +767,13 @@
                 系统设计能力相对薄弱，建议增加架构设计类题目练习
               </p>
               <div class="flex items-center gap-2">
-                <div class="flex-1 h-2 bg-surface-700 rounded-full overflow-hidden">
-                  <div class="h-full bg-yellow-400 rounded-full" style="width: 65%"></div>
+                <div
+                  class="flex-1 h-2 bg-surface-700 rounded-full overflow-hidden"
+                >
+                  <div
+                    class="h-full bg-yellow-400 rounded-full"
+                    style="width: 65%"
+                  ></div>
                 </div>
                 <span class="text-xs text-slate-400">65%</span>
               </div>
@@ -705,19 +788,28 @@
                 沟通表达能力表现优秀，继续保持清晰的表达逻辑
               </p>
               <div class="flex items-center gap-2">
-                <div class="flex-1 h-2 bg-surface-700 rounded-full overflow-hidden">
-                  <div class="h-full bg-green-400 rounded-full" style="width: 92%"></div>
+                <div
+                  class="flex-1 h-2 bg-surface-700 rounded-full overflow-hidden"
+                >
+                  <div
+                    class="h-full bg-green-400 rounded-full"
+                    style="width: 92%"
+                  ></div>
                 </div>
                 <span class="text-xs text-slate-400">92%</span>
               </div>
             </div>
 
-            <div class="glass-light rounded-xl p-4 border-l-2 border-primary-400">
+            <div
+              class="glass-light rounded-xl p-4 border-l-2 border-primary-400"
+            >
               <div class="flex items-center gap-2 mb-3">
                 <i class="fas fa-tasks text-primary-400"></i>
                 <span class="text-sm font-medium text-white">推荐练习</span>
               </div>
-              <p class="text-sm text-slate-400 mb-3">基于目标岗位，推荐进行3次技术深度面试</p>
+              <p class="text-sm text-slate-400 mb-3">
+                基于目标岗位，推荐进行3次技术深度面试
+              </p>
               <button
                 class="w-full py-2 rounded-lg bg-primary-500/20 text-primary-400 text-sm font-medium hover:bg-primary-500/30 transition-colors"
               >
@@ -730,9 +822,13 @@
         <!-- 面试报告通知栏 -->
         <div class="glass rounded-2xl p-6 card-hover">
           <div class="flex items-center justify-between mb-6">
-            <h3 class="font-display font-semibold text-lg text-white">面试报告通知</h3>
+            <h3 class="font-display font-semibold text-lg text-white">
+              面试报告通知
+            </h3>
             <div class="flex items-center gap-2">
-              <span class="notification-badge w-2 h-2 bg-red-500 rounded-full"></span>
+              <span
+                class="notification-badge w-2 h-2 bg-red-500 rounded-full"
+              ></span>
               <span class="text-xs text-slate-400">3条新通知</span>
             </div>
           </div>
@@ -741,14 +837,19 @@
               class="glass-light rounded-xl p-4 flex items-center gap-4 cursor-pointer hover:bg-primary-500/10 transition-colors group"
             >
               <div
-                class="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center flex-shrink-0"
+                class="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center shrink-0"
               >
                 <i class="fas fa-file-alt text-green-400 text-lg"></i>
               </div>
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 mb-1">
-                  <span class="text-sm font-medium text-white">字节跳动一面报告已生成</span>
-                  <span class="text-xs text-green-400 bg-green-500/10 px-2 py-0.5 rounded">新</span>
+                  <span class="text-sm font-medium text-white"
+                    >字节跳动一面报告已生成</span
+                  >
+                  <span
+                    class="text-xs text-green-400 bg-green-500/10 px-2 py-0.5 rounded"
+                    >新</span
+                  >
                 </div>
                 <p class="text-xs text-slate-400 truncate">
                   综合评分85分，发现3个待改进点，2个亮点表现
@@ -766,14 +867,19 @@
               class="glass-light rounded-xl p-4 flex items-center gap-4 cursor-pointer hover:bg-primary-500/10 transition-colors group"
             >
               <div
-                class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center flex-shrink-0"
+                class="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center shrink-0"
               >
                 <i class="fas fa-chart-pie text-blue-400 text-lg"></i>
               </div>
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 mb-1">
-                  <span class="text-sm font-medium text-white">能力分析周报已更新</span>
-                  <span class="text-xs text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded">周报</span>
+                  <span class="text-sm font-medium text-white"
+                    >能力分析周报已更新</span
+                  >
+                  <span
+                    class="text-xs text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded"
+                    >周报</span
+                  >
                 </div>
                 <p class="text-xs text-slate-400 truncate">
                   本周完成4次面试，整体进步12%，系统设计能力提升明显
@@ -791,18 +897,23 @@
               class="glass-light rounded-xl p-4 flex items-center gap-4 cursor-pointer hover:bg-primary-500/10 transition-colors group"
             >
               <div
-                class="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center flex-shrink-0"
+                class="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center shrink-0"
               >
                 <i class="fas fa-trophy text-purple-400 text-lg"></i>
               </div>
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 mb-1">
-                  <span class="text-sm font-medium text-white">恭喜！获得"持续进步"成就</span>
-                  <span class="text-xs text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded"
+                  <span class="text-sm font-medium text-white"
+                    >恭喜！获得"持续进步"成就</span
+                  >
+                  <span
+                    class="text-xs text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded"
                     >成就</span
                   >
                 </div>
-                <p class="text-xs text-slate-400 truncate">连续7天进行面试练习，坚持就是胜利！</p>
+                <p class="text-xs text-slate-400 truncate">
+                  连续7天进行面试练习，坚持就是胜利！
+                </p>
               </div>
               <div class="flex items-center gap-3">
                 <span class="text-xs text-slate-500">昨天</span>
@@ -822,9 +933,15 @@
       class="fixed inset-0 z-50 hidden items-center justify-center p-4"
       style="background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(8px)"
     >
-      <div class="glass rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-slide-in">
-        <div class="p-6 border-b border-white/5 flex items-center justify-between">
-          <h3 class="font-display font-semibold text-xl text-white">个性化设置</h3>
+      <div
+        class="glass rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl animate-slide-in"
+      >
+        <div
+          class="p-6 border-b border-white/5 flex items-center justify-between"
+        >
+          <h3 class="font-display font-semibold text-xl text-white">
+            个性化设置
+          </h3>
           <button
             id="closeSettings"
             class="w-8 h-8 rounded-lg hover:bg-white/10 flex items-center justify-center transition-colors"
@@ -835,7 +952,9 @@
         <div class="p-6 space-y-6">
           <!-- 岗位选择 -->
           <div>
-            <label class="block text-sm font-medium text-white mb-3">目标岗位</label>
+            <label class="block text-sm font-medium text-white mb-3"
+              >目标岗位</label
+            >
             <div class="grid grid-cols-2 gap-3">
               <button
                 class="p-3 rounded-xl glass-light border-2 border-primary-500 text-left transition-all"
@@ -878,12 +997,16 @@
 
           <!-- 考官设置 -->
           <div>
-            <label class="block text-sm font-medium text-white mb-3">AI考官风格</label>
+            <label class="block text-sm font-medium text-white mb-3"
+              >AI考官风格</label
+            >
             <div class="space-y-3">
-              <div class="flex items-center justify-between p-4 rounded-xl glass-light">
+              <div
+                class="flex items-center justify-between p-4 rounded-xl glass-light"
+              >
                 <div class="flex items-center gap-3">
                   <div
-                    class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center"
+                    class="w-10 h-10 rounded-full bg-linear-to-br from-blue-400 to-blue-600 flex items-center justify-center"
                   >
                     <i class="fas fa-user-tie text-white text-sm"></i>
                   </div>
@@ -903,7 +1026,7 @@
               >
                 <div class="flex items-center gap-3">
                   <div
-                    class="w-10 h-10 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center"
+                    class="w-10 h-10 rounded-full bg-linear-to-br from-green-400 to-green-600 flex items-center justify-center"
                   >
                     <i class="fas fa-smile text-white text-sm"></i>
                   </div>
@@ -912,14 +1035,16 @@
                     <p class="text-xs text-slate-400">氛围轻松，循序渐进</p>
                   </div>
                 </div>
-                <div class="w-5 h-5 rounded-full border-2 border-slate-500"></div>
+                <div
+                  class="w-5 h-5 rounded-full border-2 border-slate-500"
+                ></div>
               </div>
               <div
                 class="flex items-center justify-between p-4 rounded-xl glass-light cursor-pointer hover:bg-white/5 transition-colors"
               >
                 <div class="flex items-center gap-3">
                   <div
-                    class="w-10 h-10 rounded-full bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center"
+                    class="w-10 h-10 rounded-full bg-linear-to-br from-red-400 to-red-600 flex items-center justify-center"
                   >
                     <i class="fas fa-fire text-white text-sm"></i>
                   </div>
@@ -928,7 +1053,9 @@
                     <p class="text-xs text-slate-400">高压环境，实战模拟</p>
                   </div>
                 </div>
-                <div class="w-5 h-5 rounded-full border-2 border-slate-500"></div>
+                <div
+                  class="w-5 h-5 rounded-full border-2 border-slate-500"
+                ></div>
               </div>
             </div>
           </div>
@@ -941,7 +1068,7 @@
             </div>
             <div class="relative h-2 bg-surface-700 rounded-full">
               <div
-                class="absolute left-0 top-0 h-full w-1/2 bg-gradient-to-r from-primary-500 to-primary-400 rounded-full"
+                class="absolute left-0 top-0 h-full w-1/2 bg-linear-to-r from-primary-500 to-primary-400 rounded-full"
               ></div>
               <div
                 class="absolute top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 w-4 h-4 bg-white rounded-full shadow-lg cursor-pointer"
@@ -961,7 +1088,7 @@
             取消
           </button>
           <button
-            class="flex-1 py-3 rounded-xl bg-gradient-to-r from-primary-500 to-primary-600 text-white font-medium hover:from-primary-400 hover:to-primary-500 transition-all"
+            class="flex-1 py-3 rounded-xl bg-linear-to-r from-primary-500 to-primary-600 text-white font-medium hover:from-primary-400 hover:to-primary-500 transition-all"
           >
             保存设置
           </button>
@@ -1026,7 +1153,9 @@
       });
 
       // 岗位选择切换
-      const jobButtons = document.querySelectorAll("#settingsModal .grid button");
+      const jobButtons = document.querySelectorAll(
+        "#settingsModal .grid button",
+      );
       jobButtons.forEach((btn) => {
         btn.addEventListener("click", function () {
           jobButtons.forEach((b) => {
@@ -1043,7 +1172,9 @@
       });
 
       // 考官风格选择
-      const interviewerOptions = document.querySelectorAll("#settingsModal .space-y-3 > div");
+      const interviewerOptions = document.querySelectorAll(
+        "#settingsModal .space-y-3 > div",
+      );
       interviewerOptions.forEach((option) => {
         option.addEventListener("click", function () {
           interviewerOptions.forEach((o) => {
@@ -1057,7 +1188,8 @@
           const circle = this.querySelector(".w-5");
           circle.classList.remove("border-slate-500");
           circle.classList.add("border-primary-500");
-          circle.innerHTML = '<div class="w-2.5 h-2.5 rounded-full bg-primary-500"></div>';
+          circle.innerHTML =
+            '<div class="w-2.5 h-2.5 rounded-full bg-primary-500"></div>';
         });
       });
     </script>

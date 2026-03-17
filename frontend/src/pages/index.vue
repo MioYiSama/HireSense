@@ -189,7 +189,7 @@ const scrollToSection = (sectionId: string) => {
     <section id="hero" class="relative min-h-screen flex items-center">
       <!-- 背景 -->
       <div
-        class="absolute inset-0 bg-gradient-to-br from-gray-900 via-blue-950 to-gray-900"
+        class="absolute inset-0 bg-linear-to-br from-gray-900 via-blue-950 to-gray-900"
       ></div>
       <div
         class="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.15),transparent_70%)]"
@@ -200,7 +200,7 @@ const scrollToSection = (sectionId: string) => {
           <!-- 左侧文字 -->
           <div class="md:w-1/2 mb-12 md:mb-0">
             <h1
-              class="text-6xl md:text-7xl font-bold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-500"
+              class="text-6xl md:text-7xl font-bold mb-6 bg-clip-text text-transparent bg-linear-to-r from-blue-400 to-purple-500"
             >
               HireSense
             </h1>

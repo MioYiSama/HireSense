@@ -2,7 +2,7 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { authApi } from "@/lib/api";
-import { setAccessToken } from "@/utils/token";
+import { setAccessToken, setUserInfo } from "@/utils/token";
 import type { SignUpRequest } from "@/api";
 
 const router = useRouter();
@@ -41,6 +41,8 @@ const handleSignup = async () => {
     if (data.success) {
       // 注册成功，保存 Token
       setAccessToken(data.data);
+      // 保存用户信息
+      setUserInfo({ name: name.value, account: account.value });
       console.log("注册成功:", data.message);
       // 跳转到仪表盘
       router.push("/dashboard");
