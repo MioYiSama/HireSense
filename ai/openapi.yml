@@ -22,10 +22,10 @@ paths:
             schema: { $ref: "#/components/schemas/InterviewStartRequest" }
       responses:
         "200":
-          description: 成功开始面试，返回初始化状态
+          description: 成功开始面试，返回初始化状态与首个问题
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/InterviewStatusResponse" }
+              schema: { $ref: "#/components/schemas/InterviewStartResponse" }
 
   /api/interview/reply:
     post:
@@ -166,6 +166,22 @@ components:
           description: 候选人的完整简历文案，用作 AI 汲取背景信息并按阶段提问的素材基底
           examples:
             - "姓名：张三\n学历：清华大学 计算机硕士\n经验：5年Java开发经验，曾主导设计千万级DAU的消息推送系统..."
+
+    InterviewStartResponse:
+      description: 成功开始面试后的响应体，包含初始化状态及首个问题
+      type: object
+      required: [success, data]
+      properties:
+        success:
+          type: boolean
+          description: 标识面试初始化是否成功
+          examples:
+            - true
+        data:
+          type: string
+          description: AI 面试官返回的首个问题
+          examples:
+            - "先做一个简短的自我介绍，并结合最近一段项目经历说明你承担的核心职责。"
 
     InterviewStatusResponse:
       description: 面试状态（如开始、结束）的通用响应体

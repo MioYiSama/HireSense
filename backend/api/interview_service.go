@@ -52,6 +52,10 @@ type InterviewSession struct {
 	Personalization string
 }
 
+type InterviewStartResult struct {
+	Reply string
+}
+
 type InterviewReplyAudio struct {
 	Filename    string
 	ContentType string
@@ -95,7 +99,7 @@ type interviewReplyPayload struct {
 }
 
 type interviewConversationBackend interface {
-	Start(ctx context.Context, session InterviewSession) error
+	Start(ctx context.Context, session InterviewSession) (InterviewStartResult, error)
 	Reply(ctx context.Context, payload interviewReplyPayload) (InterviewReplyResult, error)
 	Stop(ctx context.Context, interviewID string) error
 }
@@ -127,7 +131,7 @@ func NewInterviewService(cfg InterviewServiceConfig) (*InterviewService, error) 
 	}, nil
 }
 
-func (s *InterviewService) Start(ctx context.Context, session InterviewSession) error {
+func (s *InterviewService) Start(ctx context.Context, session InterviewSession) (InterviewStartResult, error) {
 	return s.backend.Start(ctx, session)
 }
 

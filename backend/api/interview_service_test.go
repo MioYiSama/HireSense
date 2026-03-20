@@ -12,13 +12,15 @@ import (
 )
 
 type stubInterviewBackend struct {
+	startResult InterviewStartResult
+	startErr    error
 	replyResult InterviewReplyResult
 	replyErr    error
 	replyCalls  []interviewReplyPayload
 }
 
-func (s *stubInterviewBackend) Start(context.Context, InterviewSession) error {
-	return nil
+func (s *stubInterviewBackend) Start(context.Context, InterviewSession) (InterviewStartResult, error) {
+	return s.startResult, s.startErr
 }
 
 func (s *stubInterviewBackend) Reply(_ context.Context, payload interviewReplyPayload) (InterviewReplyResult, error) {
@@ -143,6 +145,24 @@ func TestInterviewServiceReplyTrimsTextBeforeCallingBackend(t *testing.T) {
 	}
 	if backend.replyCalls[0].Transcript != nil {
 		t.Fatal("backend transcript should be nil for text replies")
+	}
+}
+
+func TestInterviewServiceStartReturnsBackendResult(t *testing.T) {
+	t.Parallel()
+
+	service := &InterviewService{
+		backend: &stubInterviewBackend{
+			startResult: InterviewStartResult{Reply: "first question"},
+		},
+	}
+
+	result, err := service.Start(context.Background(), InterviewSession{ID: "interview-1"})
+	if err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	if result.Reply != "first question" {
+		t.Fatalf("result.Reply = %q, want %q", result.Reply, "first question")
 	}
 }
 

@@ -42,6 +42,11 @@ type aiInterviewReplyResponse struct {
 	Ending bool   `json:"ending"`
 }
 
+type aiInterviewStartResponse struct {
+	Success bool   `json:"success"`
+	Data    string `json:"data"`
+}
+
 type aiInterviewStopRequest struct {
 	ID string `json:"id"`
 }
@@ -58,7 +63,7 @@ func newInterviewConversationBackend(cfg InterviewServiceConfig, client *http.Cl
 	}, nil
 }
 
-func (b *remoteInterviewBackend) Start(ctx context.Context, session InterviewSession) error {
+func (b *remoteInterviewBackend) Start(ctx context.Context, session InterviewSession) (InterviewStartResult, error) {
 	request := aiInterviewStartRequest{
 		ID:              session.ID,
 		Job:             session.Job,
@@ -66,14 +71,24 @@ func (b *remoteInterviewBackend) Start(ctx context.Context, session InterviewSes
 		Personalization: session.Personalization,
 	}
 
-	if err := b.doJSON(ctx, http.MethodPost, "/api/interview/start", request, nil); err != nil {
-		return &InterviewUpstreamError{
+	var response aiInterviewStartResponse
+	if err := b.doJSON(ctx, http.MethodPost, "/api/interview/start", request, &response); err != nil {
+		return InterviewStartResult{}, &InterviewUpstreamError{
 			Service: "ai",
 			Err:     err,
 		}
 	}
 
-	return nil
+	if response.Data == "" {
+		return InterviewStartResult{}, &InterviewUpstreamError{
+			Service: "ai",
+			Err:     fmt.Errorf("empty initial reply returned"),
+		}
+	}
+
+	return InterviewStartResult{
+		Reply: response.Data,
+	}, nil
 }
 
 func (b *remoteInterviewBackend) Reply(ctx context.Context, payload interviewReplyPayload) (InterviewReplyResult, error) {

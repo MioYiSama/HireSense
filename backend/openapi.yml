@@ -133,7 +133,7 @@ paths:
       description: 基于用户当前档案数据生成并启动一个新的 AI 面试会话，并获取首个提问。
       responses:
         "200":
-          description: 面试正式启动并返回该场面试 ID
+          description: 面试正式启动并返回该场面试 ID 及首个问题
           content:
             application/json:
               schema: { $ref: "#/components/schemas/InterviewStartResponse" }
@@ -448,7 +448,12 @@ components:
               description: 新创建的本次面试 ID
               examples:
                 - "550e8400-e29b-41d4-a716-446655440000"
-          required: [id]
+            reply:
+              type: string
+              description: AI 面试官返回的首个问题
+              examples:
+                - "先做一个简短的自我介绍，并重点说明你最近一段项目经历里最有代表性的技术挑战。"
+          required: [id, reply]
       required: [success, message, data]
 
     InterviewStopRequest:

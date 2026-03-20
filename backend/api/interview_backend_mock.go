@@ -16,8 +16,10 @@ func newInterviewConversationBackend(InterviewServiceConfig, *http.Client) (inte
 	return mockInterviewBackend{}, nil
 }
 
-func (mockInterviewBackend) Start(context.Context, InterviewSession) error {
-	return nil
+func (mockInterviewBackend) Start(context.Context, InterviewSession) (InterviewStartResult, error) {
+	return InterviewStartResult{
+		Reply: "先做一个简短的自我介绍，并结合最近一段项目经历说明你承担的核心职责。",
+	}, nil
 }
 
 func (mockInterviewBackend) Reply(_ context.Context, payload interviewReplyPayload) (InterviewReplyResult, error) {

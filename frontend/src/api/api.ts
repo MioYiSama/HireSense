@@ -86,6 +86,10 @@ export interface InterviewStartResponseData {
      * 新创建的本次面试 ID
      */
     'id': string;
+    /**
+     * AI 面试官返回的首个问题
+     */
+    'reply': string;
 }
 export interface InterviewStopRequest {
     /**

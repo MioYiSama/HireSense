@@ -59,12 +59,13 @@ func (h interviewHandler) start(c fiber.Ctx) error {
 	}
 
 	interviewID := uuid.NewString()
-	if err := h.interviewService.Start(c.Context(), InterviewSession{
+	startResult, err := h.interviewService.Start(c.Context(), InterviewSession{
 		ID:              interviewID,
 		Job:             string(profile.Job),
 		Resume:          profile.Resume,
 		Personalization: profile.Personalization,
-	}); err != nil {
+	})
+	if err != nil {
 		return mapInterviewServiceError(err)
 	}
 
@@ -80,7 +81,8 @@ func (h interviewHandler) start(c fiber.Ctx) error {
 	}
 
 	return respond(c, fiber.StatusOK, "AI 面试官已就绪", fiber.Map{
-		"id": interview.ID,
+		"id":    interview.ID,
+		"reply": startResult.Reply,
 	})
 }
 
