@@ -34,7 +34,8 @@ class ReportBackend(BaseModel):
     feedback: str = Field(description="给用户的总结反馈")
     shortcomings: List[str] =Field(description="列举用户的明显短板")
     advice : str = Field(description="给用户的总建议")
-    urls: List[str] = Field(description="给出你所选择的推荐的内容的url，url必须完全来自所给的data")
+    urls: List[str] = Field(description="给出你所选择的推荐的内容text和url，url和text必须完全来自所给的data，内容不允许重复"
+                                        "例子：C语言教程  https://example.com/video")
 
 class ReportFrontend(BaseModel):
     # 通用能力维度
@@ -57,7 +58,8 @@ class ReportFrontend(BaseModel):
     feedback: str = Field(description="给用户的总结反馈")
     shortcomings: List[str] = Field(description="列举用户的明显短板")
     advice: str = Field(description="给用户的总建议")
-    urls: List[str] = Field(description="给出你所选择的推荐的内容的url，url必须完全来自所给的data")
+    urls: List[str] = Field(description="给出你所选择的推荐的内容text和url，url和text必须完全来自所给的data，内容不允许重复"
+                                        "例子：C语言教程  https://example.com/video")
 
 class FinalReport:
     def __init__(self, llm : ChatOpenAI):
@@ -104,7 +106,7 @@ class FinalReport:
                     1. general纬度按要求给出6个纬度的评分
                     2. specific维度的按要求给出6个纬度的评分
                     3. 评价必须客观犀利，一针见血。
-                    4. 根据给出的建议学习资料选出url"""),
+                    4. 根据给出的建议学习资料选出text和url，组装成一个单一的str url格式，例子：C语言教程  https://example.com/video"""),
                     ("user", "【分题表现记录汇总】:\n{transcript}")
         ])
 
