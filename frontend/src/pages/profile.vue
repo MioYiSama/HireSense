@@ -97,10 +97,6 @@ const cancelLogout = () => {
   showLogoutDialog.value = false;
 };
 
-const goToHome = () => {
-  router.push("/");
-};
-
 const goToDashboard = () => {
   router.push("/dashboard");
 };
@@ -264,31 +260,44 @@ onUnmounted(() => {
     <div
       class="navbar bg-gray-900/60 backdrop-blur-md border-b border-gray-700/50 shadow-lg relative z-10"
     >
-      <div class="flex-1 flex items-center gap-4">
-        <button
-          @click="goToHome"
-          class="flex items-center gap-2 transition-all duration-300 hover:scale-105 hover:opacity-90 cursor-pointer"
-        >
-          <img src="/logo-long.png" alt="HireSense" class="h-6 rounded-md" />
-        </button>
+      <div class="flex-1">
         <button
           @click="goToDashboard"
-          class="flex items-center gap-2 px-4 py-2 bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700/50 rounded-lg text-sm text-gray-300 hover:text-white transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10 cursor-pointer"
+          class="relative flex items-center gap-2 px-4 py-2 bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700/50 rounded-lg text-sm text-gray-300 hover:text-white transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10 cursor-pointer group overflow-hidden"
         >
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+          <!-- 正常状态：返回按钮 -->
+          <div
+            class="flex items-center gap-2 transition-all duration-300 group-hover:translate-x-[-150%]"
           >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M10 19l-7-7m0 0l7-7m-7 7h18"
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M10 19l-7-7m0 0l7-7m-7 7h18"
+              />
+            </svg>
+            <span>返回面试中心</span>
+          </div>
+
+          <!-- 悬停状态：Logo -->
+          <div
+            class="absolute left-0 top-0 h-full flex items-center gap-2 px-4 opacity-0 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-0"
+          >
+            <img
+              src="/favicon.png"
+              alt="HireSense"
+              class="h-6 w-6 rounded-md object-contain"
             />
-          </svg>
-          返回面试中心
+            <span class="text-sm font-bold text-white tracking-tight"
+              >Hire Sense</span
+            >
+          </div>
         </button>
       </div>
       <div class="flex-none">

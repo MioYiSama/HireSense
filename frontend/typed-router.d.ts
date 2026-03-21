@@ -40,11 +40,18 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
-    '/interview': RouteRecordInfo<
-      '/interview',
+    '/interview/': RouteRecordInfo<
+      '/interview/',
       '/interview',
       Record<never, never>,
       Record<never, never>,
+      | never
+    >,
+    '/interview/[id]/report': RouteRecordInfo<
+      '/interview/[id]/report',
+      '/interview/:id/report',
+      { id: ParamValue<true> },
+      { id: ParamValue<false> },
       | never
     >,
     '/profile': RouteRecordInfo<
@@ -93,9 +100,15 @@ declare module 'vue-router/auto-routes' {
       views:
         | never
     }
-    'src/pages/interview.vue': {
+    'src/pages/interview/index.vue': {
       routes:
-        | '/interview'
+        | '/interview/'
+      views:
+        | never
+    }
+    'src/pages/interview/[id]/report.vue': {
+      routes:
+        | '/interview/[id]/report'
       views:
         | never
     }
