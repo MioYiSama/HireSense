@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/vue-query";
 import { getAccessToken } from "@/utils/token";
 
 const configuration = new Configuration({
-  basePath: "http://127.0.0.1:8080",
+  basePath: import.meta.env["VITE_BACKEND_URL"],
   accessToken: async () => {
     return getAccessToken();
   },
