@@ -11,8 +11,14 @@ class StartRequest(BaseModel):
     job: Literal["backend", "frontend"] = Field(
         description="可选类 只有backend和frontend"
     )
-    personalization: Optional[str] = Field(description="用户倾向风格")
-    resume: Optional[str] = Field(description="简历信息")
+    personalization: Optional[str] = Field(
+        default=None,
+        description="用户倾向风格",
+    )
+    resume: Optional[str] = Field(
+        default=None,
+        description="简历信息",
+    )
 
 
 class StartResponse(BaseModel):

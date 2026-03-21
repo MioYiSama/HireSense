@@ -169,7 +169,7 @@ class LLMGenerator:
                 5. q_id_and_brief: 如果 action 是 TRANSITION 且选择了题目，填写 [题目id, 题目内容]；如果 action 是 PROBE 或 END，填 null（数组或null）
 
                 注意：action 和 reply_speech 是必需字段，不能省略；如果 action 为 END，selected_node 和 q_id_and_brief 必须都是 null。"""),
-                ("user", f"【近期历史】\n{history}\n【全局历史总结】\n{candidate_fact_sheet}\n【候选人本题累计回答】: {cumulative_answer}")
+                ("user", "【近期历史】\n{history}\n【全局历史总结】\n{candidate_fact_sheet}\n【候选人本题累计回答】: {cumulative_answer}")
             ])
 
             # 使用重试机制
@@ -184,7 +184,10 @@ class LLMGenerator:
                     "mastery_score": mastery_score,
                     "std_answer": std_answer,
                     "menu_str": final_menu,
-                    "resume_star":resume_star
+                    "resume_star":resume_star,
+                    "history": history,
+                    "candidate_fact_sheet": candidate_fact_sheet,
+                    "cumulative_answer": cumulative_answer,
                 },
                 model_class=TacticalDecision,
                 llm=self.llm,
@@ -209,7 +212,7 @@ class LLMGenerator:
                             1. reply_speech: 你对用户的回复（字符串，必需）
 
                             输出必须口语化、自然。"""),
-                ("user",f"【近期历史】\n{history}\n【用户发言】\n{user_text}")
+                ("user","【近期历史】\n{history}\n【用户发言】\n{user_text}")
             ])
 
             res : Clarify = await self._retry_structured_generation(
@@ -217,7 +220,9 @@ class LLMGenerator:
                 input_data={
                     "current_topic":current_topic,
                     "question_brief":question_brief,
-                    "std_answer":std_answer
+                    "std_answer":std_answer,
+                    "history": history,
+                    "user_text": user_text,
                 },
                 model_class=Clarify,
                 llm=self.llm,

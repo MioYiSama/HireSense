@@ -124,8 +124,8 @@ class FinalReport:
                     【岗位专业能力维度要求】:{specific_dimensions_instruction}
                     【任务要求】:
                     严格按 JSON 格式输出总分、general(软实力) 
-                    1. general纬度按要求给出6个纬度的评分
-                    2. specific维度的按要求给出6个纬度的评分
+                    1. general纬度按要求给出6个纬度的评分。每个纬度满分10分。
+                    2. specific维度的按要求给出6个纬度的评分。每个纬度满分10分。
                     3. 评价必须客观犀利，一针见血。
                     4. 根据给出的建议学习资料选出url""",
                 ),

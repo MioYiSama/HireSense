@@ -29,10 +29,13 @@ class ResumeAnalyzer:
                 4. 以JSON格式返回结果
                 """),
 
-            ("user", f"【目标岗位】: {job_domain}\n【原始简历】:\n{resume_text}")
+            ("user", "【目标岗位】: {job_domain}\n【原始简历】:\n{resume_text}")
         ])
 
         # 耗时约 1~1.5 秒
-        parsed_resume: ParsedResume = await (prompt | self.structured_llm).ainvoke({})
+        parsed_resume: ParsedResume = await (prompt | self.structured_llm).ainvoke({
+            "job_domain": job_domain,
+            "resume_text": resume_text,
+        })
 
         return parsed_resume

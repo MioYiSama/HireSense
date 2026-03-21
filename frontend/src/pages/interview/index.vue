@@ -132,22 +132,22 @@ const goBackToDashboard = () => {
 };
 const isInitialLoading = ref(true);
 
+type InterviewReplyPayload = { text: string } | Blob;
+
 // API请求函数
-const sendInterviewReply = async (payload: { text: string } | FormData) => {
+const sendInterviewReply = async (payload: InterviewReplyPayload) => {
   const token = getAccessToken();
   const id = getInterviewId();
   const url = `http://127.0.0.1:8080/api/interview/reply?id=${id}`;
+  const isAudioPayload = payload instanceof Blob;
 
   const options = {
     method: "POST",
     headers: {
       Authorization: `Bearer ${token}`,
-
-      ...(payload instanceof FormData
-        ? {}
-        : { "Content-Type": "application/json" }),
+      "Content-Type": isAudioPayload ? payload.type || "audio/wav" : "application/json",
     },
-    body: payload instanceof FormData ? payload : JSON.stringify(payload),
+    body: isAudioPayload ? payload : JSON.stringify(payload),
   };
 
   const response = await fetch(url, options);
@@ -581,11 +581,7 @@ const sendAudioMessage = async (audioBlob: Blob, duration: number) => {
   // 发送请求获取AI回复
   isSubmitting.value = true;
   try {
-    const formData = new FormData();
-    formData.append("audio", audioBlob, "recording.wav");
-    formData.append("text", `[语音消息] ${formatRecordingTime(duration)}`);
-
-    await sendInterviewReply(formData);
+    await sendInterviewReply(audioBlob);
   } catch (error) {
     console.error("发送语音消息失败:", error);
     // 添加错误提示消息
@@ -614,12 +610,8 @@ const formatRecordingTime = (seconds: number) => {
     class="min-h-screen bg-linear-to-br from-gray-900 via-gray-800 to-gray-900 relative overflow-hidden"
   >
     <!-- 背景 -->
-    <div
-      class="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"
-    ></div>
-    <div
-      class="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"
-    ></div>
+    <div class="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
 
     <!-- 导航栏 -->
     <div
@@ -627,14 +619,8 @@ const formatRecordingTime = (seconds: number) => {
     >
       <div class="flex-1">
         <div class="flex items-center gap-2">
-          <img
-            src="/favicon.png"
-            alt="HireSense"
-            class="h-8 w-8 rounded-md object-contain"
-          />
-          <span class="text-xl font-bold text-white tracking-tight"
-            >Hire Sense</span
-          >
+          <img src="/favicon.png" alt="HireSense" class="h-8 w-8 rounded-md object-contain" />
+          <span class="text-xl font-bold text-white tracking-tight">Hire Sense</span>
         </div>
       </div>
       <div class="flex-none flex items-center gap-4">
@@ -642,12 +628,7 @@ const formatRecordingTime = (seconds: number) => {
         <div
           class="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-gray-800/50 border border-gray-700/50 shadow-lg"
         >
-          <svg
-            class="w-4 h-4 text-blue-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -663,7 +644,7 @@ const formatRecordingTime = (seconds: number) => {
         <!-- 结束面试按钮 -->
         <button
           @click="endInterview"
-          :disabled="isInterviewEnded"
+          :disabled="messages.length < 3"
           class="group px-4 py-1.5 rounded-xl bg-linear-to-r from-red-500/20 to-red-600/20 hover:from-red-500 hover:to-red-600 text-red-400 hover:text-white font-semibold transition-all duration-300 border border-red-500/40 hover:border-red-500 shadow-lg shadow-red-500/10 hover:shadow-red-500/30 cursor-pointer flex items-center gap-2 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-red-500/20 disabled:hover:to-red-600/20 disabled:hover:text-red-400 disabled:hover:scale-100"
         >
           <div class="relative">
@@ -707,10 +688,7 @@ const formatRecordingTime = (seconds: number) => {
         <!-- 对话内容展示区 -->
         <div ref="chatContainer" class="flex-1 overflow-y-auto p-6 space-y-6">
           <!-- 初始加载状态 -->
-          <div
-            v-if="isInitialLoading"
-            class="flex justify-center items-center h-full"
-          >
+          <div v-if="isInitialLoading" class="flex justify-center items-center h-full">
             <div class="text-center">
               <div
                 class="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-500/20 flex items-center justify-center animate-pulse"
@@ -742,10 +720,7 @@ const formatRecordingTime = (seconds: number) => {
               :class="message.role === 'ai' ? 'justify-start' : 'justify-end'"
             >
               <!-- AI面试官消息 -->
-              <div
-                v-if="message.role === 'ai'"
-                class="flex flex-col items-start gap-1 max-w-[80%]"
-              >
+              <div v-if="message.role === 'ai'" class="flex flex-col items-start gap-1 max-w-[80%]">
                 <div class="flex items-start gap-3">
                   <div
                     class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0"
@@ -768,9 +743,7 @@ const formatRecordingTime = (seconds: number) => {
                     class="bg-gray-800/50 rounded-2xl rounded-tl-none p-4 shadow-lg shadow-gray-900/50"
                   >
                     <div class="flex items-center mb-2">
-                      <span class="text-sm font-medium text-blue-400"
-                        >AI面试官</span
-                      >
+                      <span class="text-sm font-medium text-blue-400">AI面试官</span>
                     </div>
                     <div v-if="message.isAudio" class="flex items-center gap-3">
                       <button
@@ -820,9 +793,7 @@ const formatRecordingTime = (seconds: number) => {
                   </div>
                 </div>
                 <div class="ml-[52px]">
-                  <span class="text-xs text-gray-500">{{
-                    message.timestamp
-                  }}</span>
+                  <span class="text-xs text-gray-500">{{ message.timestamp }}</span>
                 </div>
               </div>
 
@@ -888,9 +859,7 @@ const formatRecordingTime = (seconds: number) => {
                   </div>
                 </div>
                 <div class="mr-[52px]">
-                  <span class="text-xs text-gray-500">{{
-                    message.timestamp
-                  }}</span>
+                  <span class="text-xs text-gray-500">{{ message.timestamp }}</span>
                 </div>
               </div>
             </div>
@@ -919,9 +888,7 @@ const formatRecordingTime = (seconds: number) => {
                     </svg>
                   </div>
                 </div>
-                <h3 class="text-xl font-semibold text-white mb-2">
-                  面试已完成
-                </h3>
+                <h3 class="text-xl font-semibold text-white mb-2">面试已完成</h3>
                 <p class="text-gray-300 mb-6">
                   感谢您的精彩表现！面试官已收到您的回答，我们将尽快生成面试报告。
                   <br /><br />
@@ -937,10 +904,7 @@ const formatRecordingTime = (seconds: number) => {
             </div>
 
             <!-- 加载状态 -->
-            <div
-              v-if="isSubmitting"
-              class="flex justify-start animate-message-in"
-            >
+            <div v-if="isSubmitting" class="flex justify-start animate-message-in">
               <div class="flex items-start gap-3 max-w-[80%]">
                 <div
                   class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0"

@@ -11,16 +11,30 @@ const router = useRouter();
 const showDropdown = ref(false);
 let hideTimeout: number | null = null;
 
-const name = ref("奶龙");
-const job = ref<ProfileJobEnum>("frontend");
+const interviewerStyles = [
+  { value: "default", label: "默认" },
+  { value: "professional", label: "专业严肃" },
+  { value: "friendly", label: "亲和温和" },
+  { value: "challenging", label: "挑战性" },
+  { value: "custom", label: "自定义" },
+] as const;
+
+type InterviewerStyle = (typeof interviewerStyles)[number]["value"];
+
+const storedUserInfo = getUserInfo();
+const name = ref(storedUserInfo?.name || "奶龙");
+const job = ref<ProfileJobEnum>(
+  (storedUserInfo?.job as ProfileJobEnum | undefined) || "frontend",
+);
 const resumeFile = ref<File | null>(null);
 const resumeFileName = ref("");
 const resumeText = ref("");
 const parseLoading = ref(false);
 const parseError = ref("");
-const personalization = ref({
+const personalization = ref<{ interviewerStyle: InterviewerStyle }>({
   interviewerStyle: "default",
 });
+const profileLoading = ref(false);
 let messageTimeout: number | null = null;
 
 // 错误消息处理函数
@@ -36,20 +50,6 @@ const showMessage = (message: string, isSuccess: boolean = false) => {
   }, 3000);
 };
 
-// 从localStorage获取用户信息
-const userInfo = getUserInfo();
-if (userInfo && userInfo.name) {
-  name.value = userInfo.name;
-}
-
-const interviewerStyles = [
-  { value: "default", label: "默认" },
-  { value: "professional", label: "专业严肃" },
-  { value: "friendly", label: "亲和温和" },
-  { value: "challenging", label: "挑战性" },
-  { value: "custom", label: "自定义" },
-];
-
 const customStyle = ref("");
 
 const loading = ref(false);
@@ -57,6 +57,93 @@ const saveMessage = ref("");
 const saveSuccess = ref(false);
 
 const showLogoutDialog = ref(false);
+
+const isInterviewerStyle = (value: string): value is InterviewerStyle => {
+  return interviewerStyles.some((style) => style.value === value);
+};
+
+const applyPersonalization = (value?: string) => {
+  const savedPersonalization = value?.trim() || "";
+
+  if (!savedPersonalization) {
+    personalization.value.interviewerStyle = "default";
+    customStyle.value = "";
+    return;
+  }
+
+  if (isInterviewerStyle(savedPersonalization)) {
+    personalization.value.interviewerStyle = savedPersonalization;
+    customStyle.value = "";
+    return;
+  }
+
+  personalization.value.interviewerStyle = "custom";
+  customStyle.value = savedPersonalization;
+};
+
+const buildPersonalization = () => {
+  if (personalization.value.interviewerStyle === "custom") {
+    return customStyle.value.trim();
+  }
+
+  return personalization.value.interviewerStyle;
+};
+
+const syncUserInfo = (profile: Profile) => {
+  const currentUserInfo = getUserInfo();
+
+  setUserInfo({
+    ...currentUserInfo,
+    name: profile.name,
+    job: profile.job,
+    resume: profile.resume ?? "",
+    personalization: profile.personalization ?? "",
+  });
+};
+
+const applyProfile = (profile: Profile) => {
+  name.value = profile.name;
+  job.value = profile.job;
+  resumeFile.value = null;
+  resumeFileName.value = profile.resume ? "已保存的简历内容" : "";
+  resumeText.value = profile.resume ?? "";
+  parseError.value = "";
+  applyPersonalization(profile.personalization);
+};
+
+const fetchProfile = async (showFailureMessage: boolean = true) => {
+  profileLoading.value = true;
+
+  try {
+    const response = await userApi.apiUserProfileGet();
+    const data = response.data;
+
+    if (data.success) {
+      applyProfile(data.data);
+      syncUserInfo(data.data);
+      return true;
+    }
+
+    if (showFailureMessage) {
+      showMessage(data.message || "获取档案失败");
+    }
+  } catch (err: any) {
+    console.error("获取档案错误:", err);
+    if (showFailureMessage) {
+      showMessage(err.response?.data?.message || "获取最新档案失败，请稍后重试");
+    }
+  } finally {
+    profileLoading.value = false;
+  }
+
+  return false;
+};
+
+applyPersonalization(storedUserInfo?.personalization);
+if (storedUserInfo?.resume) {
+  resumeFileName.value = "已保存的简历内容";
+  resumeText.value = storedUserInfo.resume;
+}
 
 const handleLogout = async () => {
   // 显示确认对话框
@@ -189,19 +276,12 @@ const handleSave = async () => {
   saveMessage.value = "";
 
   try {
-    // 从localStorage获取完整的用户信息
-    const currentUserInfo = getUserInfo();
-
     // 构建请求体
     const profile: Profile = {
-      name: name.value,
+      name: name.value.trim(),
       job: job.value,
-      // 如果有解析后的简历文本
-      ...(resumeText.value && { resume: resumeText.value }),
-      // 保留原有的personalization设置
-      ...(currentUserInfo?.personalization && {
-        personalization: currentUserInfo.personalization,
-      }),
+      resume: resumeText.value.trim(),
+      personalization: buildPersonalization(),
     };
 
     // 发送 PUT 请求
@@ -209,15 +289,15 @@ const handleSave = async () => {
     const data = response.data;
 
     if (data.success) {
-      showMessage(data.message || "档案更新成功", true);
+      const refreshed = await fetchProfile(false);
+
+      if (refreshed) {
+        showMessage(data.message || "档案更新成功", true);
+      } else {
+        showMessage("档案已保存，但刷新最新档案失败");
+      }
+
       console.log("档案更新成功:", data);
-      // 更新localStorage中的用户信息
-      setUserInfo({
-        ...currentUserInfo,
-        name: name.value,
-        job: job.value,
-        resume: resumeText.value || currentUserInfo?.resume,
-      });
     } else {
       showMessage(data.message || "档案更新失败");
     }
@@ -231,6 +311,7 @@ const handleSave = async () => {
 
 onMounted(() => {
   document.addEventListener("click", handleClickOutside);
+  void fetchProfile();
 });
 
 onUnmounted(() => {
@@ -373,6 +454,13 @@ onUnmounted(() => {
 
       <div class="max-w-4xl mx-auto space-y-6">
         <!-- 基本信息 -->
+        <div
+          v-if="profileLoading"
+          class="bg-blue-500/10 border border-blue-500/20 rounded-xl px-4 py-3 text-sm text-blue-200"
+        >
+          正在同步后端最新档案...
+        </div>
+
         <div
           class="bg-gray-900/60 backdrop-blur-md border border-gray-700/50 rounded-2xl shadow-2xl shadow-blue-500/10 p-6"
         >
@@ -679,7 +767,7 @@ onUnmounted(() => {
             </button>
             <button
               @click="handleSave"
-              :disabled="loading"
+              :disabled="loading || profileLoading"
               class="btn bg-linear-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-none shadow-lg shadow-blue-500/20 transition-all duration-300 px-8 py-3 rounded-lg hover:shadow-xl hover:shadow-blue-500/30 transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               <svg
@@ -703,7 +791,13 @@ onUnmounted(() => {
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 ></path>
               </svg>
-              {{ loading ? "保存中..." : "保存设置" }}
+              {{
+                loading
+                  ? "保存中..."
+                  : profileLoading
+                    ? "同步中..."
+                    : "保存设置"
+              }}
             </button>
           </div>
         </div>

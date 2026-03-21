@@ -238,8 +238,14 @@ class AgentFlow:
                                           concept=state.current_concept)
 
     async def initialize_session(self, req: StartRequest) -> dict:
+        personalization = (req.personalization or "").strip()
+        resume_text = req.resume or ""
+
         #  简历解析与对齐
-        resume : ParsedResume = await self.resume_analyzer.analyze_and_align(resume_text=req.resume, job_domain=req.job)
+        resume : ParsedResume = await self.resume_analyzer.analyze_and_align(
+            resume_text=resume_text,
+            job_domain=req.job,
+        )
         core_skills = resume.core_skills
         resume_star = resume.projects_star_summary
 
@@ -251,7 +257,7 @@ class AgentFlow:
         question_menu = await self.neo4j_client.get_batch_questions_brief(concept_list=final_concepts)
 
         start_interview : StartInterview = await self.llm_gen.generate_opening_speech(
-            personalization=req.personalization,
+            personalization=personalization,
             projects_star=resume_star,
             question_menu=question_menu
         )
@@ -260,7 +266,7 @@ class AgentFlow:
         new_state = AgentState(
             session_id=req.id,
             job=req.job,
-            personalization=req.personalization,
+            personalization=personalization,
             resume_star=resume_star,
             resume_concept_list=align_concepts,
             current_concept=start_interview.selected_node,

@@ -13,6 +13,7 @@ import LucideGauge from "~icons/lucide/gauge";
 import LucideBarChart from "~icons/lucide/bar-chart";
 import LucideArrowRight from "~icons/lucide/arrow-right";
 import InteractiveTerminal from "../components/InteractiveTerminal.vue";
+import { clearAll, getAccessToken, setUserInfo } from "@/utils/token";
 
 // 常量定义
 const TYPING_DELAY = 50;
@@ -23,8 +24,10 @@ const scrolled = ref(false);
 const activeSection = ref("hero");
 const expandedCards = ref([false, false, false]);
 const typingText = ref("");
+const hasValidToken = ref(false);
 let animationStyle: HTMLStyleElement | null = null;
 let typingInterval: number | null = null;
+let profileRequestController: AbortController | null = null;
 const typingTexts: string[] = [
   "请解释 Vue 3 的响应式原理？",
   "如何设计一个高并发抢购系统？",
@@ -59,6 +62,7 @@ const advantageItems = [
 onMounted(() => {
   window.addEventListener("scroll", handleScroll);
   initAnimations();
+  void validateToken();
   // 添加鼠标聚光灯效果
   document.addEventListener("mousemove", handleMouseMove);
 });
@@ -74,6 +78,7 @@ onUnmounted(() => {
   if (typingInterval) {
     window.clearTimeout(typingInterval as number);
   }
+  profileRequestController?.abort();
 });
 
 const handleMouseMove = (e: MouseEvent) => {
@@ -342,11 +347,79 @@ const initAnimations = () => {
   document.head.appendChild(animationStyle);
 };
 
+const validateToken = async () => {
+  const token = getAccessToken();
+
+  if (!token) {
+    hasValidToken.value = false;
+    return;
+  }
+
+  profileRequestController?.abort();
+  const controller = new AbortController();
+  profileRequestController = controller;
+
+  try {
+    const response = await fetch("/api/user/profile", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      hasValidToken.value = false;
+
+      if (response.status === 401 || response.status === 403) {
+        clearAll();
+      }
+      return;
+    }
+
+    const data = await response.json().catch(() => null);
+
+    if (data?.success === false) {
+      hasValidToken.value = false;
+      return;
+    }
+
+    hasValidToken.value = true;
+
+    if (data?.data) {
+      setUserInfo(data.data);
+    }
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      return;
+    }
+
+    hasValidToken.value = false;
+  } finally {
+    if (profileRequestController === controller) {
+      profileRequestController = null;
+    }
+  }
+};
+
+const goToDashboard = () => {
+  router.push("/dashboard");
+};
+
 const goToSignin = () => {
+  if (hasValidToken.value) {
+    goToDashboard();
+    return;
+  }
+
   router.push("/signin");
 };
 
 const goToSignup = () => {
+  if (hasValidToken.value) {
+    goToDashboard();
+    return;
+  }
+
   router.push("/signup");
 };
 
@@ -492,20 +565,31 @@ const stopTyping = () => {
 
           <!-- 登录注册按钮 -->
           <div class="flex items-center gap-4 relative z-10">
-            <button
-              @click="goToSignin"
-              class="hidden sm:flex items-center gap-2 px-5 py-2 text-sm text-gray-300 hover:text-white transition-colors cursor-pointer"
-            >
-              <LucideLogIn class="w-4 h-4" />
-              登录
-            </button>
-            <button
-              @click="goToSignup"
-              class="flex items-center gap-2 px-6 py-2.5 bg-white text-black text-sm font-semibold rounded-full hover:bg-gray-200 transition-colors btn-shine cursor-pointer"
-            >
-              <LucideUserPlus class="w-4 h-4" />
-              免费注册
-            </button>
+            <template v-if="hasValidToken">
+              <button
+                @click="goToDashboard"
+                class="flex items-center gap-2 px-6 py-2.5 bg-white text-black text-sm font-semibold rounded-full hover:bg-gray-200 transition-colors btn-shine cursor-pointer"
+              >
+                <LucideGauge class="w-4 h-4" />
+                进入仪表盘
+              </button>
+            </template>
+            <template v-else>
+              <button
+                @click="goToSignin"
+                class="hidden sm:flex items-center gap-2 px-5 py-2 text-sm text-gray-300 hover:text-white transition-colors cursor-pointer"
+              >
+                <LucideLogIn class="w-4 h-4" />
+                登录
+              </button>
+              <button
+                @click="goToSignup"
+                class="flex items-center gap-2 px-6 py-2.5 bg-white text-black text-sm font-semibold rounded-full hover:bg-gray-200 transition-colors btn-shine cursor-pointer"
+              >
+                <LucideUserPlus class="w-4 h-4" />
+                免费注册
+              </button>
+            </template>
           </div>
         </div>
       </div>

@@ -61,7 +61,7 @@ const confirmLogout = async () => {
       // 清除所有用户信息
       clearAll();
       // 跳转到登录页面
-      router.push("/signin");
+      router.push("/");
     } else {
       console.error("退出登录失败:", data.message);
       showMessage(data.message || "退出登录失败");
@@ -103,15 +103,13 @@ const refreshInterviews = async () => {
 
   try {
     await fetchInterviews();
-    // 延迟一小段时间，让动画效果更明显
-    await new Promise((resolve) => setTimeout(resolve, 500));
   } finally {
     // 结束刷新动画
     showRefreshAnimation.value = false;
     // 稍微延迟后恢复按钮状态，让用户有足够时间看到动画
     setTimeout(() => {
       isRefreshing.value = false;
-    }, 300);
+    }, 100);
   }
 };
 
@@ -123,15 +121,11 @@ const growthData = computed(() => {
     totalInterviews: interviews.value.length,
     completedInterviews: completedInterviews.length,
     averageScore:
-      scores.length > 0
-        ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
-        : 0,
+      scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0,
     highestScore: scores.length > 0 ? Math.max(...scores) : 0,
     improvement:
       scores.length > 2
-        ? Math.round(
-            ((scores[scores.length - 1] - scores[0]) * 100) / scores[0],
-          )
+        ? Math.round(((scores[scores.length - 1] - scores[0]) * 100) / scores[0])
         : 0,
   };
 });
@@ -341,11 +335,7 @@ const learningResources = computed(() => {
 
   // 补充默认资源
   while (resources.length < 3) {
-    const defaultResources = [
-      "技术博客和社区",
-      "行业会议和讲座",
-      "在线课程平台",
-    ];
+    const defaultResources = ["技术博客和社区", "行业会议和讲座", "在线课程平台"];
     defaultResources.forEach((resource) => {
       if (!resources.includes(resource) && resources.length < 3) {
         resources.push(resource);
@@ -361,8 +351,7 @@ const learningResources = computed(() => {
 const formatInterviewTime = (timestamp: any): string => {
   try {
     // 确保时间戳是数字类型
-    const ts =
-      typeof timestamp === "string" ? parseInt(timestamp, 10) : timestamp;
+    const ts = typeof timestamp === "string" ? parseInt(timestamp, 10) : timestamp;
     if (isNaN(ts)) {
       return "时间未知";
     }
@@ -409,7 +398,7 @@ const companyNames = [
   "谷歌",
   "亚马逊",
   "苹果",
-  "脸书",
+  "Meta",
   "特斯拉",
   "英特尔",
 ];
@@ -614,12 +603,8 @@ onUnmounted(() => {
     class="min-h-screen bg-linear-to-br from-gray-900 via-gray-800 to-gray-900 relative overflow-hidden"
   >
     <!-- 背景 -->
-    <div
-      class="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"
-    ></div>
-    <div
-      class="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"
-    ></div>
+    <div class="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
 
     <!-- 导航栏 -->
     <div
@@ -631,24 +616,14 @@ onUnmounted(() => {
           class="flex items-center gap-3 transition-all duration-300 hover:scale-105 hover:opacity-90 cursor-pointer"
         >
           <div class="flex items-center gap-2">
-            <img
-              src="/favicon.png"
-              alt="HireSense"
-              class="h-8 w-8 rounded-md object-contain"
-            />
-            <span class="text-xl font-bold text-white tracking-tight"
-              >Hire Sense</span
-            >
+            <img src="/favicon.png" alt="HireSense" class="h-8 w-8 rounded-md object-contain" />
+            <span class="text-xl font-bold text-white tracking-tight">Hire Sense</span>
           </div>
         </button>
       </div>
       <div class="flex-none">
         <!-- 用户菜单 -->
-        <div
-          class="user-menu relative"
-          @mouseenter="showMenu"
-          @mouseleave="hideMenu"
-        >
+        <div class="user-menu relative" @mouseenter="showMenu" @mouseleave="hideMenu">
           <button
             class="flex items-center justify-center w-10 h-10 rounded-full bg-gray-800/50 hover:bg-gray-700/50 border border-gray-600 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10 cursor-pointer"
           >
@@ -719,8 +694,7 @@ onUnmounted(() => {
         <div class="p-4 border-b border-white/5">
           <div class="flex items-center justify-between">
             <h2 class="font-semibold text-white">历史面试记录</h2>
-            <span
-              class="text-xs text-slate-400 bg-gray-800/50 px-2 py-1 rounded-full"
+            <span class="text-xs text-slate-400 bg-gray-800/50 px-2 py-1 rounded-full"
               >{{ interviews.length }}次</span
             >
           </div>
@@ -756,12 +730,7 @@ onUnmounted(() => {
             class="p-4 rounded-xl bg-red-500/20 border border-red-500/40 text-red-400"
           >
             <div class="flex items-center gap-2">
-              <svg
-                class="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   stroke-linecap="round"
                   stroke-linejoin="round"
@@ -771,10 +740,7 @@ onUnmounted(() => {
               </svg>
               <span>{{ interviewsError }}</span>
             </div>
-            <button
-              @click="fetchInterviews"
-              class="mt-2 text-sm text-blue-400 hover:underline"
-            >
+            <button @click="fetchInterviews" class="mt-2 text-sm text-blue-400 hover:underline">
               重试
             </button>
           </div>
@@ -812,42 +778,32 @@ onUnmounted(() => {
             v-else
             :class="[
               'space-y-2',
-              showRefreshAnimation
-                ? 'opacity-50 scale-95'
-                : 'opacity-100 scale-100',
+              showRefreshAnimation ? 'opacity-50 scale-95' : 'opacity-100 scale-100',
             ]"
             :style="{
-              transition: showRefreshAnimation
-                ? 'all 0.3s ease-out'
-                : 'all 0.5s ease-in',
+              transition: showRefreshAnimation ? 'all 0.3s ease-out' : 'all 0.5s ease-in',
             }"
           >
             <!-- 面试记录项 -->
             <div
               v-for="interview in interviews"
               :key="interview.id"
-              @click="
-                interview.report &&
-                router.push(`/interview/${interview.id}/report`)
-              "
+              @click="interview.report && router.push(`/interview/${interview.id}/report`)"
               :class="[
-                'p-4 rounded-xl border-l-2 cursor-pointer group transition-all duration-200',
+                'p-4 rounded-xl border-l-2 group transition-all duration-200',
                 interview.report
-                  ? 'border-transparent hover:border-blue-500/50 hover:bg-gray-800/30'
+                  ? 'border-transparent cursor-pointer hover:border-blue-500/50 hover:bg-gray-800/30'
                   : 'border-gray-700/30 opacity-70 cursor-not-allowed',
               ]"
             >
               <div class="flex items-start justify-between mb-2">
-                <span
-                  class="text-xs text-blue-400 bg-blue-500/10 px-2 py-1 rounded-lg"
-                  >{{
-                    interview.report
-                      ? interview.report.specific
-                        ? "前端开发工程师"
-                        : "后端开发工程师"
-                      : "面试"
-                  }}</span
-                >
+                <!-- <span class="text-xs text-blue-400 bg-blue-500/10 px-2 py-1 rounded-lg">{{
+                  interview.report
+                    ? interview.report.specific
+                      ? "前端开发工程师"
+                      : "后端开发工程师"
+                    : "面试"
+                }}</span> -->
                 <span class="text-xs text-slate-500">{{
                   formatInterviewTime(interview.created_at)
                 }}</span>
@@ -855,8 +811,8 @@ onUnmounted(() => {
               <h3
                 class="font-medium text-white text-sm mb-1 group-hover:text-blue-300 transition-colors"
               >
-                {{ getRandomCompanyName(interview.id) }} -
-                {{ interview.status === "stopped" ? "已结束" : "进行中" }}
+                <strong>{{ getRandomCompanyName(interview.id) }}</strong
+                >面试
               </h3>
               <p class="text-xs text-slate-400">
                 {{ interview.report ? "已生成报告" : "待生成报告" }}
@@ -886,18 +842,20 @@ onUnmounted(() => {
                     />
                   </svg>
                   <span class="text-xs text-slate-300">{{
-                    interview.report ? interview.report.score + "分" : "进行中"
+                    interview.report
+                      ? interview.report.score + "分"
+                      : interview.status === "started"
+                        ? "进行中"
+                        : "已结束"
                   }}</span>
                 </div>
-                <span class="text-xs text-slate-500">|</span>
-                <span
+                <!-- <span class="text-xs text-slate-500">|</span> -->
+                <!-- <span
                   class="text-xs"
-                  :class="
-                    interview.report ? 'text-green-400' : 'text-yellow-400'
-                  "
+                  :class="interview.report ? 'text-green-400' : 'text-yellow-400'"
                 >
                   {{ interview.report ? "已生成报告" : "待生成报告" }}
-                </span>
+                </span> -->
               </div>
             </div>
           </div>
@@ -1021,14 +979,10 @@ onUnmounted(() => {
             <div
               :class="[
                 'bg-gray-800/50 backdrop-blur-md border border-gray-700/50 rounded-xl p-6 shadow-lg hover:shadow-blue-500/10 transition-all duration-500 hover:border-blue-500/30 group animate-fade-in-up animate-delay-100 card-hover',
-                showRefreshAnimation
-                  ? 'opacity-50 scale-95'
-                  : 'opacity-100 scale-100',
+                showRefreshAnimation ? 'opacity-50 scale-95' : 'opacity-100 scale-100',
               ]"
               :style="{
-                transition: showRefreshAnimation
-                  ? 'all 0.3s ease-out'
-                  : 'all 0.5s ease-in',
+                transition: showRefreshAnimation ? 'all 0.3s ease-out' : 'all 0.5s ease-in',
               }"
             >
               <div class="flex items-center justify-between mb-4">
@@ -1061,14 +1015,10 @@ onUnmounted(() => {
             <div
               :class="[
                 'bg-gray-800/50 backdrop-blur-md border border-gray-700/50 rounded-xl p-6 shadow-lg hover:shadow-green-500/10 transition-all duration-500 hover:border-green-500/30 group animate-fade-in-up animate-delay-200 card-hover',
-                showRefreshAnimation
-                  ? 'opacity-50 scale-95'
-                  : 'opacity-100 scale-100',
+                showRefreshAnimation ? 'opacity-50 scale-95' : 'opacity-100 scale-100',
               ]"
               :style="{
-                transition: showRefreshAnimation
-                  ? 'all 0.3s ease-out'
-                  : 'all 0.5s ease-in',
+                transition: showRefreshAnimation ? 'all 0.3s ease-out' : 'all 0.5s ease-in',
               }"
             >
               <div class="flex items-center justify-between mb-4">
@@ -1101,14 +1051,10 @@ onUnmounted(() => {
             <div
               :class="[
                 'bg-gray-800/50 backdrop-blur-md border border-gray-700/50 rounded-xl p-6 shadow-lg hover:shadow-yellow-500/10 transition-all duration-500 hover:border-yellow-500/30 group animate-fade-in-up animate-delay-300 card-hover',
-                showRefreshAnimation
-                  ? 'opacity-50 scale-95'
-                  : 'opacity-100 scale-100',
+                showRefreshAnimation ? 'opacity-50 scale-95' : 'opacity-100 scale-100',
               ]"
               :style="{
-                transition: showRefreshAnimation
-                  ? 'all 0.3s ease-out'
-                  : 'all 0.5s ease-in',
+                transition: showRefreshAnimation ? 'all 0.3s ease-out' : 'all 0.5s ease-in',
               }"
             >
               <div class="flex items-center justify-between mb-4">
@@ -1141,14 +1087,10 @@ onUnmounted(() => {
             <div
               :class="[
                 'bg-gray-800/50 backdrop-blur-md border border-gray-700/50 rounded-xl p-6 shadow-lg hover:shadow-purple-500/10 transition-all duration-500 hover:border-purple-500/30 group animate-fade-in-up animate-delay-400 card-hover',
-                showRefreshAnimation
-                  ? 'opacity-50 scale-95'
-                  : 'opacity-100 scale-100',
+                showRefreshAnimation ? 'opacity-50 scale-95' : 'opacity-100 scale-100',
               ]"
               :style="{
-                transition: showRefreshAnimation
-                  ? 'all 0.3s ease-out'
-                  : 'all 0.5s ease-in',
+                transition: showRefreshAnimation ? 'all 0.3s ease-out' : 'all 0.5s ease-in',
               }"
             >
               <div class="flex items-center justify-between mb-4">
@@ -1173,14 +1115,9 @@ onUnmounted(() => {
               </div>
               <div
                 class="text-3xl font-bold"
-                :class="
-                  growthData.improvement >= 0
-                    ? 'text-green-400'
-                    : 'text-red-400'
-                "
+                :class="growthData.improvement >= 0 ? 'text-green-400' : 'text-red-400'"
               >
-                {{ growthData.improvement >= 0 ? "+" : ""
-                }}{{ growthData.improvement }}%
+                {{ growthData.improvement >= 0 ? "+" : "" }}{{ growthData.improvement }}%
               </div>
               <p class="text-xs text-gray-500 mt-1">相比首次面试</p>
             </div>
@@ -1259,9 +1196,7 @@ onUnmounted(() => {
                   <div class="flex justify-between mb-1">
                     <span class="text-sm text-gray-400">专业技能</span>
                     <span class="text-sm text-white"
-                      >{{
-                        Math.round(abilityProgress.professionalSkills)
-                      }}%</span
+                      >{{ Math.round(abilityProgress.professionalSkills) }}%</span
                     >
                   </div>
                   <div class="w-full bg-gray-700/50 rounded-full h-2">
@@ -1288,9 +1223,7 @@ onUnmounted(() => {
               class="bg-gray-800/50 backdrop-blur-md border border-gray-700/50 rounded-xl p-6 shadow-lg hover:shadow-red-500/10 transition-all duration-500 card-hover animate-fade-in-up animate-delay-100"
             >
               <div class="flex items-center gap-3 mb-4">
-                <div
-                  class="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center"
-                >
+                <div class="w-10 h-10 rounded-full bg-red-500/20 flex items-center justify-center">
                   <svg
                     class="w-5 h-5 text-red-400"
                     fill="none"
@@ -1324,9 +1257,7 @@ onUnmounted(() => {
               class="bg-gray-800/50 backdrop-blur-md border border-gray-700/50 rounded-xl p-6 shadow-lg hover:shadow-blue-500/10 transition-all duration-500 card-hover animate-fade-in-up animate-delay-200"
             >
               <div class="flex items-center gap-3 mb-4">
-                <div
-                  class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center"
-                >
+                <div class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center">
                   <svg
                     class="w-5 h-5 text-blue-400"
                     fill="none"
