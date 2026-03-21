@@ -1,15 +1,22 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
+import { useMutation, useQueryClient } from "@tanstack/vue-query";
 import { useRouter } from "vue-router";
-import { authApi, userApi } from "@/lib/api";
-import { setAccessToken, setUserInfo } from "@/utils/token";
+import { getApiErrorMessage, getProfileQueryOptions, signIn } from "@/lib/api";
+import { setAccessToken } from "@/utils/token";
 import type { SignInRequest } from "@/api";
 
 const router = useRouter();
+const queryClient = useQueryClient();
 const account = ref("");
 const password = ref("");
-const loading = ref(false);
 const error = ref("");
+
+const loginMutation = useMutation({
+  mutationFn: signIn,
+});
+
+const loading = computed(() => loginMutation.isPending.value);
 
 const handleLogin = async () => {
   // 表单验证
@@ -18,7 +25,6 @@ const handleLogin = async () => {
     return;
   }
 
-  loading.value = true;
   error.value = "";
 
   try {
@@ -27,35 +33,21 @@ const handleLogin = async () => {
       password: password.value,
     };
 
-    const response = await authApi.apiAuthSigninPost(signInRequest);
-    const data = response.data;
+    const token = await loginMutation.mutateAsync(signInRequest);
 
-    if (data.success) {
-      // 登录成功，保存 Token
-      setAccessToken(data.data);
-      console.log("登录成功:", data.message);
+    setAccessToken(token);
+    queryClient.clear();
 
-      // 获取用户信息并保存
-      try {
-        const profileResponse = await userApi.apiUserProfileGet();
-        if (profileResponse.data.success) {
-          setUserInfo(profileResponse.data.data);
-        }
-      } catch (err) {
-        console.error("获取用户信息失败:", err);
-      }
-
-      // 跳转到仪表盘
-      router.push("/dashboard");
-    } else {
-      // 登录失败
-      error.value = data.message || "登录失败，请检查账号密码";
+    try {
+      await queryClient.fetchQuery(getProfileQueryOptions());
+    } catch (profileError) {
+      console.error("获取用户信息失败:", profileError);
     }
-  } catch (err: any) {
-    console.error("登录错误:", err);
-    error.value = err.response?.data?.message || "网络错误，请稍后重试";
-  } finally {
-    loading.value = false;
+
+    router.push("/dashboard");
+  } catch (loginError) {
+    console.error("登录错误:", loginError);
+    error.value = getApiErrorMessage(loginError, "登录失败，请检查账号密码");
   }
 };
 

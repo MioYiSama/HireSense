@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed } from "vue";
+import { ref, onMounted, onUnmounted, computed, watch } from "vue";
+import { useMutation, useQueryClient } from "@tanstack/vue-query";
 import { useRouter } from "vue-router";
 import {
   getUserInfo,
@@ -8,13 +9,20 @@ import {
   setInitialReply,
   clearAll,
 } from "@/utils/token";
-import { authApi } from "@/lib/api";
+import {
+  getApiErrorMessage,
+  signOut,
+  startInterview,
+  useInterviewsQuery,
+} from "@/lib/api";
 import ConfirmDialog from "@/components/ConfirmDialog.vue";
 import GrowthCurve from "@/components/GrowthCurve.vue";
 
 const router = useRouter();
+const queryClient = useQueryClient();
 const showDropdown = ref(false);
 let hideTimeout: number | null = null;
+let abilityAnimationFrame: number | null = null;
 
 const name = ref("奶龙");
 const showLogoutDialog = ref(false);
@@ -52,23 +60,13 @@ const confirmLogout = async () => {
   }
 
   try {
-    // 调用退出登录 API
-    const response = await authApi.apiAuthSignoutPost();
-    const data = response.data;
-
-    if (data.success) {
-      console.log("退出登录成功:", data.message);
-      // 清除所有用户信息
-      clearAll();
-      // 跳转到登录页面
-      router.push("/");
-    } else {
-      console.error("退出登录失败:", data.message);
-      showMessage(data.message || "退出登录失败");
-    }
-  } catch (err: any) {
-    console.error("退出登录错误:", err);
-    showMessage(err.response?.data?.message || "网络错误，请稍后重试");
+    await logoutMutation.mutateAsync();
+    clearAll();
+    queryClient.clear();
+    router.push("/");
+  } catch (logoutError) {
+    console.error("退出登录错误:", logoutError);
+    showMessage(getApiErrorMessage(logoutError, "网络错误，请稍后重试"));
   }
 };
 
@@ -85,15 +83,200 @@ const goToProfile = () => {
   router.push("/profile");
 };
 
-const isLoading = ref(false);
+const interviewsQuery = useInterviewsQuery();
+const logoutMutation = useMutation({
+  mutationFn: signOut,
+});
+const startInterviewMutation = useMutation({
+  mutationFn: startInterview,
+});
+
+const isLoading = computed(() => startInterviewMutation.isPending.value);
 const errorMessage = ref("");
 
 // 面试记录相关
-const interviews = ref<any[]>([]);
-const isLoadingInterviews = ref(false);
-const interviewsError = ref("");
+const interviews = computed(() => interviewsQuery.data.value ?? []);
+const isLoadingInterviews = computed(() => interviewsQuery.isPending.value);
+const interviewsError = computed(() => {
+  if (!getAccessToken()) {
+    return "请先登录";
+  }
+
+  if (interviewsQuery.error.value) {
+    return getApiErrorMessage(interviewsQuery.error.value, "获取面试记录失败");
+  }
+
+  return "";
+});
 const isRefreshing = ref(false);
 const showRefreshAnimation = ref(false);
+const MIN_REPORTS_FOR_ANALYSIS = 3;
+
+type AbilityProgressState = {
+  communication: number;
+  adaptability: number;
+  logicalThinking: number;
+  professionalSkills: number;
+};
+
+type AbilityInsight = {
+  name: string;
+  averageScore: number;
+  sampleCount: number;
+  source: "general" | "specific";
+};
+
+const createEmptyAbilityProgress = (): AbilityProgressState => ({
+  communication: 0,
+  adaptability: 0,
+  logicalThinking: 0,
+  professionalSkills: 0,
+});
+
+const getAverage = (values: number[]) => {
+  if (values.length === 0) {
+    return 0;
+  }
+
+  return values.reduce((total, value) => total + value, 0) / values.length;
+};
+
+const parseScore = (value: unknown) => {
+  const score = Number(value);
+  return Number.isFinite(score) ? score : null;
+};
+
+const pushScore = (bucket: number[], value: unknown) => {
+  const score = parseScore(value);
+  if (score !== null) {
+    bucket.push(score);
+  }
+};
+
+const rankReportTexts = (values: unknown[]) => {
+  const buckets = new Map<string, { count: number; firstSeen: number }>();
+
+  values.forEach((value, index) => {
+    const text = String(value ?? "").trim();
+    if (!text) {
+      return;
+    }
+
+    const current = buckets.get(text);
+    if (current) {
+      current.count += 1;
+      return;
+    }
+
+    buckets.set(text, { count: 1, firstSeen: index });
+  });
+
+  return [...buckets.entries()]
+    .sort((left, right) => {
+      if (right[1].count !== left[1].count) {
+        return right[1].count - left[1].count;
+      }
+
+      return left[1].firstSeen - right[1].firstSeen;
+    })
+    .map(([text]) => text);
+};
+
+const FIXED_GUIDANCE_BY_ABILITY: Record<
+  string,
+  { weakPoint: string; suggestion: string; resource: string }
+> = {
+  沟通表达: {
+    weakPoint: "沟通表达维度持续偏弱，回答还可以更精炼、更有结构。",
+    suggestion: "用 STAR 结构重写项目经历，并通过录音复盘是否做到结论前置。",
+    resource: "STAR 项目表达复盘清单",
+  },
+  逻辑思维: {
+    weakPoint: "逻辑思维维度偏弱，分析问题时还需要更清晰的拆解路径。",
+    suggestion: "练习按“结论-分析-方案-权衡”结构回答开放题，减少跳步表达。",
+    resource: "结构化拆题练习题单",
+  },
+  应变能力: {
+    weakPoint: "应变能力偏弱，面对追问和临场变化时稳定性不足。",
+    suggestion: "补充高频追问场景演练，先澄清问题边界再给出取舍方案。",
+    resource: "高频追问场景演练清单",
+  },
+  自信度: {
+    weakPoint: "自信度维度偏弱，表达时容易犹豫或反复修正。",
+    suggestion: "回答时先亮结论和依据，再展开细节，降低口头重复和迟疑。",
+    resource: "高压面试表达训练卡",
+  },
+  学习能力: {
+    weakPoint: "学习能力维度有待加强，缺少把新知识快速转成实践成果的证明。",
+    suggestion: "准备 2 到 3 个“学习新技术并落地”的案例，突出学习路径和业务结果。",
+    resource: "技术学习案例整理模板",
+  },
+  团队协同: {
+    weakPoint: "团队协同维度偏弱，协作推进和冲突处理案例还不够扎实。",
+    suggestion: "补充跨团队协作案例，明确角色分工、冲突处理和推进结果。",
+    resource: "协作冲突复盘模板",
+  },
+  设计: {
+    weakPoint: "设计维度评分偏低，系统化设计思路还不够完整。",
+    suggestion: "围绕页面架构、组件抽象和交互方案准备成体系的设计说明。",
+    resource: "前端架构设计复盘清单",
+  },
+  性能: {
+    weakPoint: "性能维度评分偏低，性能瓶颈定位和优化手段需要继续强化。",
+    suggestion: "梳理性能优化案例，回答时明确指标、瓶颈、方案和收益。",
+    resource: "性能优化案例清单",
+  },
+  工程化: {
+    weakPoint: "工程化维度评分偏低，流程规范和质量保障能力有待加强。",
+    suggestion: "准备构建、测试、发布和规范治理的真实案例，强调提效结果。",
+    resource: "前端工程化专题题单",
+  },
+  组件化: {
+    weakPoint: "组件化维度评分偏低，复用设计和边界抽象还不够清晰。",
+    suggestion: "复盘通用组件设计，重点准备接口边界、可扩展性和维护成本取舍。",
+    resource: "组件设计问答清单",
+  },
+  数据流: {
+    weakPoint: "数据流维度评分偏低，状态管理和复杂交互建模仍需加强。",
+    suggestion: "整理复杂状态流转案例，讲清数据来源、更新机制和异常处理。",
+    resource: "状态管理与数据流专题",
+  },
+  安全: {
+    weakPoint: "安全维度评分偏低，常见安全风险及防护策略掌握不够扎实。",
+    suggestion: "重点复习常见安全风险和防护方案，并准备项目里的安全实践案例。",
+    resource: "应用安全高频问答清单",
+  },
+  分布式: {
+    weakPoint: "分布式维度评分偏低，系统拆分和一致性设计仍需补强。",
+    suggestion: "补充分布式场景案例，回答时说明拆分依据、容错和一致性方案。",
+    resource: "分布式系统面试题单",
+  },
+  数据库: {
+    weakPoint: "数据库维度评分偏低，建模、索引和事务取舍还不够扎实。",
+    suggestion: "准备数据库优化案例，重点说明建模、索引策略和故障排查过程。",
+    resource: "数据库优化复盘清单",
+  },
+  API: {
+    weakPoint: "API 维度评分偏低，接口设计和稳定性治理能力还需加强。",
+    suggestion: "复盘接口设计案例，明确版本管理、幂等、容错和监控策略。",
+    resource: "API 设计与治理题单",
+  },
+  DevOps: {
+    weakPoint: "DevOps 维度评分偏低，交付链路和运维协作经验还不够具体。",
+    suggestion: "补充 CI/CD、发布回滚和监控告警的实战案例，突出质量闭环。",
+    resource: "DevOps 实战问答清单",
+  },
+};
+
+const getFixedGuidance = (name: string) => {
+  return (
+    FIXED_GUIDANCE_BY_ABILITY[name] ?? {
+      weakPoint: `${name}维度评分偏低，需要继续补强相关知识和案例表达。`,
+      suggestion: `围绕${name}补充核心概念、项目案例和常见追问练习。`,
+      resource: `${name}专项复盘清单`,
+    }
+  );
+};
 
 // 刷新面试数据
 const refreshInterviews = async () => {
@@ -103,6 +286,8 @@ const refreshInterviews = async () => {
 
   try {
     await fetchInterviews();
+  } catch (error) {
+    console.error("刷新面试记录失败:", error);
   } finally {
     // 结束刷新动画
     showRefreshAnimation.value = false;
@@ -116,6 +301,12 @@ const refreshInterviews = async () => {
 // 个人成长数据
 const growthData = computed(() => {
   const { completedInterviews, scores } = commonComputedData.value;
+  const firstScore = scores[0];
+  const lastScore = scores[scores.length - 1];
+  const improvement =
+    scores.length > 2 && firstScore !== undefined && firstScore > 0 && lastScore !== undefined
+      ? Math.round(((lastScore - firstScore) * 100) / firstScore)
+      : null;
 
   return {
     totalInterviews: interviews.value.length,
@@ -123,10 +314,7 @@ const growthData = computed(() => {
     averageScore:
       scores.length > 0 ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0,
     highestScore: scores.length > 0 ? Math.max(...scores) : 0,
-    improvement:
-      scores.length > 2
-        ? Math.round(((scores[scores.length - 1] - scores[0]) * 100) / scores[0])
-        : 0,
+    improvement,
   };
 });
 
@@ -155,37 +343,21 @@ const growthCurveData = computed(() => {
 
   const filteredData = realData.filter((item) => item.date >= cutoffDate);
 
-  // 如果真实数据点较少，生成额外的模拟数据
-  if (filteredData.length <= 1) {
-    const mockData = [];
-    const today = new Date();
-
-    // 生成最近N天的模拟数据
-    for (let i = days - 1; i >= 0; i -= Math.max(1, Math.floor(days / 5))) {
-      const date = new Date(today);
-      date.setDate(today.getDate() - i);
-
-      // 生成逐渐增长的分数
-      const baseScore = 60;
-      const growth = (days - 1 - i) * (25 / (days - 1));
-      const score = Math.round(baseScore + growth);
-
-      mockData.push({
-        score,
-        date,
-      });
-    }
-
-    return mockData;
-  }
-
   return filteredData;
 });
 
 // 通用计算数据，避免重复计算
 const commonComputedData = computed(() => {
-  const completedInterviews = interviews.value.filter((item) => item.report);
-  const scores = completedInterviews.map((item) => item.report.score);
+  const completedInterviews = interviews.value
+    .filter((item) => item.report)
+    .sort((a, b) => {
+      const timeA = new Date(a.created_at || 0).getTime();
+      const timeB = new Date(b.created_at || 0).getTime();
+      return timeA - timeB;
+    });
+  const scores = completedInterviews
+    .map((item) => parseScore(item.report?.score))
+    .filter((score): score is number => score !== null);
 
   return {
     completedInterviews,
@@ -193,158 +365,211 @@ const commonComputedData = computed(() => {
   };
 });
 
+const hasEnoughReportsForAnalysis = computed(() => {
+  return commonComputedData.value.completedInterviews.length > 2;
+});
+
+const hasEnoughGrowthCurveData = computed(() => {
+  return growthCurveData.value.length > 2;
+});
+
+const growthCurveEmptyMessage = computed(() => {
+  if (!hasEnoughReportsForAnalysis.value) {
+    return `至少需要 ${MIN_REPORTS_FOR_ANALYSIS} 份已生成面试报告后才展示成长曲线，当前为 ${commonComputedData.value.completedInterviews.length} 份。`;
+  }
+
+  return `当前所选时间范围内仅有 ${growthCurveData.value.length} 份已生成面试报告，暂时无法展示可靠趋势。`;
+});
+
 // 时间范围选择
 const timeRange = ref("30"); // 默认近30天
 
 // 能力对比进度条数据
-const abilityProgress = ref({
-  communication: 0,
-  problemSolving: 0,
-  logicalThinking: 0,
-  professionalSkills: 0,
+const abilityProgress = ref<AbilityProgressState>(createEmptyAbilityProgress());
+
+const abilityTargetProgress = computed<AbilityProgressState>(() => {
+  if (!hasEnoughReportsForAnalysis.value) {
+    return createEmptyAbilityProgress();
+  }
+
+  const communicationScores: number[] = [];
+  const adaptabilityScores: number[] = [];
+  const logicalThinkingScores: number[] = [];
+  const professionalSkillScores: number[] = [];
+
+  commonComputedData.value.completedInterviews.forEach((item) => {
+    const report = item.report;
+
+    if (!report) {
+      return;
+    }
+
+    pushScore(communicationScores, report.general?.["沟通表达"]);
+    pushScore(adaptabilityScores, report.general?.["应变能力"]);
+    pushScore(logicalThinkingScores, report.general?.["逻辑思维"]);
+    Object.values(report.specific ?? {}).forEach((score) => {
+      pushScore(professionalSkillScores, score);
+    });
+  });
+
+  return {
+    communication: Math.round(getAverage(communicationScores) * 10),
+    adaptability: Math.round(getAverage(adaptabilityScores) * 10),
+    logicalThinking: Math.round(getAverage(logicalThinkingScores) * 10),
+    professionalSkills: Math.round(getAverage(professionalSkillScores) * 10),
+  };
 });
 
-// 目标进度值
-const targetProgress = {
-  communication: 75,
-  problemSolving: 85,
-  logicalThinking: 80,
-  professionalSkills: 70,
-};
+const abilityComparisonEmptyMessage = computed(() => {
+  return `至少需要 ${MIN_REPORTS_FOR_ANALYSIS} 份已生成面试报告后才展示能力对比，当前为 ${commonComputedData.value.completedInterviews.length} 份。`;
+});
+
+const hasAdviceData = computed(() => {
+  return commonComputedData.value.completedInterviews.length > 0;
+});
+
+const adviceEmptyMessage = "至少需要 1 份已生成面试报告后才展示提升建议。";
+
+const historicalAbilityInsights = computed<AbilityInsight[]>(() => {
+  const buckets = new Map<string, { total: number; count: number; source: "general" | "specific" }>();
+
+  commonComputedData.value.completedInterviews.forEach((item) => {
+    const report = item.report;
+    if (!report) {
+      return;
+    }
+
+    Object.entries(report.general ?? {}).forEach(([name, score]) => {
+      const parsedScore = parseScore(score);
+      if (parsedScore === null) {
+        return;
+      }
+
+      const current = buckets.get(name) ?? { total: 0, count: 0, source: "general" as const };
+      current.total += parsedScore;
+      current.count += 1;
+      current.source = "general";
+      buckets.set(name, current);
+    });
+
+    Object.entries(report.specific ?? {}).forEach(([name, score]) => {
+      const parsedScore = parseScore(score);
+      if (parsedScore === null) {
+        return;
+      }
+
+      const current = buckets.get(name) ?? { total: 0, count: 0, source: "specific" as const };
+      current.total += parsedScore;
+      current.count += 1;
+      current.source = "specific";
+      buckets.set(name, current);
+    });
+  });
+
+  return [...buckets.entries()]
+    .map(([name, bucket]) => ({
+      name,
+      averageScore: bucket.total / bucket.count,
+      sampleCount: bucket.count,
+      source: bucket.source,
+    }))
+    .sort((left, right) => {
+      if (left.averageScore !== right.averageScore) {
+        return left.averageScore - right.averageScore;
+      }
+
+      return left.name.localeCompare(right.name, "zh-CN");
+    });
+});
+
+const focusAbilities = computed(() => {
+  const lowerScoreAbilities = historicalAbilityInsights.value.filter((item) => item.averageScore < 8.5);
+  return (lowerScoreAbilities.length > 0 ? lowerScoreAbilities : historicalAbilityInsights.value).slice(0, 3);
+});
+
+const extractedWeakPoints = computed(() => {
+  const shortcomings = commonComputedData.value.completedInterviews.flatMap((item) => {
+    return item.report?.shortcomings ?? [];
+  });
+
+  return rankReportTexts(shortcomings);
+});
+
+const extractedResources = computed(() => {
+  const resources = commonComputedData.value.completedInterviews.flatMap((item) => {
+    return item.report?.resources ?? [];
+  });
+
+  return rankReportTexts(resources);
+});
 
 // 分析面试报告中的薄弱点
 const weakPoints = computed(() => {
-  const { completedInterviews } = commonComputedData.value;
-  if (completedInterviews.length === 0) {
-    return ["专业技能需要加强", "沟通表达不够流畅", "项目经验描述不够详细"];
+  if (!hasAdviceData.value) {
+    return [];
   }
 
-  // 获取最新的面试报告
-  const latestInterview = completedInterviews[completedInterviews.length - 1];
-  const report = latestInterview.report;
-
-  if (!report) {
-    return ["专业技能需要加强", "沟通表达不够流畅", "项目经验描述不够详细"];
+  if (extractedWeakPoints.value.length > 0) {
+    return extractedWeakPoints.value.slice(0, 3);
   }
 
-  const weakAreas: string[] = [];
+  if (focusAbilities.value.length === 0) {
+    return [];
+  }
 
-  // 分析通用能力
-  if (report.general) {
-    Object.entries(report.general).forEach(([name, score]) => {
-      const numScore = Number(score);
-      if (numScore < 70) {
-        switch (name) {
-          case "communication":
-            weakAreas.push("沟通表达能力需要加强");
-            break;
-          case "problemSolving":
-            weakAreas.push("问题解决能力需要提升");
-            break;
-          case "logicalThinking":
-            weakAreas.push("逻辑思维能力需要加强");
-            break;
-          default:
-            weakAreas.push(`${name}能力需要加强`);
-        }
+  const lowScoreWeakPoints = focusAbilities.value
+    .filter((item) => item.averageScore < 8.5)
+    .map((item) => {
+      if (item.averageScore < 7) {
+        return getFixedGuidance(item.name).weakPoint;
       }
+
+      return `${item.name}维度仍有提升空间，最近报告均分 ${item.averageScore.toFixed(1)} / 10。`;
     });
+
+  if (lowScoreWeakPoints.length > 0) {
+    return lowScoreWeakPoints.slice(0, 3);
   }
 
-  // 分析专业能力
-  if (report.specific) {
-    Object.entries(report.specific).forEach(([name, score]) => {
-      const numScore = Number(score);
-      if (numScore < 70) {
-        weakAreas.push(`${name}技能需要加强`);
-      }
-    });
-  }
-
-  // 如果没有找到薄弱点，返回默认值
-  if (weakAreas.length === 0) {
-    return ["专业技能需要加强", "沟通表达不够流畅", "项目经验描述不够详细"];
-  }
-
-  return weakAreas.slice(0, 3); // 最多返回3个薄弱点
+  return ["近几次历史报告未发现明确的薄弱环节"];
 });
 
 // 生成针对性的改进建议
 const improvementSuggestions = computed(() => {
-  const weak = weakPoints.value;
-  const suggestions: string[] = [];
-
-  if (weak.some((item) => item.includes("沟通表达"))) {
-    suggestions.push("多练习面试表达，录制自己的回答并分析改进");
+  if (!hasAdviceData.value || focusAbilities.value.length === 0) {
+    return [];
   }
 
-  if (weak.some((item) => item.includes("问题解决"))) {
-    suggestions.push("多练习算法题和系统设计问题");
-  }
-
-  if (weak.some((item) => item.includes("逻辑思维"))) {
-    suggestions.push("练习结构化思考和表达能力");
-  }
-
-  if (weak.some((item) => item.includes("专业技能"))) {
-    suggestions.push("针对岗位要求系统学习相关技术栈");
-  }
-
-  if (weak.some((item) => item.includes("项目经验"))) {
-    suggestions.push("准备项目案例的详细描述，突出自己的贡献");
-  }
-
-  // 补充默认建议
-  while (suggestions.length < 3) {
-    const defaultSuggestions = [
-      "参加模拟面试训练",
-      "准备常见面试问题的答案",
-      "学习行业最新技术趋势",
-    ];
-    defaultSuggestions.forEach((suggestion) => {
-      if (!suggestions.includes(suggestion) && suggestions.length < 3) {
-        suggestions.push(suggestion);
+  return focusAbilities.value
+    .map((item) => {
+      if (item.averageScore >= 8.5) {
+        return `当前${item.name}表现稳定，继续通过模拟面试和复盘保持答题质量。`;
       }
-    });
-    break;
-  }
 
-  return suggestions;
+      return getFixedGuidance(item.name).suggestion;
+    })
+    .filter((suggestion, index, suggestions) => {
+      return suggestions.indexOf(suggestion) === index;
+    })
+    .slice(0, 3);
 });
 
 // 生成学习资源建议
 const learningResources = computed(() => {
-  const weak = weakPoints.value;
-  const resources: string[] = [];
-
-  if (weak.some((item) => item.includes("算法"))) {
-    resources.push("LeetCode 算法题");
+  if (!hasAdviceData.value) {
+    return [];
   }
 
-  if (weak.some((item) => item.includes("系统设计"))) {
-    resources.push("系统设计面试指南");
-  }
+  const resources = [...extractedResources.value];
 
-  if (weak.some((item) => item.includes("前端"))) {
-    resources.push("前端面试常见问题");
-  }
+  focusAbilities.value.forEach((item) => {
+    const fixedResource = getFixedGuidance(item.name).resource;
+    if (!resources.includes(fixedResource)) {
+      resources.push(fixedResource);
+    }
+  });
 
-  if (weak.some((item) => item.includes("后端"))) {
-    resources.push("后端技术面试题集");
-  }
-
-  // 补充默认资源
-  while (resources.length < 3) {
-    const defaultResources = ["技术博客和社区", "行业会议和讲座", "在线课程平台"];
-    defaultResources.forEach((resource) => {
-      if (!resources.includes(resource) && resources.length < 3) {
-        resources.push(resource);
-      }
-    });
-    break;
-  }
-
-  return resources;
+  return resources.slice(0, 3);
 });
 
 // 时间格式化函数
@@ -416,50 +641,15 @@ const getRandomCompanyName = (id: string): string => {
 
 // 获取面试记录
 const fetchInterviews = async () => {
-  isLoadingInterviews.value = true;
-  interviewsError.value = "";
-
-  try {
-    const token = getAccessToken();
-
-    if (!token) {
-      interviewsError.value = "请先登录";
-      isLoadingInterviews.value = false;
-      return;
-    }
-
-    const url = "http://127.0.0.1:8080/api/user/interviews";
-    const options = {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    };
-
-    const response = await fetch(url, options);
-
-    if (!response.ok) {
-      throw new Error("请求失败");
-    }
-
-    const data = await response.json();
-
-    if (data.success) {
-      interviews.value = data.data || [];
-    } else {
-      interviewsError.value = data.message || "获取面试记录失败";
-    }
-  } catch (error) {
-    console.error("获取面试记录失败:", error);
-    interviewsError.value = "网络错误，请稍后重试";
-  } finally {
-    isLoadingInterviews.value = false;
+  if (!getAccessToken()) {
+    return;
   }
+
+  await interviewsQuery.refetch();
 };
 
 const startNewInterview = async () => {
   // 显示加载状态
-  isLoading.value = true;
   errorMessage.value = "";
 
   try {
@@ -468,55 +658,28 @@ const startNewInterview = async () => {
 
     if (!token) {
       errorMessage.value = "请先登录";
-      isLoading.value = false;
       setTimeout(() => {
         errorMessage.value = "";
       }, 3000);
       return;
     }
 
-    // 发送开始面试请求
-    const url = "http://127.0.0.1:8080/api/interview/start";
-    const options = {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-    };
+    const data = await startInterviewMutation.mutateAsync();
 
-    const response = await fetch(url, options);
-
-    if (!response.ok) {
-      throw new Error("请求失败");
-    }
-
-    const data = await response.json();
-
-    if (data.success && data.data && data.data.id) {
-      // 存储面试ID到localStorage
-      setInterviewId(data.data.id);
-      // 存储AI面试官的初始回复
-      if (data.data.reply) {
-        setInitialReply(data.data.reply);
+    if (data.id) {
+      setInterviewId(data.id);
+      if (data.reply) {
+        setInitialReply(data.reply);
       }
-      // 请求成功，跳转到面试页面
+      void fetchInterviews();
       router.push("/interview");
-    } else {
-      errorMessage.value = data.message || "启动面试失败";
-      setTimeout(() => {
-        errorMessage.value = "";
-      }, 3000);
     }
   } catch (error) {
     console.error("启动面试失败:", error);
-    errorMessage.value = "网络错误，请稍后重试";
+    errorMessage.value = getApiErrorMessage(error, "网络错误，请稍后重试");
     setTimeout(() => {
       errorMessage.value = "";
     }, 3000);
-  } finally {
-    // 隐藏加载状态
-    isLoading.value = false;
   }
 };
 
@@ -546,6 +709,55 @@ const handleClickOutside = (event: MouseEvent) => {
   }
 };
 
+const animateAbilityProgress = (targetProgress: AbilityProgressState) => {
+  if (abilityAnimationFrame) {
+    cancelAnimationFrame(abilityAnimationFrame);
+    abilityAnimationFrame = null;
+  }
+
+  const duration = 1500;
+  const startTime = performance.now();
+
+  const animate = (currentTime: number) => {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+
+    abilityProgress.value = {
+      communication: targetProgress.communication * easeOutQuart,
+      adaptability: targetProgress.adaptability * easeOutQuart,
+      logicalThinking: targetProgress.logicalThinking * easeOutQuart,
+      professionalSkills: targetProgress.professionalSkills * easeOutQuart,
+    };
+
+    if (progress < 1) {
+      abilityAnimationFrame = requestAnimationFrame(animate);
+      return;
+    }
+
+    abilityAnimationFrame = null;
+  };
+
+  abilityAnimationFrame = requestAnimationFrame(animate);
+};
+
+watch(
+  abilityTargetProgress,
+  (targetProgress) => {
+    if (!hasEnoughReportsForAnalysis.value) {
+      if (abilityAnimationFrame) {
+        cancelAnimationFrame(abilityAnimationFrame);
+        abilityAnimationFrame = null;
+      }
+      abilityProgress.value = createEmptyAbilityProgress();
+      return;
+    }
+
+    animateAbilityProgress(targetProgress);
+  },
+  { immediate: true },
+);
+
 onMounted(() => {
   // 从localStorage获取用户信息
   const userInfo = getUserInfo();
@@ -553,38 +765,7 @@ onMounted(() => {
     name.value = userInfo.name;
   }
 
-  // 获取面试记录
-  fetchInterviews();
-
   document.addEventListener("click", handleClickOutside);
-
-  // 启动能力对比进度条动画
-  const animateProgress = () => {
-    const duration = 1500;
-    const startTime = performance.now();
-
-    const animate = (currentTime: number) => {
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-
-      const easeOutQuart = 1 - Math.pow(1 - progress, 4);
-
-      abilityProgress.value = {
-        communication: targetProgress.communication * easeOutQuart,
-        problemSolving: targetProgress.problemSolving * easeOutQuart,
-        logicalThinking: targetProgress.logicalThinking * easeOutQuart,
-        professionalSkills: targetProgress.professionalSkills * easeOutQuart,
-      };
-
-      if (progress < 1) {
-        requestAnimationFrame(animate);
-      }
-    };
-
-    requestAnimationFrame(animate);
-  };
-
-  setTimeout(animateProgress, 300);
 });
 
 onUnmounted(() => {
@@ -594,6 +775,9 @@ onUnmounted(() => {
   }
   if (messageTimeout) {
     clearTimeout(messageTimeout);
+  }
+  if (abilityAnimationFrame) {
+    cancelAnimationFrame(abilityAnimationFrame);
   }
 });
 </script>
@@ -1115,11 +1299,27 @@ onUnmounted(() => {
               </div>
               <div
                 class="text-3xl font-bold"
-                :class="growthData.improvement >= 0 ? 'text-green-400' : 'text-red-400'"
+                :class="
+                  growthData.improvement === null
+                    ? 'text-slate-300'
+                    : growthData.improvement >= 0
+                      ? 'text-green-400'
+                      : 'text-red-400'
+                "
               >
-                {{ growthData.improvement >= 0 ? "+" : "" }}{{ growthData.improvement }}%
+                {{
+                  growthData.improvement === null
+                    ? "数据不足"
+                    : `${growthData.improvement >= 0 ? "+" : ""}${growthData.improvement}%`
+                }}
               </div>
-              <p class="text-xs text-gray-500 mt-1">相比首次面试</p>
+              <p class="text-xs text-gray-500 mt-1">
+                {{
+                  growthData.improvement === null
+                    ? `至少需要 ${MIN_REPORTS_FOR_ANALYSIS} 份已生成报告`
+                    : "相比首次面试"
+                }}
+              </p>
             </div>
           </div>
         </section>
@@ -1131,18 +1331,48 @@ onUnmounted(() => {
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <!-- 能力成长曲线 -->
             <GrowthCurve
+              v-if="hasEnoughGrowthCurveData"
               :data="growthCurveData"
               v-model:timeRange="timeRange"
               title="能力成长曲线"
               class="animate-fade-in-up animate-delay-100"
             />
+            <div
+              v-else
+              class="bg-gray-800/50 backdrop-blur-md border border-gray-700/50 rounded-xl p-6 shadow-lg transition-all duration-500 card-hover animate-fade-in-up animate-delay-100"
+            >
+              <div class="flex items-center justify-between mb-6">
+                <h3 class="text-lg font-medium text-white">能力成长曲线</h3>
+                <span class="text-xs text-slate-400">数据不足</span>
+              </div>
+              <div
+                class="h-64 rounded-xl border border-dashed border-gray-700/60 bg-gray-900/30 px-6 flex flex-col items-center justify-center text-center"
+              >
+                <div
+                  class="w-12 h-12 rounded-full bg-cyan-500/10 text-cyan-300 flex items-center justify-center mb-4"
+                >
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="1.8"
+                      d="M3 17l6-6 4 4 7-8"
+                    />
+                  </svg>
+                </div>
+                <p class="text-sm font-medium text-white">暂时无法生成可靠成长曲线</p>
+                <p class="text-xs text-slate-400 mt-2 max-w-sm">
+                  {{ growthCurveEmptyMessage }}
+                </p>
+              </div>
+            </div>
 
             <!-- 能力对比图 -->
             <div
               class="bg-gray-800/50 backdrop-blur-md border border-gray-700/50 rounded-xl p-6 shadow-lg hover:shadow-green-500/10 transition-all duration-500 card-hover animate-fade-in-up animate-delay-200"
             >
               <h3 class="text-lg font-medium text-white mb-4">能力对比</h3>
-              <div class="space-y-4">
+              <div v-if="hasEnoughReportsForAnalysis" class="space-y-4">
                 <!-- 沟通表达 -->
                 <div>
                   <div class="flex justify-between mb-1">
@@ -1162,15 +1392,15 @@ onUnmounted(() => {
                 <!-- 问题解决 -->
                 <div>
                   <div class="flex justify-between mb-1">
-                    <span class="text-sm text-gray-400">问题解决</span>
+                    <span class="text-sm text-gray-400">应变能力</span>
                     <span class="text-sm text-white"
-                      >{{ Math.round(abilityProgress.problemSolving) }}%</span
+                      >{{ Math.round(abilityProgress.adaptability) }}%</span
                     >
                   </div>
                   <div class="w-full bg-gray-700/50 rounded-full h-2">
                     <div
                       class="bg-green-500 h-2 rounded-full transition-all duration-1000 ease-out"
-                      :style="{ width: abilityProgress.problemSolving + '%' }"
+                      :style="{ width: abilityProgress.adaptability + '%' }"
                     ></div>
                   </div>
                 </div>
@@ -1209,6 +1439,27 @@ onUnmounted(() => {
                   </div>
                 </div>
               </div>
+              <div
+                v-else
+                class="h-64 rounded-xl border border-dashed border-gray-700/60 bg-gray-900/30 px-6 flex flex-col items-center justify-center text-center"
+              >
+                <div
+                  class="w-12 h-12 rounded-full bg-green-500/10 text-green-300 flex items-center justify-center mb-4"
+                >
+                  <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="1.8"
+                      d="M9 17v-6m3 6V7m3 10v-3m3 3V5M3 19h18"
+                    />
+                  </svg>
+                </div>
+                <p class="text-sm font-medium text-white">暂时无法生成可靠能力对比</p>
+                <p class="text-xs text-slate-400 mt-2 max-w-sm">
+                  {{ abilityComparisonEmptyMessage }}
+                </p>
+              </div>
             </div>
           </div>
         </section>
@@ -1240,7 +1491,7 @@ onUnmounted(() => {
                 </div>
                 <h3 class="text-lg font-medium text-white">薄弱环节</h3>
               </div>
-              <ul class="space-y-2 text-sm text-gray-300">
+              <ul v-if="weakPoints.length > 0" class="space-y-2 text-sm text-gray-300">
                 <li
                   v-for="(point, index) in weakPoints"
                   :key="index"
@@ -1250,6 +1501,9 @@ onUnmounted(() => {
                   {{ point }}
                 </li>
               </ul>
+              <p v-else class="text-sm text-slate-400">
+                {{ adviceEmptyMessage }}
+              </p>
             </div>
 
             <!-- 改进建议 -->
@@ -1274,7 +1528,7 @@ onUnmounted(() => {
                 </div>
                 <h3 class="text-lg font-medium text-white">改进建议</h3>
               </div>
-              <ul class="space-y-2 text-sm text-gray-300">
+              <ul v-if="improvementSuggestions.length > 0" class="space-y-2 text-sm text-gray-300">
                 <li
                   v-for="(suggestion, index) in improvementSuggestions"
                   :key="index"
@@ -1284,6 +1538,9 @@ onUnmounted(() => {
                   {{ suggestion }}
                 </li>
               </ul>
+              <p v-else class="text-sm text-slate-400">
+                {{ adviceEmptyMessage }}
+              </p>
             </div>
 
             <!-- 学习资源 -->
@@ -1310,16 +1567,19 @@ onUnmounted(() => {
                 </div>
                 <h3 class="text-lg font-medium text-white">学习资源</h3>
               </div>
-              <ul class="space-y-2 text-sm text-gray-300">
+              <ul v-if="learningResources.length > 0" class="space-y-2 text-sm text-gray-300">
                 <li
                   v-for="(resource, index) in learningResources"
                   :key="index"
-                  class="flex items-center gap-2 hover:text-blue-400 cursor-pointer transition-colors"
+                  class="flex items-center gap-2"
                 >
                   <span class="w-1.5 h-1.5 rounded-full bg-green-400"></span>
                   {{ resource }}
                 </li>
               </ul>
+              <p v-else class="text-sm text-slate-400">
+                {{ adviceEmptyMessage }}
+              </p>
             </div>
           </div>
         </section>

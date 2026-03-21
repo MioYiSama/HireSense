@@ -178,9 +178,10 @@ const chartData = computed(() => {
     if (!d) {
       return { x: 0, y: 0 };
     }
+    const ratio = data.length === 1 ? 0.5 : i / (data.length - 1);
     const x =
       CHART_CONFIG.padding +
-      (i / (data.length - 1)) * (CHART_CONFIG.width - CHART_CONFIG.padding * 2);
+      ratio * (CHART_CONFIG.width - CHART_CONFIG.padding * 2);
     const y =
       CHART_CONFIG.height -
       CHART_CONFIG.padding -

@@ -1,13 +1,21 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { useMutation, useQueryClient } from "@tanstack/vue-query";
 import { useRouter } from "vue-router";
-import { getUserInfo, setUserInfo, clearAll } from "@/utils/token";
-import { userApi, authApi } from "@/lib/api";
+import { clearAll, getUserInfo } from "@/utils/token";
+import {
+  getApiErrorMessage,
+  queryKeys,
+  signOut,
+  updateProfile,
+  useProfileQuery,
+} from "@/lib/api";
 import { parseFile } from "@/utils/fileParser";
 import type { Profile, ProfileJobEnum } from "@/api";
 import ConfirmDialog from "@/components/ConfirmDialog.vue";
 
 const router = useRouter();
+const queryClient = useQueryClient();
 const showDropdown = ref(false);
 let hideTimeout: number | null = null;
 
@@ -34,8 +42,26 @@ const parseError = ref("");
 const personalization = ref<{ interviewerStyle: InterviewerStyle }>({
   interviewerStyle: "default",
 });
-const profileLoading = ref(false);
 let messageTimeout: number | null = null;
+
+const customStyle = ref("");
+const saveMessage = ref("");
+const saveSuccess = ref(false);
+const showLogoutDialog = ref(false);
+
+const profileQuery = useProfileQuery();
+const logoutMutation = useMutation({
+  mutationFn: signOut,
+});
+const saveProfileMutation = useMutation({
+  mutationFn: updateProfile,
+  onSuccess: (profile) => {
+    queryClient.setQueryData(queryKeys.profile(), profile);
+  },
+});
+
+const profileLoading = computed(() => profileQuery.isFetching.value);
+const loading = computed(() => saveProfileMutation.isPending.value);
 
 // 错误消息处理函数
 const showMessage = (message: string, isSuccess: boolean = false) => {
@@ -49,14 +75,6 @@ const showMessage = (message: string, isSuccess: boolean = false) => {
     messageTimeout = null;
   }, 3000);
 };
-
-const customStyle = ref("");
-
-const loading = ref(false);
-const saveMessage = ref("");
-const saveSuccess = ref(false);
-
-const showLogoutDialog = ref(false);
 
 const isInterviewerStyle = (value: string): value is InterviewerStyle => {
   return interviewerStyles.some((style) => style.value === value);
@@ -89,18 +107,6 @@ const buildPersonalization = () => {
   return personalization.value.interviewerStyle;
 };
 
-const syncUserInfo = (profile: Profile) => {
-  const currentUserInfo = getUserInfo();
-
-  setUserInfo({
-    ...currentUserInfo,
-    name: profile.name,
-    job: profile.job,
-    resume: profile.resume ?? "",
-    personalization: profile.personalization ?? "",
-  });
-};
-
 const applyProfile = (profile: Profile) => {
   name.value = profile.name;
   job.value = profile.job;
@@ -111,72 +117,52 @@ const applyProfile = (profile: Profile) => {
   applyPersonalization(profile.personalization);
 };
 
-const fetchProfile = async (showFailureMessage: boolean = true) => {
-  profileLoading.value = true;
-
-  try {
-    const response = await userApi.apiUserProfileGet();
-    const data = response.data;
-
-    if (data.success) {
-      applyProfile(data.data);
-      syncUserInfo(data.data);
-      return true;
-    }
-
-    if (showFailureMessage) {
-      showMessage(data.message || "获取档案失败");
-    }
-  } catch (err: any) {
-    console.error("获取档案错误:", err);
-    if (showFailureMessage) {
-      showMessage(err.response?.data?.message || "获取最新档案失败，请稍后重试");
-    }
-  } finally {
-    profileLoading.value = false;
-  }
-
-  return false;
-};
-
 applyPersonalization(storedUserInfo?.personalization);
 if (storedUserInfo?.resume) {
   resumeFileName.value = "已保存的简历内容";
   resumeText.value = storedUserInfo.resume;
 }
 
+watch(
+  () => profileQuery.data.value,
+  (profile) => {
+    if (profile) {
+      applyProfile(profile);
+    }
+  },
+  { immediate: true },
+);
+
+watch(
+  () => profileQuery.error.value,
+  (error) => {
+    if (error) {
+      console.error("获取档案错误:", error);
+      showMessage(getApiErrorMessage(error, "获取最新档案失败，请稍后重试"));
+    }
+  },
+);
+
 const handleLogout = async () => {
-  // 显示确认对话框
   showLogoutDialog.value = true;
 };
 
 const confirmLogout = async () => {
   showLogoutDialog.value = false;
 
-  // 清除之前的定时器
   if (messageTimeout) {
     clearTimeout(messageTimeout);
     messageTimeout = null;
   }
 
   try {
-    // 调用退出登录 API
-    const response = await authApi.apiAuthSignoutPost();
-    const data = response.data;
-
-    if (data.success) {
-      console.log("退出登录成功:", data.message);
-      // 清除所有用户信息
-      clearAll();
-      // 跳转到登录页面
-      router.push("/signin");
-    } else {
-      console.error("退出登录失败:", data.message);
-      showMessage(data.message || "退出登录失败");
-    }
-  } catch (err: any) {
-    console.error("退出登录错误:", err);
-    showMessage(err.response?.data?.message || "网络错误，请稍后重试");
+    await logoutMutation.mutateAsync();
+    clearAll();
+    queryClient.clear();
+    router.push("/signin");
+  } catch (logoutError) {
+    console.error("退出登录错误:", logoutError);
+    showMessage(getApiErrorMessage(logoutError, "网络错误，请稍后重试"));
   }
 };
 
@@ -189,12 +175,10 @@ const goToDashboard = () => {
 };
 
 const goToProfile = () => {
-  // 跳转到个人中心页面
   router.push("/profile");
 };
 
 const showMenu = () => {
-  // 清除之前的定时器
   if (hideTimeout) {
     clearTimeout(hideTimeout);
     hideTimeout = null;
@@ -260,23 +244,19 @@ const handleRemoveFile = () => {
 };
 
 const handleSave = async () => {
-  // 清除之前的定时器
   if (messageTimeout) {
     clearTimeout(messageTimeout);
     messageTimeout = null;
   }
 
-  // 表单验证
   if (!name.value || !job.value) {
     showMessage("请填写姓名和期望职位");
     return;
   }
 
-  loading.value = true;
   saveMessage.value = "";
 
   try {
-    // 构建请求体
     const profile: Profile = {
       name: name.value.trim(),
       job: job.value,
@@ -284,34 +264,16 @@ const handleSave = async () => {
       personalization: buildPersonalization(),
     };
 
-    // 发送 PUT 请求
-    const response = await userApi.apiUserProfilePut(profile);
-    const data = response.data;
-
-    if (data.success) {
-      const refreshed = await fetchProfile(false);
-
-      if (refreshed) {
-        showMessage(data.message || "档案更新成功", true);
-      } else {
-        showMessage("档案已保存，但刷新最新档案失败");
-      }
-
-      console.log("档案更新成功:", data);
-    } else {
-      showMessage(data.message || "档案更新失败");
-    }
-  } catch (err: any) {
-    console.error("更新档案错误:", err);
-    showMessage(err.response?.data?.message || "网络错误，请稍后重试");
-  } finally {
-    loading.value = false;
+    await saveProfileMutation.mutateAsync(profile);
+    showMessage("档案更新成功", true);
+  } catch (saveError) {
+    console.error("更新档案错误:", saveError);
+    showMessage(getApiErrorMessage(saveError, "网络错误，请稍后重试"));
   }
 };
 
 onMounted(() => {
   document.addEventListener("click", handleClickOutside);
-  void fetchProfile();
 });
 
 onUnmounted(() => {

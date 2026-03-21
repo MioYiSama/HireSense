@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { useMutation, useQueryClient } from "@tanstack/vue-query";
 import { useRouter } from "vue-router";
 import {
   getAccessToken,
@@ -8,6 +9,12 @@ import {
   removeInterviewId,
   removeInitialReply,
 } from "@/utils/token";
+import {
+  getApiErrorMessage,
+  queryKeys,
+  replyInterview,
+  stopInterview,
+} from "@/lib/api";
 import ConfirmDialog from "@/components/ConfirmDialog.vue";
 import InterviewInput from "@/components/InterviewInput.vue";
 
@@ -18,10 +25,10 @@ const AUDIO_URL_RELEASE_DELAY = 1000;
 const ANSWER_COUNTDOWN_TIME = 60;
 
 const router = useRouter();
+const queryClient = useQueryClient();
 const showConfirmDialog = ref(false);
 const interviewTime = ref(0);
 const timerInterval = ref<number | null>(null);
-const isLoading = ref(false);
 const errorMessage = ref("");
 const interviewId = ref(getInterviewId());
 
@@ -49,7 +56,6 @@ interface Message {
 // 对话相关状态
 const messages = ref<Message[]>([]);
 const userInput = ref("");
-const isSubmitting = ref(false);
 const isInterviewEnded = ref(false);
 const chatContainer = ref<HTMLElement | null>(null);
 
@@ -134,57 +140,60 @@ const isInitialLoading = ref(true);
 
 type InterviewReplyPayload = { text: string } | Blob;
 
+const stopInterviewMutation = useMutation({
+  mutationFn: stopInterview,
+});
+
+const replyInterviewMutation = useMutation({
+  mutationFn: async (payload: InterviewReplyPayload) => {
+    const id = getInterviewId();
+
+    if (!id) {
+      throw new Error("面试ID不存在");
+    }
+
+    return replyInterview({
+      id,
+      payload,
+      contentType: payload instanceof Blob ? payload.type || "audio/wav" : undefined,
+    });
+  },
+});
+
+const isLoading = computed(() => stopInterviewMutation.isPending.value);
+const isSubmitting = computed(() => replyInterviewMutation.isPending.value);
+
 // API请求函数
 const sendInterviewReply = async (payload: InterviewReplyPayload) => {
-  const token = getAccessToken();
-  const id = getInterviewId();
-  const url = `http://127.0.0.1:8080/api/interview/reply?id=${id}`;
-  const isAudioPayload = payload instanceof Blob;
+  const data = await replyInterviewMutation.mutateAsync(payload);
 
-  const options = {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": isAudioPayload ? payload.type || "audio/wav" : "application/json",
-    },
-    body: isAudioPayload ? payload : JSON.stringify(payload),
+  // 添加AI回复
+  const aiMessage = {
+    id: Date.now() + 1,
+    role: "ai" as const,
+    content: data.reply,
+    timestamp: new Date().toLocaleTimeString(),
   };
+  messages.value.push(aiMessage);
 
-  const response = await fetch(url, options);
-  const data = await response.json();
+  // 检查是否面试结束
+  if (data.ending) {
+    console.log("面试已结束");
+    isInterviewEnded.value = true;
+    void queryClient.invalidateQueries({ queryKey: queryKeys.interviews() });
 
-  if (data.success) {
-    // 添加AI回复
-    const aiMessage = {
-      id: Date.now() + 1,
-      role: "ai" as const,
-      content: data.data.reply,
-      timestamp: new Date().toLocaleTimeString(),
-    };
-    messages.value.push(aiMessage);
-
-    // 检查是否面试结束
-    if (data.data.ending) {
-      console.log("面试已结束");
-      // 设置面试结束状态
-      isInterviewEnded.value = true;
-
-      // 清理资源
-      if (timerInterval.value) {
-        clearInterval(timerInterval.value);
-      }
-      if (recordingInterval.value) {
-        clearInterval(recordingInterval.value);
-      }
-      if (countdownInterval.value) {
-        clearInterval(countdownInterval.value);
-      }
-      if (mediaRecorder.value && isRecording.value) {
-        mediaRecorder.value.stop();
-      }
+    if (timerInterval.value) {
+      clearInterval(timerInterval.value);
     }
-  } else {
-    throw new Error(data.message || "API请求失败");
+    if (recordingInterval.value) {
+      clearInterval(recordingInterval.value);
+    }
+    if (countdownInterval.value) {
+      clearInterval(countdownInterval.value);
+    }
+    if (mediaRecorder.value && isRecording.value) {
+      mediaRecorder.value.stop();
+    }
   }
 };
 
@@ -206,8 +215,6 @@ const sendMessage = async () => {
 
   console.log("用户输入:", inputContent);
 
-  // 发送请求获取AI回复
-  isSubmitting.value = true;
   try {
     await sendInterviewReply({ text: inputContent });
   } catch (error) {
@@ -220,8 +227,6 @@ const sendMessage = async () => {
       timestamp: new Date().toLocaleTimeString(),
     };
     messages.value.push(errorMsg);
-  } finally {
-    isSubmitting.value = false;
   }
 };
 
@@ -298,7 +303,6 @@ const endInterview = () => {
 
 const confirmEndInterview = async () => {
   // 显示加载状态
-  isLoading.value = true;
   errorMessage.value = "";
 
   try {
@@ -307,53 +311,26 @@ const confirmEndInterview = async () => {
 
     if (!token) {
       errorMessage.value = "请先登录";
-      isLoading.value = false;
       return;
     }
 
     if (!interviewId.value) {
       errorMessage.value = "面试ID不存在";
-      isLoading.value = false;
       return;
     }
 
-    // 发送面试结束请求
-    const url = "http://127.0.0.1:8080/api/interview/stop";
-    const options = {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ id: interviewId.value }),
-    };
+    await stopInterviewMutation.mutateAsync({ id: interviewId.value });
 
-    const response = await fetch(url, options);
-
-    if (!response.ok) {
-      throw new Error("请求失败");
+    if (timerInterval.value) {
+      clearInterval(timerInterval.value);
     }
-
-    const data = await response.json();
-
-    if (data.success) {
-      // 清除计时器
-      if (timerInterval.value) {
-        clearInterval(timerInterval.value);
-      }
-      // 删除存储的面试ID
-      removeInterviewId();
-      // 请求成功，返回dashboard页面
-      showConfirmDialog.value = false;
-      router.push("/dashboard");
-    } else {
-      errorMessage.value = data.message || "结束面试失败";
-      isLoading.value = false;
-    }
+    removeInterviewId();
+    showConfirmDialog.value = false;
+    await queryClient.invalidateQueries({ queryKey: queryKeys.interviews() });
+    router.push("/dashboard");
   } catch (error) {
     console.error("结束面试失败:", error);
-    errorMessage.value = "网络错误，请稍后重试";
-    isLoading.value = false;
+    errorMessage.value = getApiErrorMessage(error, "网络错误，请稍后重试");
   }
 };
 
@@ -578,8 +555,6 @@ const sendAudioMessage = async (audioBlob: Blob, duration: number) => {
   };
   messages.value.push(newMessage);
 
-  // 发送请求获取AI回复
-  isSubmitting.value = true;
   try {
     await sendInterviewReply(audioBlob);
   } catch (error) {
@@ -592,8 +567,6 @@ const sendAudioMessage = async (audioBlob: Blob, duration: number) => {
       timestamp: new Date().toLocaleTimeString(),
     };
     messages.value.push(errorMsg);
-  } finally {
-    isSubmitting.value = false;
   }
 };
 

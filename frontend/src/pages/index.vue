@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
+import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import LucideLogIn from "~icons/lucide/log-in";
 import LucideUserPlus from "~icons/lucide/user-plus";
@@ -13,7 +13,7 @@ import LucideGauge from "~icons/lucide/gauge";
 import LucideBarChart from "~icons/lucide/bar-chart";
 import LucideArrowRight from "~icons/lucide/arrow-right";
 import InteractiveTerminal from "../components/InteractiveTerminal.vue";
-import { clearAll, getAccessToken, setUserInfo } from "@/utils/token";
+import { useProfileQuery } from "@/lib/api";
 
 // 常量定义
 const TYPING_DELAY = 50;
@@ -24,10 +24,10 @@ const scrolled = ref(false);
 const activeSection = ref("hero");
 const expandedCards = ref([false, false, false]);
 const typingText = ref("");
-const hasValidToken = ref(false);
+const profileQuery = useProfileQuery();
+const hasValidToken = computed(() => Boolean(profileQuery.data.value));
 let animationStyle: HTMLStyleElement | null = null;
 let typingInterval: number | null = null;
-let profileRequestController: AbortController | null = null;
 const typingTexts: string[] = [
   "请解释 Vue 3 的响应式原理？",
   "如何设计一个高并发抢购系统？",
@@ -62,7 +62,6 @@ const advantageItems = [
 onMounted(() => {
   window.addEventListener("scroll", handleScroll);
   initAnimations();
-  void validateToken();
   // 添加鼠标聚光灯效果
   document.addEventListener("mousemove", handleMouseMove);
 });
@@ -78,7 +77,6 @@ onUnmounted(() => {
   if (typingInterval) {
     window.clearTimeout(typingInterval as number);
   }
-  profileRequestController?.abort();
 });
 
 const handleMouseMove = (e: MouseEvent) => {
@@ -345,60 +343,6 @@ const initAnimations = () => {
     }
   `;
   document.head.appendChild(animationStyle);
-};
-
-const validateToken = async () => {
-  const token = getAccessToken();
-
-  if (!token) {
-    hasValidToken.value = false;
-    return;
-  }
-
-  profileRequestController?.abort();
-  const controller = new AbortController();
-  profileRequestController = controller;
-
-  try {
-    const response = await fetch("/api/user/profile", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      hasValidToken.value = false;
-
-      if (response.status === 401 || response.status === 403) {
-        clearAll();
-      }
-      return;
-    }
-
-    const data = await response.json().catch(() => null);
-
-    if (data?.success === false) {
-      hasValidToken.value = false;
-      return;
-    }
-
-    hasValidToken.value = true;
-
-    if (data?.data) {
-      setUserInfo(data.data);
-    }
-  } catch (error) {
-    if (error instanceof DOMException && error.name === "AbortError") {
-      return;
-    }
-
-    hasValidToken.value = false;
-  } finally {
-    if (profileRequestController === controller) {
-      profileRequestController = null;
-    }
-  }
 };
 
 const goToDashboard = () => {

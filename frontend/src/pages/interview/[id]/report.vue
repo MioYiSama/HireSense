@@ -11,71 +11,64 @@
 </style>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
+import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { getApiErrorMessage, useInterviewsQuery } from "@/lib/api";
 import { getAccessToken } from "@/utils/token";
 
 const route = useRoute();
 const router = useRouter();
 
 const interviewId = route.params["id"] as string;
-const isLoading = ref(false);
-const errorMessage = ref("");
-const reportData = ref<any>(null);
-const interviewData = ref<any>(null);
+const interviewsQuery = useInterviewsQuery();
 
-onMounted(() => {
-  loadReport();
+const isLoading = computed(() => {
+  return interviewsQuery.isPending.value || interviewsQuery.isFetching.value;
+});
+
+const interviewData = computed(() => {
+  const interviews = interviewsQuery.data.value ?? [];
+  return interviews.find((item) => item.id === interviewId) ?? null;
+});
+
+const reportData = computed(() => {
+  return interviewData.value?.report ?? null;
+});
+
+const resourceUrlPattern = /(https?:\/\/[^\s]+)/i;
+
+const parsedResources = computed(() => {
+  return (reportData.value?.resources ?? []).map((resource) => {
+    const raw = String(resource).trim();
+    const matchedUrl = raw.match(resourceUrlPattern)?.[1] ?? "";
+    const label = matchedUrl ? raw.replace(matchedUrl, "").trim() || matchedUrl : raw;
+
+    return {
+      label,
+      raw,
+      url: matchedUrl,
+    };
+  });
+});
+
+const errorMessage = computed(() => {
+  if (!getAccessToken()) {
+    return "请先登录";
+  }
+
+  if (interviewsQuery.error.value) {
+    return getApiErrorMessage(interviewsQuery.error.value, "获取面试记录失败");
+  }
+
+  if (!isLoading.value && !reportData.value) {
+    return "未找到面试报告";
+  }
+
+  return "";
 });
 
 const loadReport = async () => {
-  isLoading.value = true;
-  errorMessage.value = "";
-
-  try {
-    const token = getAccessToken();
-
-    if (!token) {
-      errorMessage.value = "请先登录";
-      isLoading.value = false;
-      return;
-    }
-
-    // 获取所有面试记录，然后找到对应的面试报告
-    const url = "http://127.0.0.1:8080/api/user/interviews";
-    const options = {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    };
-
-    const response = await fetch(url, options);
-
-    if (!response.ok) {
-      throw new Error("请求失败");
-    }
-
-    const data = await response.json();
-
-    if (data.success) {
-      // 找到对应ID的面试记录
-      const interview = data.data.find((item: any) => item.id === interviewId);
-      if (interview && interview.report) {
-        reportData.value = interview.report;
-        interviewData.value = interview;
-      } else {
-        errorMessage.value = "未找到面试报告";
-      }
-    } else {
-      errorMessage.value = data.message || "获取面试记录失败";
-    }
-  } catch (error) {
-    console.error("获取面试报告失败:", error);
-    errorMessage.value = "网络错误，请稍后重试";
-  } finally {
-    isLoading.value = false;
-  }
+  await interviewsQuery.refetch();
 };
 
 const goBack = () => {
@@ -138,15 +131,9 @@ const generateRadarPolygon = (
     class="min-h-screen bg-linear-to-br from-gray-900 via-gray-800 to-gray-900 relative overflow-hidden"
   >
     <!-- 背景 -->
-    <div
-      class="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"
-    ></div>
-    <div
-      class="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"
-    ></div>
-    <div
-      class="absolute top-1/2 right-1/3 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl"
-    ></div>
+    <div class="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
+    <div class="absolute top-1/2 right-1/3 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl"></div>
 
     <!-- 导航栏 -->
     <div
@@ -158,14 +145,8 @@ const generateRadarPolygon = (
           class="flex items-center gap-3 transition-all duration-300 hover:scale-105 hover:opacity-90 cursor-pointer"
         >
           <div class="flex items-center gap-2">
-            <img
-              src="/favicon.png"
-              alt="HireSense"
-              class="h-8 w-8 rounded-md object-contain"
-            />
-            <span class="text-xl font-bold text-white tracking-tight"
-              >Hire Sense</span
-            >
+            <img src="/favicon.png" alt="HireSense" class="h-8 w-8 rounded-md object-contain" />
+            <span class="text-xl font-bold text-white tracking-tight">Hire Sense</span>
           </div>
         </button>
       </div>
@@ -174,12 +155,7 @@ const generateRadarPolygon = (
           @click="goBack"
           class="flex items-center gap-2 px-4 py-2 rounded-xl bg-linear-to-r from-blue-600/20 to-purple-600/20 hover:from-blue-600/30 hover:to-purple-600/30 border border-blue-500/30 transition-all duration-300 hover:shadow-lg hover:shadow-blue-500/10 cursor-pointer"
         >
-          <svg
-            class="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -220,12 +196,7 @@ const generateRadarPolygon = (
         class="max-w-2xl mx-auto p-6 rounded-xl bg-red-500/20 border border-red-500/40 text-red-400"
       >
         <div class="flex items-center gap-3">
-          <svg
-            class="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -244,10 +215,7 @@ const generateRadarPolygon = (
       </div>
 
       <!-- 报告内容 -->
-      <main
-        v-else-if="reportData"
-        class="max-w-7xl mx-auto pt-6 pb-12 px-6 relative space-y-6"
-      >
+      <main v-else-if="reportData" class="max-w-7xl mx-auto pt-6 pb-12 px-6 relative space-y-6">
         <!-- 报告头部 -->
         <section class="mb-8 animate-slide-up">
           <div
@@ -282,32 +250,20 @@ const generateRadarPolygon = (
                     transform="rotate(-90 50 50)"
                   />
                   <defs>
-                    <linearGradient
-                      id="scoreGrad"
-                      x1="0%"
-                      y1="0%"
-                      x2="100%"
-                      y2="0%"
-                    >
+                    <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="0%">
                       <stop offset="0%" stop-color="#06b6d4" />
                       <stop offset="100%" stop-color="#22d3ee" />
                     </linearGradient>
                   </defs>
                 </svg>
-                <div
-                  class="absolute inset-0 flex flex-col items-center justify-center"
-                >
-                  <span class="text-5xl font-bold text-white">{{
-                    reportData.score
-                  }}</span>
+                <div class="absolute inset-0 flex flex-col items-center justify-center">
+                  <span class="text-5xl font-bold text-white">{{ reportData.score }}</span>
                   <span class="text-sm text-slate-400 mt-1">综合评分</span>
                 </div>
               </div>
               <!-- 基本信息 -->
               <div class="flex-1 text-center lg:text-left">
-                <div
-                  class="flex items-center justify-center lg:justify-start gap-3 mb-4"
-                >
+                <div class="flex items-center justify-center lg:justify-start gap-3 mb-4">
                   <span
                     class="px-3 py-1 rounded-full bg-green-500/20 text-green-400 text-sm font-medium flex items-center gap-1"
                   >
@@ -326,15 +282,11 @@ const generateRadarPolygon = (
                       /></svg
                     >已完成
                   </span>
-                  <span
-                    v-if="interviewData.created_at"
-                    class="text-slate-400 text-sm"
-                    >{{ formatDate(interviewData.created_at) }}</span
-                  >
+                  <span v-if="interviewData.created_at" class="text-slate-400 text-sm">{{
+                    formatDate(interviewData.created_at)
+                  }}</span>
                 </div>
-                <h2 class="text-3xl font-bold text-white mb-3">
-                  前端开发工程师面试报告
-                </h2>
+                <h2 class="text-3xl font-bold text-white mb-3">前端开发工程师面试报告</h2>
                 <p v-if="reportData.feedback" class="text-slate-400 max-w-2xl">
                   {{ reportData.feedback }}
                 </p>
@@ -351,9 +303,7 @@ const generateRadarPolygon = (
             class="bg-gray-900/60 backdrop-blur-md border border-gray-700/50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow animate-slide-up"
             style="animation-delay: 0.1s"
           >
-            <h3
-              class="text-lg font-semibold text-white mb-4 flex items-center gap-2"
-            >
+            <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5 text-blue-400"
@@ -375,12 +325,7 @@ const generateRadarPolygon = (
                   <!-- 网格 -->
                   <template v-for="(_, index) in 3" :key="index">
                     <polygon
-                      :points="
-                        generateRadarPolygon(
-                          generalSkills.length,
-                          100 - index * 25,
-                        )
-                      "
+                      :points="generateRadarPolygon(generalSkills.length, 100 - index * 25)"
                       fill="none"
                       stroke="rgba(255,255,255,0.05)"
                     />
@@ -391,51 +336,30 @@ const generateRadarPolygon = (
                       x1="0"
                       y1="0"
                       :x2="
-                        Math.cos(
-                          index * ((2 * Math.PI) / generalSkills.length) -
-                            Math.PI / 2,
-                        ) * 100
+                        Math.cos(index * ((2 * Math.PI) / generalSkills.length) - Math.PI / 2) * 100
                       "
                       :y2="
-                        Math.sin(
-                          index * ((2 * Math.PI) / generalSkills.length) -
-                            Math.PI / 2,
-                        ) * 100
+                        Math.sin(index * ((2 * Math.PI) / generalSkills.length) - Math.PI / 2) * 100
                       "
                       stroke="rgba(255,255,255,0.08)"
                     />
                   </template>
                   <!-- 数据路径 -->
                   <polygon
-                    :points="
-                      generateRadarPolygon(
-                        generalSkills.length,
-                        0,
-                        generalSkills,
-                      )
-                    "
+                    :points="generateRadarPolygon(generalSkills.length, 0, generalSkills)"
                     fill="rgba(6,182,212,0.2)"
                     stroke="#06b6d4"
                     stroke-width="2"
                   />
                   <!-- 数据点 -->
-                  <template
-                    v-for="(skill, index) in generalSkills"
-                    :key="index"
-                  >
+                  <template v-for="(skill, index) in generalSkills" :key="index">
                     <circle
                       :cx="
-                        Math.cos(
-                          index * ((2 * Math.PI) / generalSkills.length) -
-                            Math.PI / 2,
-                        ) *
+                        Math.cos(index * ((2 * Math.PI) / generalSkills.length) - Math.PI / 2) *
                         (skill.score * 10)
                       "
                       :cy="
-                        Math.sin(
-                          index * ((2 * Math.PI) / generalSkills.length) -
-                            Math.PI / 2,
-                        ) *
+                        Math.sin(index * ((2 * Math.PI) / generalSkills.length) - Math.PI / 2) *
                         (skill.score * 10)
                       "
                       r="4"
@@ -448,33 +372,19 @@ const generateRadarPolygon = (
                   <text
                     :x="
                       140 +
-                      Math.cos(
-                        index * ((2 * Math.PI) / generalSkills.length) -
-                          Math.PI / 2,
-                      ) *
-                        90
+                      Math.cos(index * ((2 * Math.PI) / generalSkills.length) - Math.PI / 2) * 90
                     "
                     :y="
                       130 +
-                      Math.sin(
-                        index * ((2 * Math.PI) / generalSkills.length) -
-                          Math.PI / 2,
-                      ) *
-                        90
+                      Math.sin(index * ((2 * Math.PI) / generalSkills.length) - Math.PI / 2) * 90
                     "
                     :text-anchor="
-                      Math.cos(
-                        index * ((2 * Math.PI) / generalSkills.length) -
-                          Math.PI / 2,
-                      ) > 0
+                      Math.cos(index * ((2 * Math.PI) / generalSkills.length) - Math.PI / 2) > 0
                         ? 'start'
                         : 'end'
                     "
                     :dominant-baseline="
-                      Math.sin(
-                        index * ((2 * Math.PI) / generalSkills.length) -
-                          Math.PI / 2,
-                      ) > 0
+                      Math.sin(index * ((2 * Math.PI) / generalSkills.length) - Math.PI / 2) > 0
                         ? 'text-before-edge'
                         : 'text-after-edge'
                     "
@@ -494,9 +404,7 @@ const generateRadarPolygon = (
             class="bg-gray-900/60 backdrop-blur-md border border-gray-700/50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow animate-slide-up"
             style="animation-delay: 0.2s"
           >
-            <h3
-              class="text-lg font-semibold text-white mb-4 flex items-center gap-2"
-            >
+            <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5 text-purple-400"
@@ -518,12 +426,7 @@ const generateRadarPolygon = (
                   <!-- 网格 -->
                   <template v-for="(_, index) in 3" :key="index">
                     <polygon
-                      :points="
-                        generateRadarPolygon(
-                          specificSkills.length,
-                          100 - index * 25,
-                        )
-                      "
+                      :points="generateRadarPolygon(specificSkills.length, 100 - index * 25)"
                       fill="none"
                       stroke="rgba(255,255,255,0.05)"
                     />
@@ -534,51 +437,32 @@ const generateRadarPolygon = (
                       x1="0"
                       y1="0"
                       :x2="
-                        Math.cos(
-                          index * ((2 * Math.PI) / specificSkills.length) -
-                            Math.PI / 2,
-                        ) * 100
+                        Math.cos(index * ((2 * Math.PI) / specificSkills.length) - Math.PI / 2) *
+                        100
                       "
                       :y2="
-                        Math.sin(
-                          index * ((2 * Math.PI) / specificSkills.length) -
-                            Math.PI / 2,
-                        ) * 100
+                        Math.sin(index * ((2 * Math.PI) / specificSkills.length) - Math.PI / 2) *
+                        100
                       "
                       stroke="rgba(255,255,255,0.08)"
                     />
                   </template>
                   <!-- 数据路径 -->
                   <polygon
-                    :points="
-                      generateRadarPolygon(
-                        specificSkills.length,
-                        0,
-                        specificSkills,
-                      )
-                    "
+                    :points="generateRadarPolygon(specificSkills.length, 0, specificSkills)"
                     fill="rgba(168,85,247,0.2)"
                     stroke="#a855f7"
                     stroke-width="2"
                   />
                   <!-- 数据点 -->
-                  <template
-                    v-for="(skill, index) in specificSkills"
-                    :key="index"
-                  >
+                  <template v-for="(skill, index) in specificSkills" :key="index">
                     <circle
                       :cx="
-                        Math.cos(
-                          index * ((2 * Math.PI) / specificSkills.length) -
-                            Math.PI / 2,
-                        ) *
+                        Math.cos(index * ((2 * Math.PI) / specificSkills.length) - Math.PI / 2) *
                         (skill.score * 10)
                       "
                       :cy="
-                        Math.sin(
-                          index * ((2 * Math.PI) / specificSkills.length) -
-                            Math.PI / 2,
-                        ) *
+                        Math.sin(index * ((2 * Math.PI) / specificSkills.length) - Math.PI / 2) *
                         (skill.score * 10)
                       "
                       r="4"
@@ -591,33 +475,19 @@ const generateRadarPolygon = (
                   <text
                     :x="
                       140 +
-                      Math.cos(
-                        index * ((2 * Math.PI) / specificSkills.length) -
-                          Math.PI / 2,
-                      ) *
-                        90
+                      Math.cos(index * ((2 * Math.PI) / specificSkills.length) - Math.PI / 2) * 90
                     "
                     :y="
                       130 +
-                      Math.sin(
-                        index * ((2 * Math.PI) / specificSkills.length) -
-                          Math.PI / 2,
-                      ) *
-                        90
+                      Math.sin(index * ((2 * Math.PI) / specificSkills.length) - Math.PI / 2) * 90
                     "
                     :text-anchor="
-                      Math.cos(
-                        index * ((2 * Math.PI) / specificSkills.length) -
-                          Math.PI / 2,
-                      ) > 0
+                      Math.cos(index * ((2 * Math.PI) / specificSkills.length) - Math.PI / 2) > 0
                         ? 'start'
                         : 'end'
                     "
                     :dominant-baseline="
-                      Math.sin(
-                        index * ((2 * Math.PI) / specificSkills.length) -
-                          Math.PI / 2,
-                      ) > 0
+                      Math.sin(index * ((2 * Math.PI) / specificSkills.length) - Math.PI / 2) > 0
                         ? 'text-before-edge'
                         : 'text-after-edge'
                     "
@@ -641,9 +511,7 @@ const generateRadarPolygon = (
           <div
             class="bg-gray-900/60 backdrop-blur-md border border-gray-700/50 rounded-2xl p-6 shadow-lg"
           >
-            <h3
-              class="text-lg font-semibold text-white mb-6 flex items-center gap-2"
-            >
+            <h3 class="text-lg font-semibold text-white mb-6 flex items-center gap-2">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5 text-blue-400"
@@ -715,15 +583,11 @@ const generateRadarPolygon = (
                   </div>
                 </div>
 
-                <div
-                  class="flex items-center justify-between pt-4 border-t border-white/5 mb-4"
-                >
+                <div class="flex items-center justify-between pt-4 border-t border-white/5 mb-4">
                   <div class="flex items-center gap-4">
                     <div class="flex items-center gap-2">
                       <span class="text-xs text-slate-400">得分</span>
-                      <span class="text-lg font-bold text-yellow-400">{{
-                        review.score
-                      }}</span>
+                      <span class="text-lg font-bold text-yellow-400">{{ review.score }}</span>
                     </div>
                     <div class="h-4 w-px bg-white/10"></div>
                     <div class="flex items-center gap-1">
@@ -746,12 +610,8 @@ const generateRadarPolygon = (
                   </div>
                 </div>
 
-                <div
-                  class="mt-4 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20"
-                >
-                  <p class="text-xs text-yellow-400 mb-1 font-medium">
-                    改进建议
-                  </p>
+                <div class="mt-4 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+                  <p class="text-xs text-yellow-400 mb-1 font-medium">改进建议</p>
                   <p class="text-sm text-slate-300">{{ review.advice }}</p>
                 </div>
               </div>
@@ -769,9 +629,7 @@ const generateRadarPolygon = (
             v-if="reportData.shortcomings && reportData.shortcomings.length > 0"
             class="bg-gray-900/60 backdrop-blur-md border border-gray-700/50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow"
           >
-            <h3
-              class="text-lg font-semibold text-white mb-4 flex items-center gap-2"
-            >
+            <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5 text-yellow-400"
@@ -817,9 +675,7 @@ const generateRadarPolygon = (
             v-if="reportData.advice"
             class="bg-gray-900/60 backdrop-blur-md border border-gray-700/50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow"
           >
-            <h3
-              class="text-lg font-semibold text-white mb-4 flex items-center gap-2"
-            >
+            <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5 text-blue-400"
@@ -842,12 +698,10 @@ const generateRadarPolygon = (
 
           <!-- 推荐资源 -->
           <div
-            v-if="reportData.resources && reportData.resources.length > 0"
+            v-if="parsedResources.length > 0"
             class="bg-gray-900/60 backdrop-blur-md border border-gray-700/50 rounded-2xl p-6 shadow-lg hover:shadow-xl transition-shadow"
           >
-            <h3
-              class="text-lg font-semibold text-white mb-4 flex items-center gap-2"
-            >
+            <h3 class="text-lg font-semibold text-white mb-4 flex items-center gap-2">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 class="h-5 w-5 text-green-400"
@@ -865,9 +719,9 @@ const generateRadarPolygon = (
             </h3>
             <ul class="space-y-2">
               <li
-                v-for="(resource, index) in reportData.resources"
+                v-for="(resource, index) in parsedResources"
                 :key="index"
-                class="flex items-center gap-2 text-sm text-slate-300 hover:text-blue-400 cursor-pointer transition-colors"
+                class="flex items-start gap-2 text-wrap break-all text-sm text-slate-300"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -883,7 +737,16 @@ const generateRadarPolygon = (
                     d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
                   />
                 </svg>
-                {{ resource }}
+                <a
+                  v-if="resource.url"
+                  :href="resource.url"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-slate-300 hover:text-blue-400 transition-colors"
+                >
+                  {{ resource.label }}
+                </a>
+                <span v-else>{{ resource.raw }}</span>
               </li>
             </ul>
           </div>

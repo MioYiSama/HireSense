@@ -1,17 +1,24 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
+import { useMutation, useQueryClient } from "@tanstack/vue-query";
 import { useRouter } from "vue-router";
-import { authApi } from "@/lib/api";
+import { getApiErrorMessage, signUp } from "@/lib/api";
 import { setAccessToken, setUserInfo } from "@/utils/token";
 import type { SignUpRequest } from "@/api";
 
 const router = useRouter();
+const queryClient = useQueryClient();
 const account = ref("");
 const name = ref("");
 const password = ref("");
 const confirmPassword = ref("");
-const loading = ref(false);
 const error = ref("");
+
+const signupMutation = useMutation({
+  mutationFn: signUp,
+});
+
+const loading = computed(() => signupMutation.isPending.value);
 
 const handleSignup = async () => {
   // 表单验证
@@ -25,7 +32,6 @@ const handleSignup = async () => {
     return;
   }
 
-  loading.value = true;
   error.value = "";
 
   try {
@@ -35,26 +41,15 @@ const handleSignup = async () => {
       password: password.value,
     };
 
-    const response = await authApi.apiAuthSignupPost(signUpRequest);
-    const data = response.data;
+    const token = await signupMutation.mutateAsync(signUpRequest);
 
-    if (data.success) {
-      // 注册成功，保存 Token
-      setAccessToken(data.data);
-      // 保存用户信息
-      setUserInfo({ name: name.value, account: account.value });
-      console.log("注册成功:", data.message);
-      // 跳转到仪表盘
-      router.push("/dashboard");
-    } else {
-      // 注册失败
-      error.value = data.message || "注册失败，请稍后重试";
-    }
-  } catch (err: any) {
-    console.error("注册错误:", err);
-    error.value = err.response?.data?.message || "网络错误，请稍后重试";
-  } finally {
-    loading.value = false;
+    setAccessToken(token);
+    queryClient.clear();
+    setUserInfo({ name: name.value, account: account.value });
+    router.push("/dashboard");
+  } catch (signupError) {
+    console.error("注册错误:", signupError);
+    error.value = getApiErrorMessage(signupError, "注册失败，请稍后重试");
   }
 };
 
