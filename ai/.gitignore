@@ -1,0 +1,6 @@
+**/__pycache__
+chroma_db_data
+data_source
+Embedding_model
+neo4j_data
+Score_model

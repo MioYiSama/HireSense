@@ -169,6 +169,10 @@ func (h interviewHandler) reply(c fiber.Ctx) error {
 	}
 
 	if result.Ending {
+		if err := h.interviewService.Stop(c.Context(), query.ID); err != nil {
+			return mapInterviewServiceError(err)
+		}
+
 		if err := h.store.StopInterview(c.Context(), query.ID); err != nil {
 			if errors.Is(err, database.ErrNotFound) {
 				return NewError(fiber.StatusNotFound, "interview not found")

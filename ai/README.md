@@ -1,36 +1,112 @@
-# AI
+# AI 面试智能体
 
-## 分析报告
+基于知识图谱和向量检索的 AI 面试系统，支持自动化技术面试和报告生成。
 
-- 总评分（满分100分）
-- 通用能力评分（各维度满分10分）
-  1. 逻辑思维
-  2. 沟通表达
-  3. 应变能力
-  4. 自信度
-  5. 学习能力
-  6. 团队协同
-- 专业能力评分（各维度满分10分）
-  - 前端岗位
-    1. 设计
-    2. 性能
-    3. 工程化
-    4. 组件化
-    5. 数据流
-    6. 安全
-  - 后端岗位
-    1. 分布式
-    2. 性能
-    3. 数据库
-    4. API
-    5. 安全
-    6. DevOps
-- 对面试表现进行反馈，并分析能力短板
-- 提出改进建议，推荐学习资源
-- 筛选出所有被面试者得分低于75的答案，并提供AI改进建议
+## 环境要求
 
-## 未来计划
+- Python 3.8+
+- Docker & Docker Compose
+- 阿里云 DashScope API Key（或 OpenAI API Key）
+- 模型文件，本地数据库都在项目目录下（因为文件过大所以使用qq传输）
 
-- 多Agent模拟多面试官场景
-- 面试结尾增加“你有什么想问我的吗？”
-- 对话式动态复盘
+## 快速启动
+
+### 0. 设置环境信息
+根据.env.example 的要求 设置.env
+
+### 1. 安装依赖
+
+```bash
+pip install -r requirements.txt
+```
+
+### 2. 启动 Neo4j 数据库
+
+```bash
+docker-compose up -d
+```
+
+访问 http://localhost:7474 验证 Neo4j 是否启动成功（账号: neo4j, 密码: password）
+
+### 3. 配置环境变量
+
+```bash
+cp .env.example .env
+```
+
+编辑 `.env` 文件，填入必要配置：
+
+```env
+# 大模型 API（必填）
+LLM_API_KEY=sk-your-api-key-here
+LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+FAST_LLM_MODEL=qwen-turbo
+SMART_LLM_MODEL=qwen-max
+REPORT_LLM_MODEL=qwen-plus
+
+# Neo4j 数据库（使用 docker-compose 默认配置）
+NEO4J_URI=bolt://localhost:7687
+NEO4J_USER=neo4j
+NEO4J_PASSWORD=password
+
+# 向量库路径
+CHROMA_PERSIST_DIR=./chroma_db_data
+
+# 报告推送地址（可选）
+TARGET_SERVER_URL=http://127.0.0.1:8000/api/interview/report
+INTERNAL_SECRET=your-secret-key
+```
+
+### 4. 构建知识图谱
+
+将面试题库文件放入 `data_source/` 目录，然后运行：
+
+```bash
+python GraphRag_Builder.py
+```
+
+### 5. 启动服务
+
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+访问 http://localhost:8000/docs 查看 API 文档
+
+## 使用说明
+
+### API 接口
+
+- `POST /api/interview/start` - 开始面试
+- `POST /api/interview/answer` - 提交答案
+- `GET /api/interview/report/{session_id}` - 获取面试报告
+
+### 切换模型
+
+如需使用 OpenAI、千问或其他兼容 OpenAI API 的模型，直接修改 `.env` 里的
+`FAST_LLM_MODEL`、`SMART_LLM_MODEL`、`REPORT_LLM_MODEL` 即可，无需改源码。
+
+## 目录结构
+
+```
+├── app/                # FastAPI 应用
+│   ├── api/           # API 路由
+│   ├── core/          # 核心逻辑
+│   ├── services/      # 业务服务
+│   └── main.py        # 入口文件
+├── data_source/       # 面试题库数据
+├── neo4j_data/        # Neo4j 数据持久化
+├── chroma_db_data/    # 向量库数据
+└── GraphRag_Builder.py # 知识图谱构建脚本
+```
+
+## 常见问题
+
+**Q: Neo4j 连接失败？**
+A: 确保 Docker 容器已启动，检查端口 7687 是否被占用
+
+**Q: API Key 无效？**
+A: 检查 `.env` 文件中的 `LLM_API_KEY` 是否正确填写
+
+**Q: 知识图谱为空？**
+A: 确保 `data_source/` 目录有数据文件，重新运行 `GraphRag_Builder.py`
