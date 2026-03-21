@@ -1,6 +1,7 @@
 const ACCESS_TOKEN_KEY = "ACCESS_TOKEN";
 const USER_INFO_KEY = "USER_INFO";
 const INTERVIEW_ID_KEY = "INTERVIEW_ID";
+const INITIAL_REPLY_KEY = "INITIAL_REPLY";
 
 export function getAccessToken(): string {
   return localStorage.getItem(ACCESS_TOKEN_KEY) ?? "";
@@ -39,8 +40,21 @@ export function removeInterviewId(): void {
   localStorage.removeItem(INTERVIEW_ID_KEY);
 }
 
+export function getInitialReply(): string {
+  return localStorage.getItem(INITIAL_REPLY_KEY) ?? "";
+}
+
+export function setInitialReply(reply: string): void {
+  localStorage.setItem(INITIAL_REPLY_KEY, reply);
+}
+
+export function removeInitialReply(): void {
+  localStorage.removeItem(INITIAL_REPLY_KEY);
+}
+
 export function clearAll(): void {
   removeAccessToken();
   removeUserInfo();
   removeInterviewId();
+  removeInitialReply();
 }

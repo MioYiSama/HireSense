@@ -1,13 +1,21 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, onMounted, onUnmounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import {
   getAccessToken,
   getInterviewId,
+  getInitialReply,
   removeInterviewId,
+  removeInitialReply,
 } from "@/utils/token";
 import ConfirmDialog from "@/components/ConfirmDialog.vue";
 import InterviewInput from "@/components/InterviewInput.vue";
+
+// 常量定义
+const INITIAL_LOADING_DELAY = 1500;
+const SCROLL_DELAY = 100;
+const AUDIO_URL_RELEASE_DELAY = 1000;
+const ANSWER_COUNTDOWN_TIME = 60;
 
 const router = useRouter();
 const showConfirmDialog = ref(false);
@@ -24,7 +32,7 @@ const recordingInterval = ref<number | null>(null);
 const mediaRecorder = ref<MediaRecorder | null>(null);
 const audioChunks = ref<Blob[]>([]);
 const isCancelingRecording = ref(false);
-const answerCountdown = ref(60);
+const answerCountdown = ref(ANSWER_COUNTDOWN_TIME);
 const countdownInterval = ref<number | null>(null);
 
 // 定义消息类型
@@ -33,17 +41,94 @@ interface Message {
   role: "ai" | "user";
   content: string;
   timestamp: string;
+  audioBlob?: Blob;
+  duration?: number;
+  isAudio?: boolean;
 }
 
 // 对话相关状态
 const messages = ref<Message[]>([]);
 const userInput = ref("");
 const isSubmitting = ref(false);
+const isInterviewEnded = ref(false);
+const chatContainer = ref<HTMLElement | null>(null);
+
+// 音频播放状态
+const audioElements = ref<{ [key: number]: HTMLAudioElement }>({});
+const isPlaying = ref<{ [key: number]: boolean }>({});
+
+// 清理音频资源
+const cleanupAudioResources = (messageId: number) => {
+  // 停止并移除音频元素
+  if (audioElements.value[messageId]) {
+    audioElements.value[messageId].pause();
+    // 释放创建的URL
+    const audio = audioElements.value[messageId];
+    if (audio.src) {
+      URL.revokeObjectURL(audio.src);
+    }
+    delete audioElements.value[messageId];
+    delete isPlaying.value[messageId];
+  }
+};
 
 // 处理输入消息
 const handleInputMessage = (message: string) => {
   userInput.value = message;
   sendMessage();
+};
+
+// 播放音频消息
+const toggleAudioPlayback = (messageId: number) => {
+  const message = messages.value.find((msg) => msg.id === messageId);
+  if (!message || !message.isAudio || !message.audioBlob) return;
+
+  // 停止其他正在播放的音频
+  Object.keys(audioElements.value).forEach((key) => {
+    const id = parseInt(key);
+    if (id !== messageId && audioElements.value[id]) {
+      audioElements.value[id].pause();
+      isPlaying.value[id] = false;
+    }
+  });
+
+  // 检查是否已经有音频元素
+  if (!audioElements.value[messageId]) {
+    // 创建新的音频元素
+    const audio = new Audio(URL.createObjectURL(message.audioBlob));
+    audioElements.value[messageId] = audio;
+
+    // 监听播放结束事件
+    audio.addEventListener("ended", () => {
+      isPlaying.value[messageId] = false;
+    });
+  }
+
+  const audio = audioElements.value[messageId];
+  if (audio.paused) {
+    audio.play();
+    isPlaying.value[messageId] = true;
+  } else {
+    audio.pause();
+    isPlaying.value[messageId] = false;
+  }
+};
+
+// 自动滚动到最新消息
+const scrollToBottom = () => {
+  setTimeout(() => {
+    if (chatContainer.value) {
+      chatContainer.value.scrollTop = chatContainer.value.scrollHeight;
+    }
+  }, SCROLL_DELAY);
+};
+
+// 返回面试中心
+const goBackToDashboard = () => {
+  // 删除存储的面试ID
+  removeInterviewId();
+  // 跳转到dashboard页面
+  router.push("/dashboard");
 };
 const isInitialLoading = ref(true);
 
@@ -81,6 +166,22 @@ const sendInterviewReply = async (payload: { text: string } | FormData) => {
     // 检查是否面试结束
     if (data.data.ending) {
       console.log("面试已结束");
+      // 设置面试结束状态
+      isInterviewEnded.value = true;
+
+      // 清理资源
+      if (timerInterval.value) {
+        clearInterval(timerInterval.value);
+      }
+      if (recordingInterval.value) {
+        clearInterval(recordingInterval.value);
+      }
+      if (countdownInterval.value) {
+        clearInterval(countdownInterval.value);
+      }
+      if (mediaRecorder.value && isRecording.value) {
+        mediaRecorder.value.stop();
+      }
     }
   } else {
     throw new Error(data.message || "API请求失败");
@@ -112,13 +213,13 @@ const sendMessage = async () => {
   } catch (error) {
     console.error("发送消息失败:", error);
     // 添加错误提示消息
-    const errorMessage = {
+    const errorMsg = {
       id: Date.now() + 1,
       role: "ai" as const,
       content: "抱歉，我暂时无法回复，请稍后再试。",
       timestamp: new Date().toLocaleTimeString(),
     };
-    messages.value.push(errorMessage);
+    messages.value.push(errorMsg);
   } finally {
     isSubmitting.value = false;
   }
@@ -142,14 +243,29 @@ onMounted(() => {
 
   setTimeout(() => {
     isInitialLoading.value = false;
+    // 从localStorage获取AI面试官的初始回复
+    const initialReply = getInitialReply();
     messages.value.push({
       id: 1,
       role: "ai",
       content:
+        initialReply ||
         "你好！我是你的AI面试官。欢迎参加今天的面试。请先做一个简短的自我介绍，然后我们将开始技术问题的讨论。",
       timestamp: new Date().toLocaleTimeString(),
     });
-  }, 1500);
+    // 清除已使用的初始回复
+    removeInitialReply();
+    scrollToBottom();
+  }, INITIAL_LOADING_DELAY);
+
+  // 监听消息变化，自动滚动到最新消息
+  watch(
+    messages,
+    () => {
+      scrollToBottom();
+    },
+    { deep: true },
+  );
 });
 
 onUnmounted(() => {
@@ -157,6 +273,12 @@ onUnmounted(() => {
   if (timerInterval.value) {
     clearInterval(timerInterval.value);
   }
+
+  // 清理所有音频资源
+  Object.keys(audioElements.value).forEach((key) => {
+    const messageId = parseInt(key);
+    cleanupAudioResources(messageId);
+  });
 
   // 清除录音计时器
   if (recordingInterval.value) {
@@ -347,7 +469,7 @@ const startRecording = async () => {
         console.log("WAV文件URL:", wavUrl);
 
         // 清理URL对象
-        setTimeout(() => URL.revokeObjectURL(wavUrl), 1000);
+        setTimeout(() => URL.revokeObjectURL(wavUrl), AUDIO_URL_RELEASE_DELAY);
       } catch (error) {
         console.error("WAV转换失败:", error);
       }
@@ -450,6 +572,9 @@ const sendAudioMessage = async (audioBlob: Blob, duration: number) => {
     role: "user",
     content: `[语音消息] ${formatRecordingTime(duration)}`,
     timestamp: new Date().toLocaleTimeString(),
+    audioBlob,
+    duration,
+    isAudio: true,
   };
   messages.value.push(newMessage);
 
@@ -464,13 +589,13 @@ const sendAudioMessage = async (audioBlob: Blob, duration: number) => {
   } catch (error) {
     console.error("发送语音消息失败:", error);
     // 添加错误提示消息
-    const errorMessage = {
+    const errorMsg = {
       id: Date.now() + 1,
       role: "ai" as const,
       content: "抱歉，我暂时无法处理语音消息，请稍后再试。",
       timestamp: new Date().toLocaleTimeString(),
     };
-    messages.value.push(errorMessage);
+    messages.value.push(errorMsg);
   } finally {
     isSubmitting.value = false;
   }
@@ -501,12 +626,15 @@ const formatRecordingTime = (seconds: number) => {
       class="navbar bg-gray-900/60 backdrop-blur-md border-b border-gray-700/50 shadow-lg relative z-10"
     >
       <div class="flex-1">
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-2">
           <img
-            src="/logo-long.png"
+            src="/favicon.png"
             alt="HireSense"
-            class="h-8 rounded-lg shadow-lg"
+            class="h-8 w-8 rounded-md object-contain"
           />
+          <span class="text-xl font-bold text-white tracking-tight"
+            >Hire Sense</span
+          >
         </div>
       </div>
       <div class="flex-none flex items-center gap-4">
@@ -535,7 +663,8 @@ const formatRecordingTime = (seconds: number) => {
         <!-- 结束面试按钮 -->
         <button
           @click="endInterview"
-          class="group px-4 py-1.5 rounded-xl bg-linear-to-r from-red-500/20 to-red-600/20 hover:from-red-500 hover:to-red-600 text-red-400 hover:text-white font-semibold transition-all duration-300 border border-red-500/40 hover:border-red-500 shadow-lg shadow-red-500/10 hover:shadow-red-500/30 cursor-pointer flex items-center gap-2 hover:scale-105 active:scale-95"
+          :disabled="isInterviewEnded"
+          class="group px-4 py-1.5 rounded-xl bg-linear-to-r from-red-500/20 to-red-600/20 hover:from-red-500 hover:to-red-600 text-red-400 hover:text-white font-semibold transition-all duration-300 border border-red-500/40 hover:border-red-500 shadow-lg shadow-red-500/10 hover:shadow-red-500/30 cursor-pointer flex items-center gap-2 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-red-500/20 disabled:hover:to-red-600/20 disabled:hover:text-red-400 disabled:hover:scale-100"
         >
           <div class="relative">
             <svg
@@ -571,12 +700,12 @@ const formatRecordingTime = (seconds: number) => {
     </div>
 
     <!-- 主内容区 -->
-    <div class="flex-1 p-4 md:p-8">
+    <div class="flex-1 p-4 md:p-8 flex justify-center">
       <div
-        class="h-[calc(100vh-8rem)] flex flex-col bg-gray-900/60 backdrop-blur-md border border-gray-700/50 rounded-2xl shadow-xl overflow-hidden"
+        class="h-[calc(100vh-8rem)] flex flex-col bg-gray-900/60 backdrop-blur-md border border-gray-700/50 rounded-2xl shadow-xl overflow-hidden max-w-4xl w-full"
       >
         <!-- 对话内容展示区 -->
-        <div class="flex-1 overflow-y-auto p-6 space-y-6">
+        <div ref="chatContainer" class="flex-1 overflow-y-auto p-6 space-y-6">
           <!-- 初始加载状态 -->
           <div
             v-if="isInitialLoading"
@@ -609,73 +738,209 @@ const formatRecordingTime = (seconds: number) => {
             <div
               v-for="message in messages"
               :key="message.id"
-              class="flex"
+              class="flex animate-message-in"
               :class="message.role === 'ai' ? 'justify-start' : 'justify-end'"
             >
               <!-- AI面试官消息 -->
               <div
                 v-if="message.role === 'ai'"
-                class="flex items-start gap-3 max-w-[80%]"
+                class="flex flex-col items-start gap-1 max-w-[80%]"
               >
-                <div
-                  class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0"
-                >
-                  <svg
-                    class="w-5 h-5 text-blue-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                <div class="flex items-start gap-3">
+                  <div
+                    class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0"
                   >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                    />
-                  </svg>
-                </div>
-                <div
-                  class="bg-gray-800/50 border border-gray-700/50 rounded-2xl rounded-tl-none p-4 shadow-lg"
-                >
-                  <div class="flex items-center justify-between mb-2">
-                    <span class="text-sm font-medium text-blue-400"
-                      >AI面试官</span
+                    <svg
+                      class="w-5 h-5 text-blue-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
                     >
-                    <span class="text-xs text-gray-500">{{
-                      message.timestamp
-                    }}</span>
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                      />
+                    </svg>
                   </div>
-                  <p class="text-gray-300 leading-relaxed">
-                    {{ message.content }}
-                  </p>
+                  <div
+                    class="bg-gray-800/50 rounded-2xl rounded-tl-none p-4 shadow-lg shadow-gray-900/50"
+                  >
+                    <div class="flex items-center mb-2">
+                      <span class="text-sm font-medium text-blue-400"
+                        >AI面试官</span
+                      >
+                    </div>
+                    <div v-if="message.isAudio" class="flex items-center gap-3">
+                      <button
+                        @click="toggleAudioPlayback(message.id)"
+                        class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center hover:bg-blue-500/30 transition-colors"
+                      >
+                        <svg
+                          v-if="!isPlaying[message.id]"
+                          class="w-5 h-5 text-blue-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+                          />
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        <svg
+                          v-else
+                          class="w-5 h-5 text-blue-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                      </button>
+                      <span class="text-gray-300">{{ message.content }}</span>
+                    </div>
+                    <p v-else class="text-gray-300 leading-relaxed">
+                      {{ message.content }}
+                    </p>
+                  </div>
+                </div>
+                <div class="ml-[52px]">
+                  <span class="text-xs text-gray-500">{{
+                    message.timestamp
+                  }}</span>
                 </div>
               </div>
 
               <!-- 用户消息 -->
-              <div v-else class="flex items-start gap-3 max-w-[80%]">
-                <div
-                  class="bg-linear-to-r from-blue-500/20 to-purple-500/20 border border-blue-500/30 rounded-2xl rounded-tr-none p-4 shadow-lg"
-                >
-                  <div class="flex items-center justify-between mb-2">
-                    <span class="text-sm font-medium text-blue-300">你</span>
-                    <span class="text-xs text-gray-500">{{
-                      message.timestamp
-                    }}</span>
+              <div v-else class="flex flex-col items-end gap-1 max-w-[80%]">
+                <div class="flex items-start gap-3">
+                  <div
+                    class="bg-linear-to-r from-blue-500/20 to-purple-500/20 rounded-2xl rounded-tr-none p-4 shadow-lg shadow-blue-900/20"
+                  >
+                    <div class="flex items-center mb-2">
+                      <span class="text-sm font-medium text-blue-300">你</span>
+                    </div>
+                    <div v-if="message.isAudio" class="flex items-center gap-3">
+                      <button
+                        @click="toggleAudioPlayback(message.id)"
+                        class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center hover:bg-blue-500/30 transition-colors"
+                      >
+                        <svg
+                          v-if="!isPlaying[message.id]"
+                          class="w-5 h-5 text-blue-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+                          />
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        <svg
+                          v-else
+                          class="w-5 h-5 text-blue-400"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                      </button>
+                      <span class="text-gray-200">{{ message.content }}</span>
+                    </div>
+                    <p v-else class="text-gray-200 leading-relaxed">
+                      {{ message.content }}
+                    </p>
                   </div>
-                  <p class="text-gray-200 leading-relaxed">
-                    {{ message.content }}
-                  </p>
+                  <div
+                    class="w-10 h-10 rounded-full bg-linear-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0"
+                  >
+                    <span class="text-white font-medium text-sm">你</span>
+                  </div>
                 </div>
-                <div
-                  class="w-10 h-10 rounded-full bg-linear-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0"
-                >
-                  <span class="text-white font-medium text-sm">你</span>
+                <div class="mr-[52px]">
+                  <span class="text-xs text-gray-500">{{
+                    message.timestamp
+                  }}</span>
                 </div>
               </div>
             </div>
 
+            <!-- 面试结束提示 -->
+            <div v-if="isInterviewEnded" class="mt-8">
+              <div
+                class="bg-linear-to-r from-blue-500/20 to-purple-600/20 border border-blue-500/30 rounded-2xl p-6 shadow-lg text-center"
+              >
+                <div class="flex justify-center mb-4">
+                  <div
+                    class="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center"
+                  >
+                    <svg
+                      class="w-8 h-8 text-green-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  </div>
+                </div>
+                <h3 class="text-xl font-semibold text-white mb-2">
+                  面试已完成
+                </h3>
+                <p class="text-gray-300 mb-6">
+                  感谢您的精彩表现！面试官已收到您的回答，我们将尽快生成面试报告。
+                  <br /><br />
+                  请回到面试中心耐心等待结果通知。
+                </p>
+                <button
+                  @click="goBackToDashboard"
+                  class="px-6 py-3 bg-linear-to-r from-blue-500 to-purple-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-blue-500/20"
+                >
+                  返回面试中心
+                </button>
+              </div>
+            </div>
+
             <!-- 加载状态 -->
-            <div v-if="isSubmitting" class="flex justify-start">
+            <div
+              v-if="isSubmitting"
+              class="flex justify-start animate-message-in"
+            >
               <div class="flex items-start gap-3 max-w-[80%]">
                 <div
                   class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0"
@@ -695,19 +960,19 @@ const formatRecordingTime = (seconds: number) => {
                   </svg>
                 </div>
                 <div
-                  class="bg-gray-800/50 border border-gray-700/50 rounded-2xl rounded-tl-none p-4 shadow-lg"
+                  class="bg-gray-800/50 rounded-2xl rounded-tl-none p-4 shadow-lg shadow-gray-900/50"
                 >
-                  <div class="flex space-x-1">
+                  <div class="flex space-x-1.5">
                     <div
-                      class="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
+                      class="w-2 h-2 bg-blue-400 rounded-full animate-bounce"
                       style="animation-delay: 0s"
                     ></div>
                     <div
-                      class="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
+                      class="w-2 h-2 bg-blue-400 rounded-full animate-bounce"
                       style="animation-delay: 0.2s"
                     ></div>
                     <div
-                      class="w-2 h-2 bg-gray-500 rounded-full animate-bounce"
+                      class="w-2 h-2 bg-blue-400 rounded-full animate-bounce"
                       style="animation-delay: 0.4s"
                     ></div>
                   </div>
@@ -718,12 +983,15 @@ const formatRecordingTime = (seconds: number) => {
         </div>
 
         <!-- 底部输入区域 -->
-        <div class="border-t border-gray-700/50 p-4 bg-gray-900/80">
+        <div
+          class="border-t border-gray-700/50 p-4 bg-gray-900/90 backdrop-blur-sm transition-all duration-300 hover:border-gray-600/50"
+        >
           <InterviewInput
             :is-recording="isRecording"
             :is-submitting="isSubmitting"
             :recording-time="recordingTime"
             :answer-countdown="answerCountdown"
+            :is-interview-ended="isInterviewEnded"
             @send-message="handleInputMessage"
             @start-recording="startRecording"
             @stop-recording="stopRecording"
@@ -748,3 +1016,21 @@ const formatRecordingTime = (seconds: number) => {
     />
   </div>
 </template>
+
+<style scoped>
+/* 消息气泡渐入动画 */
+@keyframes message-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-message-in {
+  animation: message-fade-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+</style>
