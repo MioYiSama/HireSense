@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Literal, Optional, List, Dict
+from typing import Any, Literal, Optional, List, Dict, Type
 from langchain_openai import ChatOpenAI
 import json
 from langchain_core.prompts import ChatPromptTemplate
@@ -55,6 +55,94 @@ class LLMGenerator:
         self.llm = llm
         self.fast_llm = fast_llm
 
+    def _validate_model_payload(self, model_class: Type[BaseModel], payload: dict) -> BaseModel:
+        """兼容 Pydantic v1/v2 的模型校验入口。"""
+        if hasattr(model_class, "model_validate"):
+            return model_class.model_validate(payload)
+        return model_class.parse_obj(payload)
+
+    def _extract_json_objects(self, text: str) -> List[str]:
+        """从混杂文本中提取顶层 JSON 对象，处理额外前后缀或重复输出。"""
+        objects = []
+        start = None
+        depth = 0
+        in_string = False
+        escape = False
+
+        for index, char in enumerate(text):
+            if start is None:
+                if char == "{":
+                    start = index
+                    depth = 1
+                    in_string = False
+                    escape = False
+                continue
+
+            if in_string:
+                if escape:
+                    escape = False
+                elif char == "\\":
+                    escape = True
+                elif char == "\"":
+                    in_string = False
+                continue
+
+            if char == "\"":
+                in_string = True
+            elif char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    objects.append(text[start:index + 1])
+                    start = None
+
+        return objects
+
+    def _recover_structured_generation(self, raw_message: Any, model_class: Type[BaseModel]) -> Optional[BaseModel]:
+        """当 LangChain 工具参数解析失败时，尝试从原始响应中恢复合法 JSON。"""
+        if raw_message is None:
+            return None
+
+        candidate_texts = []
+
+        if isinstance(raw_message, dict):
+            tool_calls = raw_message.get("tool_calls") or []
+            content = raw_message.get("content")
+        else:
+            additional_kwargs = getattr(raw_message, "additional_kwargs", {}) or {}
+            tool_calls = additional_kwargs.get("tool_calls") or []
+            content = getattr(raw_message, "content", None)
+
+        for tool_call in tool_calls:
+            function_info = tool_call.get("function") or {}
+            arguments = function_info.get("arguments")
+            if isinstance(arguments, str) and arguments.strip():
+                candidate_texts.append(arguments)
+
+        if isinstance(content, str) and content.strip():
+            candidate_texts.append(content)
+        elif isinstance(content, list):
+            for block in content:
+                if isinstance(block, dict) and block.get("type") == "text":
+                    text = block.get("text")
+                    if isinstance(text, str) and text.strip():
+                        candidate_texts.append(text)
+
+        for candidate_text in candidate_texts:
+            try:
+                return self._validate_model_payload(model_class, json.loads(candidate_text))
+            except Exception:
+                pass
+
+            for json_blob in self._extract_json_objects(candidate_text):
+                try:
+                    return self._validate_model_payload(model_class, json.loads(json_blob))
+                except Exception:
+                    continue
+
+        return None
+
     async def _retry_structured_generation(self, prompt_template, input_data, model_class, llm, max_retries=3):
         """
         通用的结构化生成重试方法
@@ -63,9 +151,24 @@ class LLMGenerator:
         last_error = None
         for attempt in range(max_retries):
             try:
-                structured_llm = llm.with_structured_output(model_class)
+                structured_llm = llm.with_structured_output(model_class, include_raw=True)
                 result = await (prompt_template | structured_llm).ainvoke(input_data)
-                return result
+                parsed = result.get("parsed")
+                if parsed is not None:
+                    return parsed
+
+                recovered = self._recover_structured_generation(
+                    raw_message=result.get("raw"),
+                    model_class=model_class,
+                )
+                if recovered is not None:
+                    print(f"[LLM Fallback] Recovered {model_class.__name__} from malformed structured output.")
+                    return recovered
+
+                parsing_error = result.get("parsing_error")
+                if parsing_error is not None:
+                    raise parsing_error
+                raise ValueError(f"{model_class.__name__} structured generation returned no parsed result.")
             except Exception as e:
                 last_error = e
                 if attempt < max_retries - 1:

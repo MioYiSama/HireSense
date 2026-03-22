@@ -3,7 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
-	"log"
+	"log/slog"
 	"mime"
 	"strings"
 
@@ -75,10 +75,19 @@ func (h interviewHandler) start(c fiber.Ctx) error {
 	})
 	if err != nil {
 		if stopErr := h.interviewService.Stop(c.Context(), interviewID); stopErr != nil {
-			log.Printf("cleanup upstream interview %s: %v", interviewID, stopErr)
+			slog.WarnContext(c.Context(), "cleanup upstream interview failed",
+				"interview_id", interviewID,
+				"user_id", principal.UserID,
+				"err", stopErr,
+			)
 		}
 		return err
 	}
+	slog.InfoContext(c.Context(), "interview started",
+		"interview_id", interview.ID,
+		"user_id", principal.UserID,
+		"job", string(profile.Job),
+	)
 
 	return respond(c, fiber.StatusOK, "AI 面试官已就绪", fiber.Map{
 		"id":    interview.ID,
@@ -125,6 +134,10 @@ func (h interviewHandler) stop(c fiber.Ctx) error {
 		}
 		return err
 	}
+	slog.InfoContext(c.Context(), "interview stopped",
+		"interview_id", request.ID,
+		"user_id", principal.UserID,
+	)
 
 	return respondEmpty(c, "已被强制标记为停止")
 }
@@ -180,6 +193,19 @@ func (h interviewHandler) reply(c fiber.Ctx) error {
 			return err
 		}
 	}
+	inputType := "text"
+	audioBytes := 0
+	if requestData.Audio != nil {
+		inputType = "audio"
+		audioBytes = len(requestData.Audio.Data)
+	}
+	slog.InfoContext(c.Context(), "interview reply processed",
+		"interview_id", query.ID,
+		"user_id", principal.UserID,
+		"input_type", inputType,
+		"audio_bytes", audioBytes,
+		"ending", result.Ending,
+	)
 
 	return respond(c, fiber.StatusOK, "交互成功", fiber.Map{
 		"reply":  result.Reply,
@@ -209,6 +235,10 @@ func (h interviewHandler) putReport(c fiber.Ctx) error {
 		}
 		return err
 	}
+	slog.InfoContext(c.Context(), "interview report stored",
+		"interview_id", request.ID,
+		"report_bytes", len(request.Report),
+	)
 
 	return respondEmpty(c, "报告归档并生成成功")
 }

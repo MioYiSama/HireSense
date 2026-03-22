@@ -29,21 +29,7 @@ func NewError(status int, message string) error {
 }
 
 func ErrorHandler(c fiber.Ctx, err error) error {
-	status := fiber.StatusInternalServerError
-	message := "internal server error"
-
-	var httpErr *HTTPError
-	switch {
-	case errors.As(err, &httpErr):
-		status = httpErr.Status
-		message = httpErr.Message
-	default:
-		var fiberErr *fiber.Error
-		if errors.As(err, &fiberErr) {
-			status = fiberErr.Code
-			message = fiberErr.Message
-		}
-	}
+	status, message := resolveHTTPError(err)
 
 	return c.Status(status).JSON(envelope{
 		Success: false,
@@ -62,4 +48,24 @@ func respond(c fiber.Ctx, status int, message string, data any) error {
 
 func respondEmpty(c fiber.Ctx, message string) error {
 	return respond(c, fiber.StatusOK, message, struct{}{})
+}
+
+func resolveHTTPError(err error) (int, string) {
+	status := fiber.StatusInternalServerError
+	message := "internal server error"
+
+	var httpErr *HTTPError
+	switch {
+	case errors.As(err, &httpErr):
+		status = httpErr.Status
+		message = httpErr.Message
+	default:
+		var fiberErr *fiber.Error
+		if errors.As(err, &fiberErr) {
+			status = fiberErr.Code
+			message = fiberErr.Message
+		}
+	}
+
+	return status, message
 }

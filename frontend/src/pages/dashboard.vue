@@ -9,12 +9,7 @@ import {
   setInitialReply,
   clearAll,
 } from "@/utils/token";
-import {
-  getApiErrorMessage,
-  signOut,
-  startInterview,
-  useInterviewsQuery,
-} from "@/lib/api";
+import { getApiErrorMessage, signOut, startInterview, useInterviewsQuery } from "@/lib/api";
 import ConfirmDialog from "@/components/ConfirmDialog.vue";
 import GrowthCurve from "@/components/GrowthCurve.vue";
 
@@ -431,7 +426,10 @@ const hasAdviceData = computed(() => {
 const adviceEmptyMessage = "至少需要 1 份已生成面试报告后才展示提升建议。";
 
 const historicalAbilityInsights = computed<AbilityInsight[]>(() => {
-  const buckets = new Map<string, { total: number; count: number; source: "general" | "specific" }>();
+  const buckets = new Map<
+    string,
+    { total: number; count: number; source: "general" | "specific" }
+  >();
 
   commonComputedData.value.completedInterviews.forEach((item) => {
     const report = item.report;
@@ -483,8 +481,12 @@ const historicalAbilityInsights = computed<AbilityInsight[]>(() => {
 });
 
 const focusAbilities = computed(() => {
-  const lowerScoreAbilities = historicalAbilityInsights.value.filter((item) => item.averageScore < 8.5);
-  return (lowerScoreAbilities.length > 0 ? lowerScoreAbilities : historicalAbilityInsights.value).slice(0, 3);
+  const lowerScoreAbilities = historicalAbilityInsights.value.filter(
+    (item) => item.averageScore < 8.5,
+  );
+  return (
+    lowerScoreAbilities.length > 0 ? lowerScoreAbilities : historicalAbilityInsights.value
+  ).slice(0, 3);
 });
 
 const extractedWeakPoints = computed(() => {
@@ -1027,19 +1029,12 @@ onUnmounted(() => {
                   </svg>
                   <span class="text-xs text-slate-300">{{
                     interview.report
-                      ? interview.report.score + "分"
+                      ? interview.report.score.toFixed(2) + "分"
                       : interview.status === "started"
                         ? "进行中"
                         : "已结束"
                   }}</span>
                 </div>
-                <!-- <span class="text-xs text-slate-500">|</span> -->
-                <!-- <span
-                  class="text-xs"
-                  :class="interview.report ? 'text-green-400' : 'text-yellow-400'"
-                >
-                  {{ interview.report ? "已生成报告" : "待生成报告" }}
-                </span> -->
               </div>
             </div>
           </div>

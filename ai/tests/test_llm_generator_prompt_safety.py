@@ -1,6 +1,9 @@
 import asyncio
 
+from langchain_core.messages import AIMessage
 from app.services.llm_generator import Clarify, LLMGenerator, TacticalDecision
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableLambda
 
 
 def test_decide_tactics_and_generate_allows_braces_in_dynamic_text():
@@ -70,3 +73,54 @@ def test_clarify_question_allows_braces_in_user_text():
     )
 
     assert result.reply_speech == "我换个说法解释一下"
+
+
+def test_retry_structured_generation_recovers_malformed_tool_arguments():
+    llm_gen = LLMGenerator(llm=object(), fast_llm=object())
+
+    malformed_args = (
+        '{"reasoning":"first json wins","action":"PROBE","selected_node":null,'
+        '"reply_speech":"继续讲线程模型","q_id_and_brief":null}\n'
+        '✿RETURN✿: '
+        '{"reasoning":"second json should be ignored","action":"END","selected_node":null,'
+        '"reply_speech":"结束","q_id_and_brief":null}'
+    )
+
+    class FakeLLM:
+        def with_structured_output(self, model_class, include_raw=False):
+            async def invoke(_):
+                return {
+                    "raw": AIMessage(
+                        content="",
+                        additional_kwargs={
+                            "tool_calls": [
+                                {
+                                    "id": "call_1",
+                                    "type": "function",
+                                    "function": {
+                                        "name": model_class.__name__,
+                                        "arguments": malformed_args,
+                                    },
+                                }
+                            ]
+                        },
+                    ),
+                    "parsed": None,
+                    "parsing_error": ValueError("malformed tool arguments"),
+                }
+
+            return RunnableLambda(invoke)
+
+    result = asyncio.run(
+        llm_gen._retry_structured_generation(
+            prompt_template=ChatPromptTemplate.from_messages([("system", "test")]),
+            input_data={},
+            model_class=TacticalDecision,
+            llm=FakeLLM(),
+            max_retries=1,
+        )
+    )
+
+    assert result.reasoning == "first json wins"
+    assert result.action == "PROBE"
+    assert result.reply_speech == "继续讲线程模型"

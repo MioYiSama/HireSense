@@ -1,7 +1,8 @@
 package main
 
 import (
-	"log"
+	"log/slog"
+	"os"
 
 	"hire_sense/api"
 	"hire_sense/auth"
@@ -12,24 +13,36 @@ import (
 )
 
 func main() {
+	initLogger()
+
 	cfg, err := LoadConfig()
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("load config", "err", err)
+		os.Exit(1)
 	}
+	slog.Info("configuration loaded",
+		"app_addr", cfg.AppAddress,
+		"jwt_ttl", cfg.JWTTTL,
+		"whisper_configured", cfg.WhisperURL != "",
+		"ai_configured", cfg.AIURL != "",
+	)
 
 	store, err := database.Open(cfg.DatabaseURL)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("open database", "err", err)
+		os.Exit(1)
 	}
+	slog.Info("database connection ready")
 	defer func() {
 		if err := store.Close(); err != nil {
-			log.Printf("close database: %v", err)
+			slog.Warn("close database", "err", err)
 		}
 	}()
 
 	tokenManager, err := auth.NewTokenManager(cfg.JWTIssuer, cfg.JWTTTL)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("initialize token manager", "err", err)
+		os.Exit(1)
 	}
 
 	interviewService, err := api.NewInterviewService(api.InterviewServiceConfig{
@@ -37,13 +50,15 @@ func main() {
 		WhisperURL: cfg.WhisperURL,
 	})
 	if err != nil {
-		log.Fatal(err)
+		slog.Error("initialize interview service", "err", err)
+		os.Exit(1)
 	}
 
 	app := fiber.New(fiber.Config{
 		PassLocalsToContext: true,
 		ErrorHandler:        api.ErrorHandler,
 	})
+	app.Use(api.RequestLogger())
 	app.Use(cors.New(cors.Config{
 		AllowOrigins: []string{"*"},
 		AllowMethods: []string{
@@ -71,8 +86,15 @@ func main() {
 		InterviewService: interviewService,
 	})
 
-	log.Printf("backend listening on %s", cfg.AppAddress)
-	log.Fatal(app.Listen(cfg.AppAddress, fiber.ListenConfig{
-		EnablePrintRoutes: true,
-	}))
+	slog.Info("backend listening", "address", cfg.AppAddress)
+	if err := app.Listen(cfg.AppAddress); err != nil {
+		slog.Error("serve backend", "address", cfg.AppAddress, "err", err)
+		os.Exit(1)
+	}
+}
+
+func initLogger() {
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	})))
 }

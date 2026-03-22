@@ -12,6 +12,7 @@
 ## 快速启动
 
 ### 0. 设置环境信息
+
 根据.env.example 的要求 设置.env
 
 ### 1. 安装依赖
@@ -68,7 +69,7 @@ python GraphRag_Builder.py
 ### 5. 启动服务
 
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8081
 ```
 
 访问 http://localhost:8000/docs 查看 API 文档

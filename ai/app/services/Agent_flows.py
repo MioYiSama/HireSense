@@ -1,11 +1,11 @@
 import asyncio
 from dataclasses import dataclass
-from typing import Tuple, Optional, Dict
+from typing import Dict, Optional, Tuple
 from app.models.schemas import AgentState, IntentResult, InterviewRoundLog, StartRequest, ParsedResume
 from app.core.history_manager import HistoryManager
 from app.db import chroma_client, neo4j_client
 from app.services import intent_router, llm_generator, evaluator
-from app.services.llm_generator import Clarify, TacticalDecision, StartInterview
+from app.services.llm_generator import Clarify, TacticalDecision
 from app.services.resume_analyzer import ResumeAnalyzer
 from app.core.state_manager import session_store
 
@@ -39,6 +39,70 @@ class AgentFlow:
         # 强引用后台任务，防止被垃圾回收 (非 FastAPI 环境下的纯 asyncio 保底做法)
         self._background_tasks = set()
 
+    def _track_background_task(self, task: asyncio.Task) -> None:
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+
+    @staticmethod
+    def _pick_initial_question(question_menu: list) -> Tuple[str, str, str]:
+        for item in question_menu:
+            if not isinstance(item, dict):
+                continue
+
+            concept = str(item.get("concept") or "").strip()
+            if not concept:
+                continue
+
+            question_info = item.get("question_info") or []
+            if not isinstance(question_info, list):
+                continue
+
+            for question in question_info:
+                if not isinstance(question, dict):
+                    continue
+
+                q_id = str(question.get("q_id") or "").strip()
+                brief = str(question.get("brief") or "").strip()
+                if q_id and brief:
+                    return concept, q_id, brief
+
+        raise ValueError("No valid opening question available")
+
+    @staticmethod
+    def _format_opening_question(question_brief: str) -> str:
+        normalized = (question_brief or "").strip()
+        if not normalized:
+            return "先简单介绍一下你最近做过的项目。"
+
+        if normalized[-1] in "。！？!?":
+            return normalized
+        return f"{normalized}？"
+
+    def _build_fast_opening_speech(
+        self, personalization: str, concept: str, question_brief: str
+    ) -> str:
+        question = self._format_opening_question(question_brief)
+        if personalization:
+            return f"我们按你偏好的节奏来，先从{concept}开始。{question}"
+        return f"我们直接开始，先从{concept}这个点切入。{question}"
+
+    async def _hydrate_session_context(
+        self, state: AgentState, resume_text: str, job_domain: str
+    ) -> None:
+        try:
+            resume: ParsedResume = await self.resume_analyzer.analyze_and_align(
+                resume_text=resume_text,
+                job_domain=job_domain,
+            )
+            align_concepts = await self.chroma_client.async_batch_align_concepts(
+                resume.core_skills
+            )
+
+            state.resume_star = resume.projects_star_summary
+            state.resume_concept_list = align_concepts
+        except Exception as e:
+            print(f"[Start Warmup Error] Session {state.session_id}: {e}")
+
     async def _async_generate_and_save_advice(self, state: AgentState, round_index: int, question: str,
                                               user_answer: str, std_answer: str, score: float):
         try:
@@ -50,7 +114,7 @@ class AgentFlow:
 
     async def process_turn(self, state: AgentState, user_text: str) -> TurnReply:
         # 1. 记忆更新与切片
-
+        interviewer = state.chat_history[-1].content
         self.history_manager.add_messages(state=state, content=user_text, role="interviewee",
                                           concept=state.current_concept)
         self.history_manager.add_track_memory(state=state)
@@ -157,7 +221,7 @@ class AgentFlow:
 
             # 3. 记录日志，供最终出表用
             round_log = InterviewRoundLog(
-                interviewer=question_brief, interviewee=user_text,
+                interviewer=interviewer, interviewee=user_text,
                 sts_coverage=c_score, nli_logic=l_status, final_score=m_score, async_advice=""
             )
             state.interview_logs.append(round_log)
@@ -168,8 +232,7 @@ class AgentFlow:
                 self._async_generate_and_save_advice(state, current_round_index, state.current_concept, user_text,
                                                      std_ans, m_score)
             )
-            self._background_tasks.add(task)
-            task.add_done_callback(self._background_tasks.discard)  # 执行完毕后自动清理引用
+            self._track_background_task(task)
 
             # 5. 图谱菜单剪枝 (结合真实分数)
             limit_fwd, limit_sib, limit_bwd = self.strategy.calculate_quota(m_score, l_status)
@@ -241,25 +304,17 @@ class AgentFlow:
         personalization = (req.personalization or "").strip()
         resume_text = req.resume or ""
 
-        #  简历解析与对齐
-        resume : ParsedResume = await self.resume_analyzer.analyze_and_align(
-            resume_text=resume_text,
-            job_domain=req.job,
+        # 首题快速路径：先用图谱兜底题单秒级返回，耗时的简历富化放到后台补齐。
+        final_concepts = await self.neo4j_client.get_icebreaker_concept(
+            resume_concepts=[],
+            visited_concepts=[],
         )
-        core_skills = resume.core_skills
-        resume_star = resume.projects_star_summary
-
-        # core_skills 对齐为图谱中节点
-        align_concepts = await self.chroma_client.async_batch_align_concepts(core_skills)
-
-        # 图谱启动得到题目表单
-        final_concepts = await self.neo4j_client.get_icebreaker_concept(resume_concepts=align_concepts, visited_concepts=[])
         question_menu = await self.neo4j_client.get_batch_questions_brief(concept_list=final_concepts)
-
-        start_interview : StartInterview = await self.llm_gen.generate_opening_speech(
+        selected_concept, q_id, question_brief = self._pick_initial_question(question_menu)
+        opening_speech = self._build_fast_opening_speech(
             personalization=personalization,
-            projects_star=resume_star,
-            question_menu=question_menu
+            concept=selected_concept,
+            question_brief=question_brief,
         )
 
         # 创建状态
@@ -267,10 +322,10 @@ class AgentFlow:
             session_id=req.id,
             job=req.job,
             personalization=personalization,
-            resume_star=resume_star,
-            resume_concept_list=align_concepts,
-            current_concept=start_interview.selected_node,
-            visited_concept=[start_interview.selected_node],
+            resume_star="",
+            resume_concept_list=[],
+            current_concept=selected_concept,
+            visited_concept=[selected_concept],
             q_id_list=[],
             new_concept_list=[],
             chat_history=[],
@@ -282,17 +337,25 @@ class AgentFlow:
 
         # 添加历史与题目
         self.history_manager.add_messages(state=new_state,
-                                          content=start_interview.reply_speech,
+                                          content=opening_speech,
                                           role="interviewer",
-                                          concept=start_interview.selected_node)
+                                          concept=selected_concept)
 
         self.history_manager.q_id_add(state=new_state,
-                                      q_id=start_interview.q_id_and_brief[0],
-                                      question_brief=start_interview.q_id_and_brief[1])
+                                      q_id=q_id,
+                                      question_brief=question_brief)
 
         session_store.save_state(req.id, new_state)
+        warmup_task = asyncio.create_task(
+            self._hydrate_session_context(
+                state=new_state,
+                resume_text=resume_text,
+                job_domain=req.job,
+            )
+        )
+        self._track_background_task(warmup_task)
 
         return {
             "id": req.id,
-            "reply_speech": start_interview.reply_speech
+            "reply_speech": opening_speech
         }

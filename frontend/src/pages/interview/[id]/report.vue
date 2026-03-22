@@ -257,7 +257,9 @@ const generateRadarPolygon = (
                   </defs>
                 </svg>
                 <div class="absolute inset-0 flex flex-col items-center justify-center">
-                  <span class="text-5xl font-bold text-white">{{ reportData.score }}</span>
+                  <span class="text-5xl font-bold text-white">{{
+                    reportData.score.toFixed(2)
+                  }}</span>
                   <span class="text-sm text-slate-400 mt-1">综合评分</span>
                 </div>
               </div>

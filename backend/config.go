@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -28,6 +29,7 @@ func LoadConfig() (Config, error) {
 		if err := loadEnvFile(envPath); err != nil {
 			return Config{}, err
 		}
+		slog.Info("loaded environment file", "path", envPath)
 	}
 
 	ttl, err := time.ParseDuration(getEnv("JWT_TTL", "24h"))

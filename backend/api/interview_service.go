@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"mime/multipart"
 	"net/http"
 	"net/textproto"
@@ -146,8 +147,16 @@ func (s *InterviewService) Reply(ctx context.Context, request InterviewReplyRequ
 			return InterviewReplyResult{}, ErrInterviewAudioRequired
 		}
 
+		transcribeStartedAt := time.Now()
 		transcript, err := s.whisper.Transcribe(ctx, *request.Audio)
 		if err != nil {
+			slog.WarnContext(ctx, "interview audio transcription failed",
+				"interview_id", request.InterviewID,
+				"audio_bytes", len(request.Audio.Data),
+				"content_type", request.Audio.ContentType,
+				"duration", time.Since(transcribeStartedAt),
+				"err", err,
+			)
 			return InterviewReplyResult{}, &InterviewUpstreamError{
 				Service: "whisper",
 				Err:     err,
@@ -156,6 +165,15 @@ func (s *InterviewService) Reply(ctx context.Context, request InterviewReplyRequ
 
 		payload.Transcript = &transcript
 		payload.Text = strings.TrimSpace(transcript.Text)
+		slog.InfoContext(ctx, "interview audio transcribed",
+			"interview_id", request.InterviewID,
+			"audio_bytes", len(request.Audio.Data),
+			"content_type", request.Audio.ContentType,
+			"duration", time.Since(transcribeStartedAt),
+			"transcript_chars", len(payload.Text),
+			"segments", len(transcript.Segments),
+			"transcript", transcript,
+		)
 		if payload.Text == "" {
 			return InterviewReplyResult{}, ErrInterviewTranscriptEmpty
 		}

@@ -37,7 +37,8 @@ class ReportBackend(BaseModel):
     shortcomings: List[str] = Field(description="列举用户的明显短板")
     advice: str = Field(description="给用户的总建议")
     urls: List[str] = Field(
-        description="给出你所选择的推荐的内容的url，url必须完全来自所给的data"
+        description="给出你所选择的推荐的内容text和url，url和text必须完全来自所给的data，内容不允许重复"
+        "例子：C语言教程  https://example.com/video"
     )
 
 
@@ -63,7 +64,8 @@ class ReportFrontend(BaseModel):
     shortcomings: List[str] = Field(description="列举用户的明显短板")
     advice: str = Field(description="给用户的总建议")
     urls: List[str] = Field(
-        description="给出你所选择的推荐的内容的url，url必须完全来自所给的data"
+        description="给出你所选择的推荐的内容text和url，url和text必须完全来自所给的data，内容不允许重复"
+        "例子：C语言教程  https://example.com/video"
     )
 
 
@@ -118,16 +120,16 @@ class FinalReport:
                 (
                     "system",
                     """你是技术总监。面试已结束，请根据底层的【机器打分与分题点评记录】，对候选人进行全局复盘，并在最后基于自己先前的判断，从data库中选择适合用户提升的内容，最终给出内容来源的url
-            。
-                    【候选人背景】: {resume_star}
-                    【建议学习资料】:{data}
-                    【岗位专业能力维度要求】:{specific_dimensions_instruction}
-                    【任务要求】:
-                    严格按 JSON 格式输出总分、general(软实力) 
-                    1. general纬度按要求给出6个纬度的评分。每个纬度满分10分。
-                    2. specific维度的按要求给出6个纬度的评分。每个纬度满分10分。
-                    3. 评价必须客观犀利，一针见血。
-                    4. 根据给出的建议学习资料选出url""",
+                    。
+                            【候选人背景】: {resume_star}
+                            【建议学习资料】:{data}
+                            【任务要求】:
+                            严格按 JSON 格式输出总分、general(软实力) 
+                            1. general纬度按要求给出6个纬度的评分。每个纬度满分10分。
+                            2. specific维度的按要求给出6个纬度的评分。每个纬度满分10分。
+                            3. 评价必须客观犀利，一针见血。
+                            4. 根据给出的建议学习资料选出text和url，组装成一个单一的str url格式，例子：C语言教程  https://example.com/video
+                            5. 回答必须使用中文""",
                 ),
                 ("user", "【分题表现记录汇总】:\n{transcript}"),
             ]
