@@ -106,8 +106,7 @@ class FinalReport:
                     1. general纬度按要求给出6个纬度的评分
                     2. specific维度的按要求给出6个纬度的评分
                     3. 评价必须客观犀利，一针见血。
-                    4. 根据给出的建议学习资料选出text和url，组装成一个单一的str url格式，例子：C语言教程  https://example.com/video
-                    5. 回答必须使用中文"""),
+                    4. 根据给出的建议学习资料选出text和url，组装成一个单一的str url格式，例子：C语言教程  https://example.com/video"""),
                     ("user", "【分题表现记录汇总】:\n{transcript}")
         ])
 
