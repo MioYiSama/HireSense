@@ -43,7 +43,7 @@ class AgentFlow:
 
     async def process_turn(self, state: AgentState, user_text: str) -> str:
         # 1. 记忆更新与切片
-        interviewer = state.chat_history[-1].content
+
         self.history_manager.add_messages(state=state, content=user_text, role="interviewee",
                                           concept=state.current_concept)
         self.history_manager.add_track_memory(state=state)
@@ -140,7 +140,7 @@ class AgentFlow:
 
             # 3. 记录日志，供最终出表用
             round_log = InterviewRoundLog(
-                interviewer=interviewer, interviewee=user_text,
+                interviewer=question_brief, interviewee=user_text,
                 sts_coverage=c_score, nli_logic=l_status, final_score=m_score, async_advice=""
             )
             state.interview_logs.append(round_log)

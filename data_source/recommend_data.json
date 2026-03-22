@@ -1,205 +1,1005 @@
 {
-      "data":
+  "data" :
 [
-      { "技术点":"vue" , "title":"【知识点学习】从0开始带你手撸一套SpringBoot+Vue后台管理系统，让小白能跟着学会的项目实战", "url":"https://www.bilibili.com/video/BV1U44y1W77D/"},
-      { "技术点":"SpringBoot" , "title":"【知识点学习】从0开始带你手撸一套SpringBoot+Vue后台管理系统，让小白能跟着学会的项目实战", "url":"https://www.bilibili.com/video/BV1U44y1W77D"},
-      { "技术点":"Springboot" , "title":"非常简单实用的前后端分离项目-仓库管理系统（Springboot+Vue）", "url":"https://www.bilibili.com/video/BV1Qe411V7TZ"},
-      { "技术点":"mybatisPlus" , "title":"非常简单实用的前后端分离项目-仓库管理系统（Springboot+Vue）", "url":"https://www.bilibili.com/video/BV1Qe411V7TZ"},
-      { "技术点":"vue" , "title":"非常简单实用的前后端分离项目-仓库管理系统（Springboot+Vue）", "url":"https://www.bilibili.com/video/BV1Qe411V7TZ"},
-      { "技术点":"elementUI" , "title":"非常简单实用的前后端分离项目-仓库管理系统（Springboot+Vue）", "url":"https://www.bilibili.com/video/BV1Qe411V7TZ"},
-      { "技术点":"java基础" , "title":"2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】", "url":"https://www.bilibili.com/video/BV1Vb4y177wm/"},
-      { "技术点":"JVM" , "title":"2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】", "url":"https://www.bilibili.com/video/BV1Vb4y177wm"},
-      { "技术点":"ArrayList和LinkedList" , "title":"2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】", "url":"https://www.bilibili.com/video/BV1Vb4y177wm"},
-      { "技术点":"JDK1.8" , "title":"2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团", "url":"https://www.bilibili.com/video/BV1Vb4y177wm"},
-      { "技术点":"mybatis" , "title":"2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】", "url":"https://www.bilibili.com/video/BV1Vb4y177wm"},
-      { "技术点":"MySQL" , "title":"2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】", "url":"https://www.bilibili.com/video/BV1Vb4y177wm"},
-      { "技术点":"MVCC" , "title":"2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】", "url":"https://www.bilibili.com/video/BV1Vb4y177wm"},
-      { "技术点":"AOP" , "title":"2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】", "url":"https://www.bilibili.com/video/BV1Vb4y177wm"},
-      { "技术点":"IOC" , "title":"2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】", "url":"https://www.bilibili.com/video/BV1Vb4y177wm"},
-      { "技术点":"zookeeper和eureka" , "title":"2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】", "url":"https://www.bilibili.com/video/BV1Vb4y177wm"},
-      { "技术点":"Spring Cloud和Dubbo" , "title":"2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】", "url":"https://www.bilibili.com/video/BV1Vb4y177wm"},
-      { "技术点":"Ribbon" , "title":"2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】", "url":"https://www.bilibili.com/video/BV1Vb4y177wm"},
-      { "技术点":"Hystrix" , "title":"2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】", "url":"https://www.bilibili.com/video/BV1Vb4y177wm"},
-      { "技术点":"ZAB协议" , "title":"2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】", "url":"https://www.bilibili.com/video/BV1Vb4y177wm"},
-      { "技术点":"kafka" , "title":"2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】", "url":"https://www.bilibili.com/video/BV1Vb4y177wm"},
-      { "技术点":"rabbitmq" , "title":"2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】", "url":"https://www.bilibili.com/video/BV1Vb4y177wm"},
-      { "技术点":"redis" , "title":"2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】", "url":"https://www.bilibili.com/video/BV1Vb4y177wm"},
-      { "技术点":"Spring Boot+Vue" , "title":"【2020版】4小时学会Spring Boot+Vue前后端分离开发", "url":"https://www.bilibili.com/video/BV137411B7vB"},
-      { "技术点":"Element UI" , "title":"【2020版】4小时学会Spring Boot+Vue前后端分离开发", "url":"https://www.bilibili.com/video/BV137411B7vB"},
-      { "技术点":"spring boot和mybatisplus" , "title":"【实战】基于SpringBoot+Vue开发的前后端分离博客项目完整教学", "url":"https://www.bilibili.com/video/BV1PQ4y1P7hZ"},
-      { "技术点":"shiro+jwt" , "title":"【实战】基于SpringBoot+Vue开发的前后端分离博客项目完整教学", "url":"https://www.bilibili.com/video/BV1PQ4y1P7hZ"},
-      { "技术点":"vue" , "title":"【实战】基于SpringBoot+Vue开发的前后端分离博客项目完整教学", "url":"https://www.bilibili.com/video/BV1PQ4y1P7hZ"},
-      { "技术点":"element-ui、axios" , "title":"【实战】基于SpringBoot+Vue开发的前后端分离博客项目完整教学", "url":"https://www.bilibili.com/video/BV1PQ4y1P7hZ"},
-      { "技术点":"Springboot+vue" , "title":"【知识点学习】带你从0搭建一个Springboot+vue前后端分离项目，真的很简单！", "url":"https://www.bilibili.com/video/BV14y4y1M7Nc"},
-      { "技术点":"wangEditor" , "title":"【知识点学习】带你从0搭建一个Springboot+vue前后端分离项目，真的很简单！", "url":"https://www.bilibili.com/video/BV14y4y1M7Nc"},
-      { "技术点":"SpringBoot+Vue" , "title":"B站最通俗易懂手把手SpringBoot+Vue项目实战-前后端分离博客项目-Java项目", "url":"https://www.bilibili.com/video/BV1hq4y1F7zk"},
-      { "技术点":"bean拷贝" , "title":"B站最通俗易懂手把手SpringBoot+Vue项目实战-前后端分离博客项目-Java项目", "url":"https://www.bilibili.com/video/BV1hq4y1F7zk"},
-      { "技术点":"redis" , "title":"B站最通俗易懂手把手SpringBoot+Vue项目实战-前后端分离博客项目-Java项目", "url":"https://www.bilibili.com/video/BV1hq4y1F7zk"},
-      { "技术点":"Swagger2" , "title":"B站最通俗易懂手把手SpringBoot+Vue项目实战-前后端分离博客项目-Java项目", "url":"https://www.bilibili.com/video/BV1hq4y1F7zk"},
-      { "技术点":"java基础" , "title":"精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】", "url":"https://www.bilibili.com/video/BV1Av4y187hf/"},
-      { "技术点":"CAS" , "title":"精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】", "url":"https://www.bilibili.com/video/BV1Av4y187hf"},
-      { "技术点":"synchronized" , "title":"精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】", "url":"https://www.bilibili.com/video/BV1Av4y187hf"},
-      { "技术点":"AQS" , "title":"精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】", "url":"https://www.bilibili.com/video/BV1Av4y187hf"},
-      { "技术点":"ReentrantLock" , "title":"精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】", "url":"https://www.bilibili.com/video/BV1Av4y187hf"},
-      { "技术点":"ReentrantReadWriteLock" , "title":"精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】", "url":"https://www.bilibili.com/video/BV1Av4y187hf"},
-      { "技术点":"ConcurrentHashMap" , "title":"精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】", "url":"https://www.bilibili.com/video/BV1Av4y187hf"},
-      { "技术点":"Spring" , "title":"精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】", "url":"https://www.bilibili.com/video/BV1Av4y187hf"},
-      { "技术点":"BeanFactory和ApplicationContext" , "title":"精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】", "url":"https://www.bilibili.com/video/BV1Av4y187hf"},
-      { "技术点":"SpringMVC" , "title":"精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】", "url":"https://www.bilibili.com/video/BV1Av4y187hf"},
-      { "技术点":"DelegatingFilterProxy" , "title":"精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】", "url":"https://www.bilibili.com/video/BV1Av4y187hf"},
-      { "技术点":"DeferredImportSelector" , "title":"精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】", "url":"https://www.bilibili.com/video/BV1Av4y187hf"},
-      { "技术点":"spring boot" , "title":"精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】", "url":"https://www.bilibili.com/video/BV1Av4y187hf"},
-      { "技术点":"Buffer Pool" , "title":"精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】", "url":"https://www.bilibili.com/video/BV1Av4y187hf"},
-      { "技术点":"MySQL、LRU算法" , "title":"精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】", "url":"https://www.bilibili.com/video/BV1Av4y187hf/"},
-      { "技术点":"InnoDB与MyISAM" , "title":"精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】", "url":"https://www.bilibili.com/video/BV1Av4y187hf"},
-      { "技术点":"redis" , "title":"精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】", "url":"https://www.bilibili.com/video/BV1Av4y187hf"},
-      { "技术点":"vue3" , "title":"【免费学习】1天学会SpringBoot3+Vue3实战项目开发，手把手带你做完整的前后端分离项目，适合计算机毕业设计、实习项目、Java、Vue编程练手项目", "url":"https://www.bilibili.com/video/BV1Df2cYVEWo"},
-      { "技术点":"Element-Plus" , "title":"【免费学习】1天学会SpringBoot3+Vue3实战项目开发，手把手带你做完整的前后端分离项目，适合计算机毕业设计、实习项目、Java、Vue编程练手项目", "url":"https://www.bilibili.com/video/BV1Df2cYVEWo"},
-      { "技术点":"MySQL" , "title":"【免费学习】1天学会SpringBoot3+Vue3实战项目开发，手把手带你做完整的前后端分离项目，适合计算机毕业设计、实习项目、Java、Vue编程练手项目", "url":"https://www.bilibili.com/video/BV1Df2cYVEWo"},
-      { "技术点":"SpringBoot3" , "title":"【免费学习】1天学会SpringBoot3+Vue3实战项目开发，手把手带你做完整的前后端分离项目，适合计算机毕业设计、实习项目、Java、Vue编程练手项目", "url":"https://www.bilibili.com/video/BV1Df2cYVEWo"},
-      { "技术点":"Mybatis" , "title":"【免费学习】1天学会SpringBoot3+Vue3实战项目开发，手把手带你做完整的前后端分离项目，适合计算机毕业设计、实习项目、Java、Vue编程练手项目", "url":"https://www.bilibili.com/video/BV1Df2cYVEWo"},
-      { "技术点":"HTML标签" , "title":"黑马程序员pink老师前端入门教程，零基础必看的h5(html5)+css3+移动端前端视频教程", "url":"https://www.bilibili.com/video/BV14J4114768"},
-      { "技术点":"CSS" , "title":"黑马程序员pink老师前端入门教程，零基础必看的h5(html5)+css3+移动端前端视频教程", "url":"https://www.bilibili.com/video/BV14J4114768"},
-      { "技术点":"Vuejs" , "title":"最全最新Vue、Vuejs教程，从入门到精通", "url":"https://www.bilibili.com/video/BV15741177Eh"},
-      { "技术点":"WXSS" , "title":"黑马程序员前端微信小程序开发教程，微信小程序从基础到发布全流程_企业级商城实战(含uni-app项目多端部署)", "url":"https://www.bilibili.com/video/BV1834y1676P"},
-      { "技术点":"WXS" , "title":"黑马程序员前端微信小程序开发教程，微信小程序从基础到发布全流程_企业级商城实战(含uni-app项目多端部署)", "url":"https://www.bilibili.com/video/BV1834y1676P"},
-      { "技术点":"HTML" , "title":"尚硅谷Web前端零基础入门HTML5+CSS3基础教程丨初学者从入门到精通", "url":"https://www.bilibili.com/video/BV1XJ411X7Ud"},
-      { "技术点":"CSS" , "title":"尚硅谷Web前端零基础入门HTML5+CSS3基础教程丨初学者从入门到精通", "url":"https://www.bilibili.com/video/BV1XJ411X7Ud"},
-      { "技术点":"less" , "title":"尚硅谷Web前端零基础入门HTML5+CSS3基础教程丨初学者从入门到精通", "url":"https://www.bilibili.com/video/BV1XJ411X7Ud"},
-      { "技术点":"HTML" , "title":"前端开发入门教程，web前端零基础html5 +css3+前端项目视频教程", "url":"https://www.bilibili.com/video/BV1Kg411T7t9"},
-      { "技术点":"CSS" , "title":"前端开发入门教程，web前端零基础html5 +css3+前端项目视频教程", "url":"https://www.bilibili.com/video/BV1Kg411T7t9"},
-      { "技术点":"PxCook" , "title":"前端开发入门教程，web前端零基础html5 +css3+前端项目视频教程", "url":"https://www.bilibili.com/video/BV1Kg411T7t9"},
-      { "技术点":"React" , "title":"尚硅谷React教程（已加更新版内容，B站最火）", "url":"https://www.bilibili.com/video/BV1wy4y1D7JT/"},
-      { "技术点":"HTML" , "title":"前端Web开发HTML5+CSS3+移动web视频教程，前端web入门首选黑马程序员", "url":"https://www.bilibili.com/video/BV1kM4y127Li"},
-      { "技术点":"vue" , "title":"前端Web开发HTML5+CSS3+移动web视频教程，前端web入门首选黑马程序员", "url":"https://www.bilibili.com/video/BV1kM4y127Li"},
-      { "技术点":"CSS" , "title":"前端Web开发HTML5+CSS3+移动web视频教程，前端web入门首选黑马程序员", "url":"https://www.bilibili.com/video/BV1kM4y127Li"},
-      { "技术点":"Flex布局" , "title":"前端Web开发HTML5+CSS3+移动web视频教程，前端web入门首选黑马程序员", "url":"https://www.bilibili.com/video/BV1kM4y127Li"},
-      { "技术点":"rem" , "title":"前端Web开发HTML5+CSS3+移动web视频教程，前端web入门首选黑马程序员", "url":"https://www.bilibili.com/video/BV1kM4y127Li"},
-      { "技术点":"less" , "title":"前端Web开发HTML5+CSS3+移动web视频教程，前端web入门首选黑马程序员", "url":"https://www.bilibili.com/video/BV1kM4y127Li"},
-      { "技术点":"Bootstrap" , "title":"前端Web开发HTML5+CSS3+移动web视频教程，前端web入门首选黑马程序员", "url":"https://www.bilibili.com/video/BV1kM4y127Li"},
-      { "技术点":"HTML" , "title":"千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）", "url":"https://www.bilibili.com/video/BV17z4y1D7Yj"},
-      { "技术点":"CSS" , "title":"千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）", "url":"https://www.bilibili.com/video/BV17z4y1D7Yj"},
-      { "技术点":"rem" , "title":"千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）", "url":"https://www.bilibili.com/video/BV17z4y1D7Yj"},
-      { "技术点":"jQuery" , "title":"千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）", "url":"https://www.bilibili.com/video/BV17z4y1D7Yj"},
-      { "技术点":"JWT" , "title":"千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）", "url":"https://www.bilibili.com/video/BV17z4y1D7Yj"},
-      { "技术点":"vue" , "title":"千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）", "url":"https://www.bilibili.com/video/BV17z4y1D7Yj"},
-      { "技术点":"swiper" , "title":"千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）", "url":"https://www.bilibili.com/video/BV17z4y1D7Yj"},
-      { "技术点":"axios" , "title":"千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）", "url":"https://www.bilibili.com/video/BV17z4y1D7Yj"},
-      { "技术点":"elementUI" , "title":"千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）", "url":"https://www.bilibili.com/video/BV17z4y1D7Yj"},
-      { "技术点":"vant" , "title":"千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）", "url":"https://www.bilibili.com/video/BV17z4y1D7Yj"},
-      { "技术点":"vuex" , "title":"千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）", "url":"https://www.bilibili.com/video/BV17z4y1D7Yj"},
-      { "技术点":"React" , "title":"千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）", "url":"https://www.bilibili.com/video/BV17z4y1D7Yj"},
-      { "技术点":"React Hooks" , "title":"千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）", "url":"https://www.bilibili.com/video/BV17z4y1D7Yj"},
-      { "技术点":"Antd" , "title":"千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）", "url":"https://www.bilibili.com/video/BV17z4y1D7Yj"},
-      { "技术点":"MongoDB、Robo3T" , "title":"千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图", "url":"https://www.bilibili.com/video/BV17z4y1D7Yj"},
-      { "技术点":"wxss" , "title":"千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）", "url":"https://www.bilibili.com/video/BV17z4y1D7Yj"},
-      { "技术点":"wxs" , "title":"千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）", "url":"https://www.bilibili.com/video/BV17z4y1D7Yj"},
-      { "技术点":"webpack" , "title":"千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）", "url":"https://www.bilibili.com/video/BV17z4y1D7Yj"},
-      { "技术点":"HTML" , "title":"html+css教程，前端html5+css3零基础入门，web前端开发", "url":"https://www.bilibili.com/video/BV1p84y1P7Z5"},
-      { "技术点":"CSS" , "title":"html+css教程，前端html5+css3零基础入门，web前端开发", "url":"https://www.bilibili.com/video/BV1p84y1P7Z5"},
-      { "技术点":"JS" , "title":"黑马程序员JavaScript全套教程，Web前端必学的JS入门教程，零基础JavaScript入门", "url":"https://www.bilibili.com/video/BV1ux411d75J"},
-      { "技术点":"fs" , "title":"黑马程序员Node.js全套入门教程，nodejs新教程含es6模块化+npm+express+webpack+promise等_Nodejs实战案例详解", "url":"https://www.bilibili.com/video/BV1a34y167AZ"},
-      { "技术点":"http模块" , "title":"黑马程序员Node.js全套入门教程，nodejs新教程含es6模块化+npm+express+webpack+promise等_Nodejs实战案例详解", "url":"https://www.bilibili.com/video/BV1a34y167AZ"},
-      { "技术点":"MySQL" , "title":"黑马程序员Node.js全套入门教程，nodejs新教程含es6模块化+npm+express+webpack+promise等_Nodejs实战案例详解", "url":"https://www.bilibili.com/video/BV1a34y167AZ"},
-      { "技术点":"Ajax" , "title":"Java后端实现Ajax局部刷新技术教程", "url":"https://blog.csdn.net/weixin_29301059/article/details/147776080"},
-      { "技术点":"全局异常处理器" , "title":"Java后端全局异常处理器详细教程", "url":"https://blog.csdn.net/weixin_52578852/article/details/147093477"},
-      { "技术点":"Swagger" , "title":"Java中Swagger生成后端接口测试【保姆级教程】", "url":"https://blog.csdn.net/weixin_73355603/article/details/148894462"},
-      { "技术点":"Springboot" , "title":"阿里通义千问API(Java)使用教程,基于Springboot后端", "url":"https://blog.csdn.net/rnnf_yyds/article/details/136507957"},
-      { "技术点":"Tomcat" , "title":"数据库前后端交互 从后端到前端入门教程二 (Tomcat、MySQL、Bootstrap、JAVA Servlet)", "url":"https://blog.csdn.net/qq_49488584/article/details/122147212"},
-      { "技术点":"Servlet" , "title":"Java后端开发完整教程：框架与实战应用", "url":"https://blog.csdn.net/weixin_35370061/article/details/142333674"},
-      { "技术点":"Struts框架" , "title":"Java后端进阶教程", "url":"https://blog.csdn.net/weixin_30878361/article/details/99051514"},
-      { "技术点":"MVC" , "title":"java 前后端分离教程,Java web前后端分离", "url":"https://blog.csdn.net/weixin_33982972/article/details/115763705"},
-      { "技术点":"SharedPreferences" , "title":"Java后端转安卓开发完整教程", "url":"https://blog.csdn.net/rysxt_/article/details/156946063"},
-      { "技术点":"Servlet" , "title":"（Java高级教程）第三章Java网络编程-第八节：博客系统搭建（前后端分离）", "url":"https://blog.csdn.net/qq_39183034/article/details/133467793"},
-      { "技术点":"HTML" , "title":"表单提交实战教程：HTML、CSS、JavaScript到Java后端", "url":"https://blog.csdn.net/weixin_42515340/article/details/144163641"},
-      { "技术点":"Spring Boot" , "title":"Spring Boot 教程：Java 后端开发入门", "url":"https://blog.csdn.net/yolov7895/article/details/133392614"},
-      { "技术点":"Struts" , "title":"java后端主流框架_好程序员Java教程分享Java开发主流框架", "url":"https://blog.csdn.net/weixin_39710361/article/details/110725067"},
-      { "技术点":"Hibernate Validator" , "title":"java后端主流框架_好程序员Java教程分享Java开发主流框架", "url":"https://blog.csdn.net/weixin_39710361/article/details/110725067"},
-      { "技术点":"多线程" , "title":"java后端管理系统开发教程，java面试堆和栈", "url":"https://blog.csdn.net/2401_84412653/article/details/138122383"},
-      { "技术点":"vue3" , "title":"element-plus java前后端分离vue3工作流引擎入门教程", "url":"https://blog.csdn.net/hmxhch/article/details/130555038"},
-      { "技术点":"mybatis" , "title":"springboot+mybatis+mysql java后端教程", "url":"https://blog.csdn.net/weixin_42312546/article/details/112487409"},
-      { "技术点":"Uniapp" , "title":"基于Java+SpringBoot+Vue+Uniapp(有教程)前后端分离健身预约系统设计与实现", "url":"https://blog.csdn.net/qq_57756904/article/details/129287644"},
-      { "技术点":"TypeScript" , "title":"JAVA前后端分离项目搭建教程 | 蓝鲸云", "url":"https://blog.csdn.net/zongjinlong/article/details/112968657"},
-      { "技术点":"Ajax" , "title":"学习笔记--黑马Java基于若依高效搭建饿了么案例实战教程，掌握独立搭建前后端分离后台管理系统", "url":"https://blog.csdn.net/m0_72810289/article/details/143607341"},
-      { "技术点":"Nginx" , "title":"Vue 前端与 Java 后端在 Linux 服务器上的部署教程及 Nginx 配置", "url":"https://blog.csdn.net/boydoy1987/article/details/140866534"},
-      { "技术点":"ShardingSphere" , "title":"ShardingSphere分库分表教程，java后端开发面试题", "url":"https://blog.csdn.net/m0_64205716/article/details/121313447"},
-      { "技术点":"redis" , "title":"Docker快速搭建java后端开发环境教程（详细图文结合）", "url":"https://blog.csdn.net/weixin_44499403/article/details/120502561"},
-      { "技术点":"TeaVM" , "title":"TeaVM C后端开发教程：将Java应用编译为原生二进制", "url":"https://blog.csdn.net/gitblog_00599/article/details/151548992"},
-      { "技术点":"AOP" , "title":"全民学后端快餐教程(1) - 只不过是写个Java程序", "url":"https://blog.csdn.net/yunqiinsight/article/details/86735852"},
-      { "技术点":"Nginx" , "title":"Java 后端工程师的书单推荐，周立功linux开发教程", "url":"https://blog.csdn.net/m0_63102527/article/details/121245872"},
-      { "技术点":"Netty" , "title":"Java 后端工程师的书单推荐，周立功linux开发教程", "url":"https://blog.csdn.net/m0_63102527/article/details/121245872"},
-      { "技术点":"JVM" , "title":"Java 后端工程师的书单推荐，周立功linux开发教程", "url":"https://blog.csdn.net/m0_63102527/article/details/121245872"},
-      { "技术点":"redis" , "title":"Java 后端工程师的书单推荐，周立功linux开发教程", "url":"https://blog.csdn.net/m0_63102527/article/details/121245872"},
-      { "技术点":"NoSQL" , "title":"Java 后端工程师的书单推荐，周立功linux开发教程", "url":"https://blog.csdn.net/m0_63102527/article/details/121245872"},
-      { "技术点":"ELK Stack" , "title":"Java 后端工程师的书单推荐，周立功linux开发教程", "url":"https://blog.csdn.net/m0_63102527/article/details/121245872"},
-      { "技术点":"ajax" , "title":"js和java后台交互 不用jsp_不用jsp怎么实现前后端交互？给萌新后端的ajax教程(1)...", "url":"https://blog.csdn.net/weixin_42406749/article/details/114152936"},
-      { "技术点":"MVCC" , "title":"java后端开发教程，京东java面试流程", "url":"https://blog.csdn.net/edgnb123/article/details/124690521"},
-      { "技术点":"React" , "title":"Web前端三大主流框架是什么？Web前端前景与就业形势分析", "url":"https://blog.csdn.net/weixin_42686892/article/details/110642081"},
-      { "技术点":"Delphi" , "title":"推荐开源项目：Delphi Web前端开发教程——基于TMS WEB Core框架", "url":"https://blog.csdn.net/gitblog_06670/article/details/142572371"},
-      { "技术点":"NodeJS" , "title":"分享一份让你零基础也可以学习web前端的教程大纲", "url":"https://blog.csdn.net/qf_python/article/details/89339997"},
-      { "技术点":"Bootstrap框架" , "title":"案例学web前端开发完整教程", "url":"https://blog.csdn.net/weixin_29138345/article/details/149410829"},
-      { "技术点":"CSS" , "title":"Web前端入门教程(全网最详细)，零基础入门到精通，从看这一篇开始！", "url":"https://blog.csdn.net/yy1715713348/article/details/149039265"},
-      { "技术点":"Flex" , "title":"web前端进阶教程目录", "url":"https://blog.csdn.net/dreamingbaobei3/article/details/87857163"},
-      { "技术点":"jQuery" , "title":"分享一份让你零基础也可以学习web前端的教程大纲", "url":"https://blog.csdn.net/weixin_33815613/article/details/91471679"},
-      { "技术点":" AJAX" , "title":"Web前端开发教程", "url":"https://blog.csdn.net/weixin_41135508/article/details/124563638"},
-      { "技术点":"ECMAScript6" , "title":"ES6features", "url":"https://gitcode.com/gh_mirrors/es/es6features"},
-      { "技术点":"JavaScript" , "title":"Superhero.js", "url":"http://superherojs.com/"},
-      { "技术点":"CoffeScript" , "title":"HowToCoffeeScript.com", "url":"http://howtocoffeescript.com/"},
-      { "技术点":"HTML" , "title":"The HTML Landscape", "url":"http://www.w3.org/html/landscape/"},
-      { "技术点":"CSS" , "title":"Open Web CSS Reference", "url":"http://ref.openweb.io/CSS/"},
-      { "技术点":"JavaScript" , "title":"JavaScript: The Right Way", "url":"http://jstherightway.org/"},
-      { "技术点":"HTML5" , "title":"The HTML5 JavaScript API Index", "url":"http://html5index.org/"},
-      { "技术点":"flexbox" , "title":"The Ultimate Flexbox Cheat Sheet", "url":"http://www.sketchingwithcss.com/samplechapter/cheatsheet.html"},
-      { "技术点":"HTML" , "title":"web前端开发基础教程一", "url":"https://blog.csdn.net/m0_64365419/article/details/126926604"},
-      { "技术点":"Nginx" , "title":"Nginx 服务器安装及配置文件详解", "url":"https://www.runoob.com/w3cnote/nginx-install-and-config.html"},
-      { "技术点":"Electron" , "title":"Electron 简介", "url":"https://www.runoob.com/electron/electron-intro.html"},
-      { "技术点":"Node.js" , "title":"Node.js 基础概念", "url":"https://www.runoob.com/nodejs/nodejs-intro.html"},
-      { "技术点":"PHP" , "title":"Web开发的入门指导", "url":"https://www.runoob.com/w3cnote/a-beginners-guide-to-web-development.html"},
-      { "技术点":"Jquery" , "title":"Jquery 教程", "url":"https://www.runoob.com/jquery/"},
-      { "技术点":"PHP" , "title":"PHP 教程", "url":"https://www.runoob.com/php/"},
-      { "技术点":"MySQL" , "title":"MySQL 教程", "url":"https://www.runoob.com/mysql/"},
-      { "技术点":"Angular" , "title":"2018 Web开发人员学习路线图", "url":"https://www.runoob.com/w3cnote/2018-web-developer.html"},
-      { "技术点":"RESTful API" , "title":"RESTful API 教程", "url":"https://www.runoob.com/restfulapi/restful-api-tutorial.html"},
-      { "技术点":"FastAPI" , "title":"FastAPI 教程", "url":"https://www.runoob.com/fastapi/fastapi-tutorial.html"},
-      { "技术点":"Pillow ImageShow" , "title":"Pillow ImageShow 模块", "url":"https://www.runoob.com/pillow/pillow-imageshow-module.html"},
-      { "技术点":"Swagger" , "title":"Swagger 教程", "url":"https://www.runoob.com/swagger/swagger-tutorial.html"},
-      { "技术点":"Django" , "title":"Django 简介", "url":"https://www.runoob.com/django/django-intro.html"},
-      { "技术点":"Vue" , "title":"Vue.js Ajax(vue-resource)", "url":"https://www.runoob.com/vue2/vuejs-ajax.html"},
-      { "技术点":"Dash" , "title":"Dash 简介", "url":"https://www.runoob.com/dash/dash-intro.html"},
-      { "技术点":"Scala" , "title":"Scala 简介", "url":"https://www.runoob.com/scala/scala-intro.html"},
-      { "技术点":"Electron" , "title":"Electron 教程", "url":"https://www.runoob.com/electron/electron-tutorial.html"},
-      { "技术点":"Docker" , "title":"Docker 教程", "url":"https://www.runoob.com/docker/docker-tutorial.html"},
-      { "技术点":"Node.js" , "title":"Node.js 教程", "url":"https://www.runoob.com/nodejs/nodejs-tutorial.html"},
-      { "技术点":"Next.js" , "title":"Next.js 教程", "url":"https://www.runoob.com/nextjs/nextjs-tutorial.html"},
-      { "技术点":"Selenium" , "title":"Selenium 教程", "url":"https://www.runoob.com/selenium/selenium-tutorial.html"},
-      { "技术点":"Rust" , "title":"Rust 教程", "url":"https://www.runoob.com/rust/rust-tutorial.html"},
-      { "技术点":"OpenResty" , "title":"OpenResty 使用介绍", "url":"https://www.runoob.com/w3cnote/openresty-intro.html"},
-      { "技术点":"Flask" , "title":"Flask 教程", "url":"https://www.runoob.com/flask/flask-tutorial.html"},
-      { "技术点":"Fetch API" , "title":"Fetch API", "url":"https://www.runoob.com/ajax/fetch-api.html"},
-      { "技术点":"Node.js" , "title":"Node.js 模块导入", "url":"https://www.runoob.com/nodejs/nodejs-commonjs-esm.html"},
-      { "技术点":"JSP" , "title":"JSP 过滤器", "url":"https://www.runoob.com/jsp/jsp-writing-filters.html"},
-      { "技术点":"HTML" , "title":"前端开发面试题", "url":"https://www.runoob.com/w3cnote/front-end-developer-questions-and-answers.html"},
-      { "技术点":"Ajax" , "title":"十年WEB技术发展历程", "url":"https://www.runoob.com/w3cnote/web-10-years.html"},
-      { "技术点":"ECharts" , "title":"ECharts 教程", "url":"https://www.runoob.com/echarts/echarts-tutorial.html"},
-      { "技术点":"Vue3" , "title":"Vue3 任务管理系统", "url":"https://www.runoob.com/vue3/vue3-taskhub.html"},
-      { "技术点":"MongoDB " , "title":"MongoDB 分片", "url":"https://www.runoob.com/mongodb/mongodb-sharding.html"},
-      { "技术点":"IO.js" , "title":"2015年10个最佳Web开发JavaScript库", "url":"https://www.runoob.com/w3cnote/10-best-javascript-library-in-2015.html"},
-      { "技术点":"Axios" , "title":"Axios 前后端对接教程｜HTTP", "url":"https://www.bilibili.com/video/BV1rM4m117Ry/"},
-      { "技术点":"RocketMQ" , "title":"kafka为什么这么快？RocketMQ哪里不如Kafka?", "url":"https://www.bilibili.com/video/BV1Zy411e7qY/"},
-      { "技术点":"BootStrap5" , "title":"【BootStrap5实战】前端后端程序员都应该看的bootstrap5快速入门，用bootstrap5快速做一个首页", "url":"https://www.bilibili.com/video/BV1G44y117Hb/"},
-      { "技术点":"Gradle" , "title":"来自Gradle开发团队的Gradle入门教程", "url":"https://www.bilibili.com/video/BV1DE411Z7nt/"},
-      { "技术点":"Ajax" , "title":"前端进阶Ajax+Git零基础到精通_ajax前后端数据交互&异步编程全套学习教程", "url":"https://www.bilibili.com/video/BV1ZS4y1w7Yz/"},
-      { "技术点":"Node.js" , "title":"Node.js是啥，如何学习Node，Node能做后端吗？【晓舟报告】", "url":"https://www.bilibili.com/video/BV1yr4y1m75j/"},
-      { "技术点":"MySQL" , "title":"Mysql是什么？架构是怎么样的？", "url":"https://www.bilibili.com/video/BV1p5qhYsE4f/"},
-      { "技术点":"redis" , "title":"【趣话Redis第一弹】我是Redis，MySQL大哥被我坑惨了！", "url":"https://www.bilibili.com/video/BV1Fd4y1T7pD/"},
-      { "技术点":"redis" , "title":"学 Redis 前，请务必先看完这个！", "url":"https://www.bilibili.com/video/BV1a1sgzfE5d/"},
-      { "技术点":"django" , "title":"4天搞定django rest framework源码和实战", "url":"https://www.bilibili.com/video/BV1ZE411j7RK/"},
-      { "技术点":"React" , "title":"【React+Nodejs】从0到1前后端分离项目—图书管理系统（完结）", "url":"https://www.bilibili.com/video/BV1Po4y1B7FF/"},
-      { "技术点":"nginx" , "title":"nginx反向代理端口转发教程 WEB应用项目前后端共用一个端口解决跨域问题 在ubuntu服务器上部署", "url":"https://www.bilibili.com/video/BV1a64y1e7nq/"},
-      { "技术点":"Mybatis" , "title":"SpringBoot+JWT+Shiro+Vue+Element-UI 疫情期间开发的前后端分离项目<<新冠物资管理系统>>,前端后端都已在Github开源.", "url":"https://www.bilibili.com/video/BV1Vf4y1m7fk/"},
-      { "技术点":"redis" , "title":"Spring Cloud+Spring Boot+Mybatis+Redis微服务开发实战项目 前后端分离 毕设 就业项目《MES云染数据》 白嫖哦！", "url":"https://www.bilibili.com/video/BV19m411C71z/"},
-      { "技术点":"Flask" , "title":"Flask+Vue 前后端分离开发", "url":"https://www.bilibili.com/video/BV1Z54y1q7BZ/"},
-      { "技术点":"NoSQL" , "title":"Flutter 组件 reaxdb_dart 适配鸿蒙 HarmonyOS 实战：响应式 NoSQL 数据库，构建高性能本地持久化与分布式状态同步架构", "url":"https://blog.csdn.net/2609_95049439/article/details/158883624"},
-      { "技术点":"Django" , "title":"【玩转全栈】----Django模板语法、请求与响应", "url":"https://blog.csdn.net/2403_83182682/article/details/144835841"}
-      ]
+  {
+    "技术点": "vue",
+    "title": "【知识点学习】从0开始带你手撸一套SpringBoot+Vue后台管理系统，让小白能跟着学会的项目实战",
+    "url": "https://www.bilibili.com/video/BV1U44y1W77D/?spm_id_from=333.337.search-card.all.click&vd_source=8bf01fd021c3cafa6d7547606a0fe543"
+  },
+  {
+    "技术点": "SpringBoot",
+    "title": "【知识点学习】从0开始带你手撸一套SpringBoot+Vue后台管理系统，让小白能跟着学会的项目实战",
+    "url": "https://www.bilibili.com/video/BV1U44y1W77D?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=5"
+  },
+  {
+    "技术点": "Springboot",
+    "title": "非常简单实用的前后端分离项目-仓库管理系统（Springboot+Vue）",
+    "url": "https://www.bilibili.com/video/BV1Qe411V7TZ?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=2"
+  },
+  {
+    "技术点": "mybatisPlus",
+    "title": "非常简单实用的前后端分离项目-仓库管理系统（Springboot+Vue）",
+    "url": "https://www.bilibili.com/video/BV1Qe411V7TZ?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=3"
+  },
+  {
+    "技术点": "vue",
+    "title": "非常简单实用的前后端分离项目-仓库管理系统（Springboot+Vue）",
+    "url": "https://www.bilibili.com/video/BV1Qe411V7TZ?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=8"
+  },
+  {
+    "技术点": "elementUI",
+    "title": "非常简单实用的前后端分离项目-仓库管理系统（Springboot+Vue）",
+    "url": "https://www.bilibili.com/video/BV1Qe411V7TZ?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=10"
+  },
+  {
+    "技术点": "java基础",
+    "title": "2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】",
+    "url": "https://www.bilibili.com/video/BV1Vb4y177wm/?spm_id_from=333.337.search-card.all.click&vd_source=8bf01fd021c3cafa6d7547606a0fe543"
+  },
+  {
+    "技术点": "JVM",
+    "title": "2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】",
+    "url": "https://www.bilibili.com/video/BV1Vb4y177wm?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=2"
+  },
+  {
+    "技术点": "ArrayList和LinkedList",
+    "title": "2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】",
+    "url": "https://www.bilibili.com/video/BV1Vb4y177wm?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=3"
+  },
+  {
+    "技术点": "JDK1.8",
+    "title": "2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团",
+    "url": "https://www.bilibili.com/video/BV1Vb4y177wm?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=5"
+  },
+  {
+    "技术点": "mybatis",
+    "title": "2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】",
+    "url": "https://www.bilibili.com/video/BV1Vb4y177wm?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=23"
+  },
+  {
+    "技术点": "MySQL",
+    "title": "2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】",
+    "url": "https://www.bilibili.com/video/BV1Vb4y177wm?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=27"
+  },
+  {
+    "技术点": "MVCC",
+    "title": "2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】",
+    "url": "https://www.bilibili.com/video/BV1Vb4y177wm?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=54"
+  },
+  {
+    "技术点": "AOP",
+    "title": "2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】",
+    "url": "https://www.bilibili.com/video/BV1Vb4y177wm?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=61"
+  },
+  {
+    "技术点": "IOC",
+    "title": "2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】",
+    "url": "https://www.bilibili.com/video/BV1Vb4y177wm?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=62"
+  },
+  {
+    "技术点": "zookeeper和eureka",
+    "title": "2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】",
+    "url": "https://www.bilibili.com/video/BV1Vb4y177wm?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=71"
+  },
+  {
+    "技术点": "Spring Cloud和Dubbo",
+    "title": "2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】",
+    "url": "https://www.bilibili.com/video/BV1Vb4y177wm?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=72"
+  },
+  {
+    "技术点": "Ribbon",
+    "title": "2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】",
+    "url": "https://www.bilibili.com/video/BV1Vb4y177wm?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=73"
+  },
+  {
+    "技术点": "Hystrix",
+    "title": "2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】",
+    "url": "https://www.bilibili.com/video/BV1Vb4y177wm?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=75"
+  },
+  {
+    "技术点": "ZAB协议",
+    "title": "2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】",
+    "url": "https://www.bilibili.com/video/BV1Vb4y177wm?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=76"
+  },
+  {
+    "技术点": "kafka",
+    "title": "2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】",
+    "url": "https://www.bilibili.com/video/BV1Vb4y177wm?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=78"
+  },
+  {
+    "技术点": "rabbitmq",
+    "title": "2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】",
+    "url": "https://www.bilibili.com/video/BV1Vb4y177wm?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=83"
+  },
+  {
+    "技术点": "redis",
+    "title": "2025年B站Java后端面试最全攻略，满足99%人的大厂offer梦：基础到高级渗透25个技术栈【码士集团】",
+    "url": "https://www.bilibili.com/video/BV1Vb4y177wm?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=87"
+  },
+  {
+    "技术点": "Spring Boot+Vue",
+    "title": "【2020版】4小时学会Spring Boot+Vue前后端分离开发",
+    "url": "https://www.bilibili.com/video/BV137411B7vB?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543"
+  },
+  {
+    "技术点": "Element UI",
+    "title": "【2020版】4小时学会Spring Boot+Vue前后端分离开发",
+    "url": "https://www.bilibili.com/video/BV137411B7vB?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=2"
+  },
+  {
+    "技术点": "spring boot和mybatisplus",
+    "title": "【实战】基于SpringBoot+Vue开发的前后端分离博客项目完整教学",
+    "url": "https://www.bilibili.com/video/BV1PQ4y1P7hZ?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=2"
+  },
+  {
+    "技术点": "shiro+jwt",
+    "title": "【实战】基于SpringBoot+Vue开发的前后端分离博客项目完整教学",
+    "url": "https://www.bilibili.com/video/BV1PQ4y1P7hZ?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=4"
+  },
+  {
+    "技术点": "vue",
+    "title": "【实战】基于SpringBoot+Vue开发的前后端分离博客项目完整教学",
+    "url": "https://www.bilibili.com/video/BV1PQ4y1P7hZ?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=14"
+  },
+  {
+    "技术点": "element-ui、axios",
+    "title": "【实战】基于SpringBoot+Vue开发的前后端分离博客项目完整教学",
+    "url": "https://www.bilibili.com/video/BV1PQ4y1P7hZ?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=16"
+  },
+  {
+    "技术点": "Springboot+vue",
+    "title": "【知识点学习】带你从0搭建一个Springboot+vue前后端分离项目，真的很简单！",
+    "url": "https://www.bilibili.com/video/BV14y4y1M7Nc?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543"
+  },
+  {
+    "技术点": "wangEditor",
+    "title": "【知识点学习】带你从0搭建一个Springboot+vue前后端分离项目，真的很简单！",
+    "url": "https://www.bilibili.com/video/BV14y4y1M7Nc?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=8"
+  },
+  {
+    "技术点": "SpringBoot+Vue",
+    "title": "B站最通俗易懂手把手SpringBoot+Vue项目实战-前后端分离博客项目-Java项目",
+    "url": "https://www.bilibili.com/video/BV1hq4y1F7zk?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543"
+  },
+  {
+    "技术点": "bean拷贝",
+    "title": "B站最通俗易懂手把手SpringBoot+Vue项目实战-前后端分离博客项目-Java项目",
+    "url": "https://www.bilibili.com/video/BV1hq4y1F7zk?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=12"
+  },
+  {
+    "技术点": "redis",
+    "title": "B站最通俗易懂手把手SpringBoot+Vue项目实战-前后端分离博客项目-Java项目",
+    "url": "https://www.bilibili.com/video/BV1hq4y1F7zk?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=81"
+  },
+  {
+    "技术点": "Swagger2",
+    "title": "B站最通俗易懂手把手SpringBoot+Vue项目实战-前后端分离博客项目-Java项目",
+    "url": "https://www.bilibili.com/video/BV1hq4y1F7zk?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=85"
+  },
+  {
+    "技术点": "java基础",
+    "title": "精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】",
+    "url": "https://www.bilibili.com/video/BV1Av4y187hf/?spm_id_from=333.337.search-card.all.click&vd_source=8bf01fd021c3cafa6d7547606a0fe543"
+  },
+  {
+    "技术点": "CAS",
+    "title": "精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】",
+    "url": "https://www.bilibili.com/video/BV1Av4y187hf?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=7"
+  },
+  {
+    "技术点": "synchronized",
+    "title": "精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】",
+    "url": "https://www.bilibili.com/video/BV1Av4y187hf?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=12"
+  },
+  {
+    "技术点": "AQS",
+    "title": "精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】",
+    "url": "https://www.bilibili.com/video/BV1Av4y187hf?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=14"
+  },
+  {
+    "技术点": "ReentrantLock",
+    "title": "精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】",
+    "url": "https://www.bilibili.com/video/BV1Av4y187hf?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=16"
+  },
+  {
+    "技术点": "ReentrantReadWriteLock",
+    "title": "精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】",
+    "url": "https://www.bilibili.com/video/BV1Av4y187hf?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=17"
+  },
+  {
+    "技术点": "ConcurrentHashMap",
+    "title": "精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】",
+    "url": "https://www.bilibili.com/video/BV1Av4y187hf?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=26"
+  },
+  {
+    "技术点": "Spring",
+    "title": "精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】",
+    "url": "https://www.bilibili.com/video/BV1Av4y187hf?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=33"
+  },
+  {
+    "技术点": "BeanFactory和ApplicationContext",
+    "title": "精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】",
+    "url": "https://www.bilibili.com/video/BV1Av4y187hf?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=46"
+  },
+  {
+    "技术点": "SpringMVC",
+    "title": "精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】",
+    "url": "https://www.bilibili.com/video/BV1Av4y187hf?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=49"
+  },
+  {
+    "技术点": "DelegatingFilterProxy",
+    "title": "精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】",
+    "url": "https://www.bilibili.com/video/BV1Av4y187hf?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=51"
+  },
+  {
+    "技术点": "DeferredImportSelector",
+    "title": "精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】",
+    "url": "https://www.bilibili.com/video/BV1Av4y187hf?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=54"
+  },
+  {
+    "技术点": "spring boot",
+    "title": "精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】",
+    "url": "https://www.bilibili.com/video/BV1Av4y187hf?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=67"
+  },
+  {
+    "技术点": "Buffer Pool",
+    "title": "精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】",
+    "url": "https://www.bilibili.com/video/BV1Av4y187hf?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=92"
+  },
+  {
+    "技术点": "MySQL、LRU算法",
+    "title": "精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】",
+    "url": "https://www.bilibili.com/video/BV1Av4y187hf/?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=95"
+  },
+  {
+    "技术点": "InnoDB与MyISAM",
+    "title": "精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】",
+    "url": "https://www.bilibili.com/video/BV1Av4y187hf?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=105"
+  },
+  {
+    "技术点": "redis",
+    "title": "精准突击！2023最新版Java面试短期突击面试题【200P】我会出手带你一周涨薪！【马士兵】",
+    "url": "https://www.bilibili.com/video/BV1Av4y187hf?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=142"
+  },
+  {
+    "技术点": "vue3",
+    "title": "【免费学习】1天学会SpringBoot3+Vue3实战项目开发，手把手带你做完整的前后端分离项目，适合计算机毕业设计、实习项目、Java、Vue编程练手项目",
+    "url": "https://www.bilibili.com/video/BV1Df2cYVEWo?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=2"
+  },
+  {
+    "技术点": "Element-Plus",
+    "title": "【免费学习】1天学会SpringBoot3+Vue3实战项目开发，手把手带你做完整的前后端分离项目，适合计算机毕业设计、实习项目、Java、Vue编程练手项目",
+    "url": "https://www.bilibili.com/video/BV1Df2cYVEWo?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=3"
+  },
+  {
+    "技术点": "MySQL",
+    "title": "【免费学习】1天学会SpringBoot3+Vue3实战项目开发，手把手带你做完整的前后端分离项目，适合计算机毕业设计、实习项目、Java、Vue编程练手项目",
+    "url": "https://www.bilibili.com/video/BV1Df2cYVEWo?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=7"
+  },
+  {
+    "技术点": "SpringBoot3",
+    "title": "【免费学习】1天学会SpringBoot3+Vue3实战项目开发，手把手带你做完整的前后端分离项目，适合计算机毕业设计、实习项目、Java、Vue编程练手项目",
+    "url": "https://www.bilibili.com/video/BV1Df2cYVEWo?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=8"
+  },
+  {
+    "技术点": "Mybatis",
+    "title": "【免费学习】1天学会SpringBoot3+Vue3实战项目开发，手把手带你做完整的前后端分离项目，适合计算机毕业设计、实习项目、Java、Vue编程练手项目",
+    "url": "https://www.bilibili.com/video/BV1Df2cYVEWo?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=9"
+  },
+  {
+    "技术点": "HTML标签",
+    "title": "黑马程序员pink老师前端入门教程，零基础必看的h5(html5)+css3+移动端前端视频教程",
+    "url": "https://www.bilibili.com/video/BV14J4114768?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=7"
+  },
+  {
+    "技术点": "CSS",
+    "title": "黑马程序员pink老师前端入门教程，零基础必看的h5(html5)+css3+移动端前端视频教程",
+    "url": "https://www.bilibili.com/video/BV14J4114768?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=62"
+  },
+  {
+    "技术点": "Vuejs",
+    "title": "最全最新Vue、Vuejs教程，从入门到精通",
+    "url": "https://www.bilibili.com/video/BV15741177Eh?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=2"
+  },
+  {
+    "技术点": "WXSS",
+    "title": "黑马程序员前端微信小程序开发教程，微信小程序从基础到发布全流程_企业级商城实战(含uni-app项目多端部署)",
+    "url": "https://www.bilibili.com/video/BV1834y1676P?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=24"
+  },
+  {
+    "技术点": "WXS",
+    "title": "黑马程序员前端微信小程序开发教程，微信小程序从基础到发布全流程_企业级商城实战(含uni-app项目多端部署)",
+    "url": "https://www.bilibili.com/video/BV1834y1676P?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=50"
+  },
+  {
+    "技术点": "HTML",
+    "title": "尚硅谷Web前端零基础入门HTML5+CSS3基础教程丨初学者从入门到精通",
+    "url": "https://www.bilibili.com/video/BV1XJ411X7Ud?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=3"
+  },
+  {
+    "技术点": "CSS",
+    "title": "尚硅谷Web前端零基础入门HTML5+CSS3基础教程丨初学者从入门到精通",
+    "url": "https://www.bilibili.com/video/BV1XJ411X7Ud?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=27"
+  },
+  {
+    "技术点": "less",
+    "title": "尚硅谷Web前端零基础入门HTML5+CSS3基础教程丨初学者从入门到精通",
+    "url": "https://www.bilibili.com/video/BV1XJ411X7Ud?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=126"
+  },
+  {
+    "技术点": "HTML",
+    "title": "前端开发入门教程，web前端零基础html5 +css3+前端项目视频教程",
+    "url": "https://www.bilibili.com/video/BV1Kg411T7t9?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=2"
+  },
+  {
+    "技术点": "CSS",
+    "title": "前端开发入门教程，web前端零基础html5 +css3+前端项目视频教程",
+    "url": "https://www.bilibili.com/video/BV1Kg411T7t9?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=45"
+  },
+  {
+    "技术点": "PxCook",
+    "title": "前端开发入门教程，web前端零基础html5 +css3+前端项目视频教程",
+    "url": "https://www.bilibili.com/video/BV1Kg411T7t9?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=91"
+  },
+  {
+    "技术点": "React",
+    "title": "尚硅谷React教程（已加更新版内容，B站最火）",
+    "url": "https://www.bilibili.com/video/BV1wy4y1D7JT/?spm_id_from=333.337.search-card.all.click&vd_source=8bf01fd021c3cafa6d7547606a0fe543"
+  },
+  {
+    "技术点": "HTML",
+    "title": "前端Web开发HTML5+CSS3+移动web视频教程，前端web入门首选黑马程序员",
+    "url": "https://www.bilibili.com/video/BV1kM4y127Li?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=5"
+  },
+  {
+    "技术点": "vue",
+    "title": "前端Web开发HTML5+CSS3+移动web视频教程，前端web入门首选黑马程序员",
+    "url": "https://www.bilibili.com/video/BV1kM4y127Li?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=16"
+  },
+  {
+    "技术点": "CSS",
+    "title": "前端Web开发HTML5+CSS3+移动web视频教程，前端web入门首选黑马程序员",
+    "url": "https://www.bilibili.com/video/BV1kM4y127Li?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=30"
+  },
+  {
+    "技术点": "Flex布局",
+    "title": "前端Web开发HTML5+CSS3+移动web视频教程，前端web入门首选黑马程序员",
+    "url": "https://www.bilibili.com/video/BV1kM4y127Li?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=75"
+  },
+  {
+    "技术点": "rem",
+    "title": "前端Web开发HTML5+CSS3+移动web视频教程，前端web入门首选黑马程序员",
+    "url": "https://www.bilibili.com/video/BV1kM4y127Li?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=162"
+  },
+  {
+    "技术点": "less",
+    "title": "前端Web开发HTML5+CSS3+移动web视频教程，前端web入门首选黑马程序员",
+    "url": "https://www.bilibili.com/video/BV1kM4y127Li?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=165"
+  },
+  {
+    "技术点": "Bootstrap",
+    "title": "前端Web开发HTML5+CSS3+移动web视频教程，前端web入门首选黑马程序员",
+    "url": "https://www.bilibili.com/video/BV1kM4y127Li?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=190"
+  },
+  {
+    "技术点": "HTML",
+    "title": "千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）",
+    "url": "https://www.bilibili.com/video/BV17z4y1D7Yj?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=3"
+  },
+  {
+    "技术点": "CSS",
+    "title": "千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）",
+    "url": "https://www.bilibili.com/video/BV17z4y1D7Yj?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=28"
+  },
+  {
+    "技术点": "rem",
+    "title": "千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）",
+    "url": "https://www.bilibili.com/video/BV17z4y1D7Yj?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=147"
+  },
+  {
+    "技术点": "jQuery",
+    "title": "千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）",
+    "url": "https://www.bilibili.com/video/BV17z4y1D7Yj?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=251"
+  },
+  {
+    "技术点": "JWT",
+    "title": "千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）",
+    "url": "https://www.bilibili.com/video/BV17z4y1D7Yj?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=348"
+  },
+  {
+    "技术点": "vue",
+    "title": "千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）",
+    "url": "https://www.bilibili.com/video/BV17z4y1D7Yj?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=428"
+  },
+  {
+    "技术点": "swiper",
+    "title": "千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）",
+    "url": "https://www.bilibili.com/video/BV17z4y1D7Yj?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=515"
+  },
+  {
+    "技术点": "axios",
+    "title": "千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）",
+    "url": "https://www.bilibili.com/video/BV17z4y1D7Yj?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=522"
+  },
+  {
+    "技术点": "elementUI",
+    "title": "千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）",
+    "url": "https://www.bilibili.com/video/BV17z4y1D7Yj?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=531"
+  },
+  {
+    "技术点": "vant",
+    "title": "千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）",
+    "url": "https://www.bilibili.com/video/BV17z4y1D7Yj?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=532"
+  },
+  {
+    "技术点": "vuex",
+    "title": "千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）",
+    "url": "https://www.bilibili.com/video/BV17z4y1D7Yj?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=540"
+  },
+  {
+    "技术点": "React",
+    "title": "千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）",
+    "url": "https://www.bilibili.com/video/BV17z4y1D7Yj?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=569"
+  },
+  {
+    "技术点": "React Hooks",
+    "title": "千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）",
+    "url": "https://www.bilibili.com/video/BV17z4y1D7Yj?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=629"
+  },
+  {
+    "技术点": "Antd",
+    "title": "千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）",
+    "url": "https://www.bilibili.com/video/BV17z4y1D7Yj?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=704"
+  },
+  {
+    "技术点": "MongoDB、Robo3T",
+    "title": "千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图",
+    "url": "https://www.bilibili.com/video/BV17z4y1D7Yj?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=773"
+  },
+  {
+    "技术点": "wxss",
+    "title": "千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）",
+    "url": "https://www.bilibili.com/video/BV17z4y1D7Yj?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=803"
+  },
+  {
+    "技术点": "wxs",
+    "title": "千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）",
+    "url": "https://www.bilibili.com/video/BV17z4y1D7Yj?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=804"
+  },
+  {
+    "技术点": "webpack",
+    "title": "千锋web前端开发项目教程_1000集完全零基础入门HTML5+CSS3+JS到精通（资料含前端学习路线图）",
+    "url": "https://www.bilibili.com/video/BV17z4y1D7Yj?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=844"
+  },
+  {
+    "技术点": "HTML",
+    "title": "html+css教程，前端html5+css3零基础入门，web前端开发",
+    "url": "https://www.bilibili.com/video/BV1p84y1P7Z5?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=9"
+  },
+  {
+    "技术点": "CSS",
+    "title": "html+css教程，前端html5+css3零基础入门，web前端开发",
+    "url": "https://www.bilibili.com/video/BV1p84y1P7Z5?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=57"
+  },
+  {
+    "技术点": "JS",
+    "title": "黑马程序员JavaScript全套教程，Web前端必学的JS入门教程，零基础JavaScript入门",
+    "url": "https://www.bilibili.com/video/BV1ux411d75J?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=4"
+  },
+  {
+    "技术点": "fs",
+    "title": "黑马程序员Node.js全套入门教程，nodejs新教程含es6模块化+npm+express+webpack+promise等_Nodejs实战案例详解",
+    "url": "https://www.bilibili.com/video/BV1a34y167AZ?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=6"
+  },
+  {
+    "技术点": "http模块",
+    "title": "黑马程序员Node.js全套入门教程，nodejs新教程含es6模块化+npm+express+webpack+promise等_Nodejs实战案例详解",
+    "url": "https://www.bilibili.com/video/BV1a34y167AZ?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=14"
+  },
+  {
+    "技术点": "MySQL",
+    "title": "黑马程序员Node.js全套入门教程，nodejs新教程含es6模块化+npm+express+webpack+promise等_Nodejs实战案例详解",
+    "url": "https://www.bilibili.com/video/BV1a34y167AZ?spm_id_from=333.788.videopod.episodes&vd_source=8bf01fd021c3cafa6d7547606a0fe543&p=59"
+  },
+  {
+    "技术点": "Ajax",
+    "title": "Java后端实现Ajax局部刷新技术教程",
+    "url": "https://blog.csdn.net/weixin_29301059/article/details/147776080?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-11-147776080-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "全局异常处理器",
+    "title": "Java后端全局异常处理器详细教程",
+    "url": "https://blog.csdn.net/weixin_52578852/article/details/147093477?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-14-147093477-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "Swagger",
+    "title": "Java中Swagger生成后端接口测试【保姆级教程】",
+    "url": "https://blog.csdn.net/weixin_73355603/article/details/148894462?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-17-148894462-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "Springboot",
+    "title": "阿里通义千问API(Java)使用教程,基于Springboot后端",
+    "url": "https://blog.csdn.net/rnnf_yyds/article/details/136507957?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-18-136507957-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "Tomcat",
+    "title": "数据库前后端交互 从后端到前端入门教程二 (Tomcat、MySQL、Bootstrap、JAVA Servlet)",
+    "url": "https://blog.csdn.net/qq_49488584/article/details/122147212?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-24-122147212-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "Servlet",
+    "title": "Java后端开发完整教程：框架与实战应用",
+    "url": "https://blog.csdn.net/weixin_35370061/article/details/142333674?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-26-142333674-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "Struts框架",
+    "title": "Java后端进阶教程",
+    "url": "https://blog.csdn.net/weixin_30878361/article/details/99051514?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-28-99051514-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "MVC",
+    "title": "java 前后端分离教程,Java web前后端分离",
+    "url": "https://blog.csdn.net/weixin_33982972/article/details/115763705?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-29-115763705-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "SharedPreferences",
+    "title": "Java后端转安卓开发完整教程",
+    "url": "https://blog.csdn.net/rysxt_/article/details/156946063?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-30-156946063-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "Servlet",
+    "title": "（Java高级教程）第三章Java网络编程-第八节：博客系统搭建（前后端分离）",
+    "url": "https://blog.csdn.net/qq_39183034/article/details/133467793?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-5-133467793-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "HTML",
+    "title": "表单提交实战教程：HTML、CSS、JavaScript到Java后端",
+    "url": "https://blog.csdn.net/weixin_42515340/article/details/144163641?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-6-144163641-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "Spring Boot",
+    "title": "Spring Boot 教程：Java 后端开发入门",
+    "url": "https://blog.csdn.net/yolov7895/article/details/133392614?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-9-133392614-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "Struts",
+    "title": "java后端主流框架_好程序员Java教程分享Java开发主流框架",
+    "url": "https://blog.csdn.net/weixin_39710361/article/details/110725067?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-14-110725067-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "Hibernate Validator",
+    "title": "java后端主流框架_好程序员Java教程分享Java开发主流框架",
+    "url": "https://blog.csdn.net/weixin_39710361/article/details/110725067?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-14-110725067-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "多线程",
+    "title": "java后端管理系统开发教程，java面试堆和栈",
+    "url": "https://blog.csdn.net/2401_84412653/article/details/138122383?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-15-138122383-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "vue3",
+    "title": "element-plus java前后端分离vue3工作流引擎入门教程",
+    "url": "https://blog.csdn.net/hmxhch/article/details/130555038?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-17-130555038-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "mybatis",
+    "title": "springboot+mybatis+mysql java后端教程",
+    "url": "https://blog.csdn.net/weixin_42312546/article/details/112487409?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-18-112487409-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "Uniapp",
+    "title": "基于Java+SpringBoot+Vue+Uniapp(有教程)前后端分离健身预约系统设计与实现",
+    "url": "https://blog.csdn.net/qq_57756904/article/details/129287644?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-19-129287644-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "TypeScript",
+    "title": "JAVA前后端分离项目搭建教程 | 蓝鲸云",
+    "url": "https://blog.csdn.net/zongjinlong/article/details/112968657?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-21-112968657-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "Ajax",
+    "title": "学习笔记--黑马Java基于若依高效搭建饿了么案例实战教程，掌握独立搭建前后端分离后台管理系统",
+    "url": "https://blog.csdn.net/m0_72810289/article/details/143607341?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-22-143607341-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "Nginx",
+    "title": "Vue 前端与 Java 后端在 Linux 服务器上的部署教程及 Nginx 配置",
+    "url": "https://blog.csdn.net/boydoy1987/article/details/140866534?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-23-140866534-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "ShardingSphere",
+    "title": "ShardingSphere分库分表教程，java后端开发面试题",
+    "url": "https://blog.csdn.net/m0_64205716/article/details/121313447?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-24-121313447-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "redis",
+    "title": "Docker快速搭建java后端开发环境教程（详细图文结合）",
+    "url": "https://blog.csdn.net/weixin_44499403/article/details/120502561?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-26-120502561-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "TeaVM",
+    "title": "TeaVM C后端开发教程：将Java应用编译为原生二进制",
+    "url": "https://blog.csdn.net/gitblog_00599/article/details/151548992?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-30-151548992-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "AOP",
+    "title": "全民学后端快餐教程(1) - 只不过是写个Java程序",
+    "url": "https://blog.csdn.net/yunqiinsight/article/details/86735852?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-1-86735852-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "Nginx",
+    "title": "Java 后端工程师的书单推荐，周立功linux开发教程",
+    "url": "https://blog.csdn.net/m0_63102527/article/details/121245872?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-2-121245872-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "Netty",
+    "title": "Java 后端工程师的书单推荐，周立功linux开发教程",
+    "url": "https://blog.csdn.net/m0_63102527/article/details/121245872?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-2-121245872-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "JVM",
+    "title": "Java 后端工程师的书单推荐，周立功linux开发教程",
+    "url": "https://blog.csdn.net/m0_63102527/article/details/121245872?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-2-121245872-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "redis",
+    "title": "Java 后端工程师的书单推荐，周立功linux开发教程",
+    "url": "https://blog.csdn.net/m0_63102527/article/details/121245872?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-2-121245872-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "NoSQL",
+    "title": "Java 后端工程师的书单推荐，周立功linux开发教程",
+    "url": "https://blog.csdn.net/m0_63102527/article/details/121245872?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-2-121245872-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "ELK Stack",
+    "title": "Java 后端工程师的书单推荐，周立功linux开发教程",
+    "url": "https://blog.csdn.net/m0_63102527/article/details/121245872?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-2-121245872-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "ajax",
+    "title": "js和java后台交互 不用jsp_不用jsp怎么实现前后端交互？给萌新后端的ajax教程(1)...",
+    "url": "https://blog.csdn.net/weixin_42406749/article/details/114152936?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-3-114152936-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "MVCC",
+    "title": "java后端开发教程，京东java面试流程",
+    "url": "https://blog.csdn.net/edgnb123/article/details/124690521?ops_request_misc=elastic_search_misc&request_id=e2cf5c64e880f3ab6c4f037c14d8f44d&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-4-124690521-null-null.142^v102^pc_search_result_base5&utm_term=Java%E5%90%8E%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "React",
+    "title": "Web前端三大主流框架是什么？Web前端前景与就业形势分析",
+    "url": "https://blog.csdn.net/weixin_42686892/article/details/110642081?ops_request_misc=elastic_search_misc&request_id=675f227e8b7a09deb3f4eec3209768e3&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-3-110642081-null-null.142^v102^pc_search_result_base5&utm_term=web%E5%89%8D%E7%AB%AF&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "Delphi",
+    "title": "推荐开源项目：Delphi Web前端开发教程——基于TMS WEB Core框架",
+    "url": "https://blog.csdn.net/gitblog_06670/article/details/142572371?ops_request_misc=elastic_search_misc&request_id=8f85d0b844186027759b43b15d66a471&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-10-142572371-null-null.142^v102^pc_search_result_base5&utm_term=web%E5%89%8D%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "NodeJS",
+    "title": "分享一份让你零基础也可以学习web前端的教程大纲",
+    "url": "https://blog.csdn.net/qf_python/article/details/89339997?ops_request_misc=elastic_search_misc&request_id=dc691a7570bcc5997d52524345671a68&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-29-89339997-null-null.142^v102^pc_search_result_base5&utm_term=web%E5%89%8D%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "Bootstrap框架",
+    "title": "案例学web前端开发完整教程",
+    "url": "https://blog.csdn.net/weixin_29138345/article/details/149410829?ops_request_misc=elastic_search_misc&request_id=dc691a7570bcc5997d52524345671a68&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-2-149410829-null-null.142^v102^pc_search_result_base5&utm_term=web%E5%89%8D%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "CSS",
+    "title": "Web前端入门教程(全网最详细)，零基础入门到精通，从看这一篇开始！",
+    "url": "https://blog.csdn.net/yy1715713348/article/details/149039265?ops_request_misc=elastic_search_misc&request_id=dc691a7570bcc5997d52524345671a68&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-5-149039265-null-null.142^v102^pc_search_result_base5&utm_term=web%E5%89%8D%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "Flex",
+    "title": "web前端进阶教程目录",
+    "url": "https://blog.csdn.net/dreamingbaobei3/article/details/87857163?ops_request_misc=elastic_search_misc&request_id=dc691a7570bcc5997d52524345671a68&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-8-87857163-null-null.142^v102^pc_search_result_base5&utm_term=web%E5%89%8D%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "jQuery",
+    "title": "分享一份让你零基础也可以学习web前端的教程大纲",
+    "url": "https://blog.csdn.net/weixin_33815613/article/details/91471679?ops_request_misc=elastic_search_misc&request_id=dc691a7570bcc5997d52524345671a68&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-9-91471679-null-null.142^v102^pc_search_result_base5&utm_term=web%E5%89%8D%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": " AJAX",
+    "title": "Web前端开发教程",
+    "url": "https://blog.csdn.net/weixin_41135508/article/details/124563638?ops_request_misc=elastic_search_misc&request_id=dc691a7570bcc5997d52524345671a68&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-10-124563638-null-null.142^v102^pc_search_result_base5&utm_term=web%E5%89%8D%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "ECMAScript6",
+    "title": "ES6features",
+    "url": "https://gitcode.com/gh_mirrors/es/es6features?utm_source=csdn_github_accelerator&isLogin=1&from_link=5cdfb3b4c440230f43c8abe7f809a5d6"
+  },
+  {
+    "技术点": "JavaScript",
+    "title": "Superhero.js",
+    "url": "http://superherojs.com/"
+  },
+  {
+    "技术点": "CoffeScript",
+    "title": "HowToCoffeeScript.com",
+    "url": "http://howtocoffeescript.com/"
+  },
+  {
+    "技术点": "HTML",
+    "title": "The HTML Landscape",
+    "url": "http://www.w3.org/html/landscape/"
+  },
+  {
+    "技术点": "CSS",
+    "title": "Open Web CSS Reference",
+    "url": "http://ref.openweb.io/CSS/"
+  },
+  {
+    "技术点": "JavaScript",
+    "title": "JavaScript: The Right Way",
+    "url": "http://jstherightway.org/"
+  },
+  {
+    "技术点": "HTML5",
+    "title": "The HTML5 JavaScript API Index",
+    "url": "http://html5index.org/"
+  },
+  {
+    "技术点": "flexbox",
+    "title": "The Ultimate Flexbox Cheat Sheet",
+    "url": "http://www.sketchingwithcss.com/samplechapter/cheatsheet.html"
+  },
+  {
+    "技术点": "HTML",
+    "title": "web前端开发基础教程一",
+    "url": "https://blog.csdn.net/m0_64365419/article/details/126926604?ops_request_misc=elastic_search_misc&request_id=dc691a7570bcc5997d52524345671a68&biz_id=0&utm_medium=distribute.pc_search_result.none-task-blog-2~all~ElasticSearch~search_v2-18-126926604-null-null.142^v102^pc_search_result_base5&utm_term=web%E5%89%8D%E7%AB%AF%E6%95%99%E7%A8%8B&spm=1018.2226.3001.4187"
+  },
+  {
+    "技术点": "Nginx",
+    "title": "Nginx 服务器安装及配置文件详解",
+    "url": "https://www.runoob.com/w3cnote/nginx-install-and-config.html"
+  },
+  {
+    "技术点": "Electron",
+    "title": "Electron 简介",
+    "url": "https://www.runoob.com/electron/electron-intro.html"
+  },
+  {
+    "技术点": "Node.js",
+    "title": "Node.js 基础概念",
+    "url": "https://www.runoob.com/nodejs/nodejs-intro.html"
+  },
+  {
+    "技术点": "PHP",
+    "title": "Web开发的入门指导",
+    "url": "https://www.runoob.com/w3cnote/a-beginners-guide-to-web-development.html"
+  },
+  {
+    "技术点": "Jquery",
+    "title": "Jquery 教程",
+    "url": "https://www.runoob.com/jquery/"
+  },
+  {
+    "技术点": "PHP",
+    "title": "PHP 教程",
+    "url": "https://www.runoob.com/php/"
+  },
+  {
+    "技术点": "MySQL",
+    "title": "MySQL 教程",
+    "url": "https://www.runoob.com/mysql/"
+  },
+  {
+    "技术点": "Angular",
+    "title": "2018 Web开发人员学习路线图",
+    "url": "https://www.runoob.com/w3cnote/2018-web-developer.html"
+  },
+  {
+    "技术点": "RESTful API",
+    "title": "RESTful API 教程",
+    "url": "https://www.runoob.com/restfulapi/restful-api-tutorial.html"
+  },
+  {
+    "技术点": "FastAPI",
+    "title": "FastAPI 教程",
+    "url": "https://www.runoob.com/fastapi/fastapi-tutorial.html"
+  },
+  {
+    "技术点": "Pillow ImageShow",
+    "title": "Pillow ImageShow 模块",
+    "url": "https://www.runoob.com/pillow/pillow-imageshow-module.html"
+  },
+  {
+    "技术点": "Swagger",
+    "title": "Swagger 教程",
+    "url": "https://www.runoob.com/swagger/swagger-tutorial.html"
+  },
+  {
+    "技术点": "Django",
+    "title": "Django 简介",
+    "url": "https://www.runoob.com/django/django-intro.html"
+  },
+  {
+    "技术点": "Vue",
+    "title": "Vue.js Ajax(vue-resource)",
+    "url": "https://www.runoob.com/vue2/vuejs-ajax.html"
+  },
+  {
+    "技术点": "Dash",
+    "title": "Dash 简介",
+    "url": "https://www.runoob.com/dash/dash-intro.html"
+  },
+  {
+    "技术点": "Scala",
+    "title": "Scala 简介",
+    "url": "https://www.runoob.com/scala/scala-intro.html"
+  },
+  {
+    "技术点": "Electron",
+    "title": "Electron 教程",
+    "url": "https://www.runoob.com/electron/electron-tutorial.html"
+  },
+  {
+    "技术点": "Docker",
+    "title": "Docker 教程",
+    "url": "https://www.runoob.com/docker/docker-tutorial.html"
+  },
+  {
+    "技术点": "Node.js",
+    "title": "Node.js 教程",
+    "url": "https://www.runoob.com/nodejs/nodejs-tutorial.html"
+  },
+  {
+    "技术点": "Next.js",
+    "title": "Next.js 教程",
+    "url": "https://www.runoob.com/nextjs/nextjs-tutorial.html"
+  },
+  {
+    "技术点": "Selenium",
+    "title": "Selenium 教程",
+    "url": "https://www.runoob.com/selenium/selenium-tutorial.html"
+  },
+  {
+    "技术点": "Rust",
+    "title": "Rust 教程",
+    "url": "https://www.runoob.com/rust/rust-tutorial.html"
+  },
+  {
+    "技术点": "OpenResty",
+    "title": "OpenResty 使用介绍",
+    "url": "https://www.runoob.com/w3cnote/openresty-intro.html"
+  },
+  {
+    "技术点": "Flask",
+    "title": "Flask 教程",
+    "url": "https://www.runoob.com/flask/flask-tutorial.html"
+  },
+  {
+    "技术点": "Fetch API",
+    "title": "Fetch API",
+    "url": "https://www.runoob.com/ajax/fetch-api.html"
+  },
+  {
+    "技术点": "Node.js",
+    "title": "Node.js 模块导入",
+    "url": "https://www.runoob.com/nodejs/nodejs-commonjs-esm.html"
+  },
+  {
+    "技术点": "JSP",
+    "title": "JSP 过滤器",
+    "url": "https://www.runoob.com/jsp/jsp-writing-filters.html"
+  },
+  {
+    "技术点": "HTML",
+    "title": "前端开发面试题",
+    "url": "https://www.runoob.com/w3cnote/front-end-developer-questions-and-answers.html"
+  },
+  {
+    "技术点": "Ajax",
+    "title": "十年WEB技术发展历程",
+    "url": "https://www.runoob.com/w3cnote/web-10-years.html"
+  },
+  {
+    "技术点": "ECharts",
+    "title": "ECharts 教程",
+    "url": "https://www.runoob.com/echarts/echarts-tutorial.html"
+  },
+  {
+    "技术点": "Vue3",
+    "title": "Vue3 任务管理系统",
+    "url": "https://www.runoob.com/vue3/vue3-taskhub.html"
+  },
+  {
+    "技术点": "MongoDB ",
+    "title": "MongoDB 分片",
+    "url": "https://www.runoob.com/mongodb/mongodb-sharding.html"
+  },
+  {
+    "技术点": "IO.js",
+    "title": "2015年10个最佳Web开发JavaScript库",
+    "url": "https://www.runoob.com/w3cnote/10-best-javascript-library-in-2015.html"
+  },
+  {
+    "技术点": "Axios",
+    "title": "Axios 前后端对接教程｜HTTP",
+    "url": "https://www.bilibili.com/video/BV1rM4m117Ry/?spm_id_from=333.337.search-card.all.click&vd_source=8bf01fd021c3cafa6d7547606a0fe543"
+  },
+  {
+    "技术点": "RocketMQ",
+    "title": "kafka为什么这么快？RocketMQ哪里不如Kafka?",
+    "url": "https://www.bilibili.com/video/BV1Zy411e7qY/?spm_id_from=333.337.search-card.all.click&vd_source=8bf01fd021c3cafa6d7547606a0fe543"
+  },
+  {
+    "技术点": "BootStrap5",
+    "title": "【BootStrap5实战】前端后端程序员都应该看的bootstrap5快速入门，用bootstrap5快速做一个首页",
+    "url": "https://www.bilibili.com/video/BV1G44y117Hb/?spm_id_from=333.337.search-card.all.click&vd_source=8bf01fd021c3cafa6d7547606a0fe543"
+  },
+  {
+    "技术点": "Gradle",
+    "title": "来自Gradle开发团队的Gradle入门教程",
+    "url": "https://www.bilibili.com/video/BV1DE411Z7nt/?spm_id_from=333.337.search-card.all.click&vd_source=8bf01fd021c3cafa6d7547606a0fe543"
+  },
+  {
+    "技术点": "Ajax",
+    "title": "前端进阶Ajax+Git零基础到精通_ajax前后端数据交互&异步编程全套学习教程",
+    "url": "https://www.bilibili.com/video/BV1ZS4y1w7Yz/?spm_id_from=333.337.search-card.all.click&vd_source=8bf01fd021c3cafa6d7547606a0fe543"
+  },
+  {
+    "技术点": "Node.js",
+    "title": "Node.js是啥，如何学习Node，Node能做后端吗？【晓舟报告】",
+    "url": "https://www.bilibili.com/video/BV1yr4y1m75j/?spm_id_from=333.337.search-card.all.click&vd_source=8bf01fd021c3cafa6d7547606a0fe543"
+  },
+  {
+    "技术点": "MySQL",
+    "title": "Mysql是什么？架构是怎么样的？",
+    "url": "https://www.bilibili.com/video/BV1p5qhYsE4f/?spm_id_from=333.337.search-card.all.click&vd_source=8bf01fd021c3cafa6d7547606a0fe543"
+  },
+  {
+    "技术点": "redis",
+    "title": "【趣话Redis第一弹】我是Redis，MySQL大哥被我坑惨了！",
+    "url": "https://www.bilibili.com/video/BV1Fd4y1T7pD/?spm_id_from=333.337.search-card.all.click&vd_source=8bf01fd021c3cafa6d7547606a0fe543"
+  },
+  {
+    "技术点": "redis",
+    "title": "学 Redis 前，请务必先看完这个！",
+    "url": "https://www.bilibili.com/video/BV1a1sgzfE5d/?spm_id_from=333.337.search-card.all.click&vd_source=8bf01fd021c3cafa6d7547606a0fe543"
+  },
+  {
+    "技术点": "django",
+    "title": "4天搞定django rest framework源码和实战",
+    "url": "https://www.bilibili.com/video/BV1ZE411j7RK/?spm_id_from=333.337.search-card.all.click&vd_source=8bf01fd021c3cafa6d7547606a0fe543"
+  },
+  {
+    "技术点": "React",
+    "title": "【React+Nodejs】从0到1前后端分离项目—图书管理系统（完结）",
+    "url": "https://www.bilibili.com/video/BV1Po4y1B7FF/?spm_id_from=333.337.search-card.all.click&vd_source=8bf01fd021c3cafa6d7547606a0fe543"
+  },
+  {
+    "技术点": "nginx",
+    "title": "nginx反向代理端口转发教程 WEB应用项目前后端共用一个端口解决跨域问题 在ubuntu服务器上部署",
+    "url": "https://www.bilibili.com/video/BV1a64y1e7nq/?spm_id_from=333.337.search-card.all.click&vd_source=8bf01fd021c3cafa6d7547606a0fe543"
+  },
+  {
+    "技术点": "Mybatis",
+    "title": "SpringBoot+JWT+Shiro+Vue+Element-UI 疫情期间开发的前后端分离项目<<新冠物资管理系统>>,前端后端都已在Github开源.",
+    "url": "https://www.bilibili.com/video/BV1Vf4y1m7fk/?spm_id_from=333.337.search-card.all.click&vd_source=8bf01fd021c3cafa6d7547606a0fe543"
+  },
+  {
+    "技术点": "redis",
+    "title": "Spring Cloud+Spring Boot+Mybatis+Redis微服务开发实战项目 前后端分离 毕设 就业项目《MES云染数据》 白嫖哦！",
+    "url": "https://www.bilibili.com/video/BV19m411C71z/?spm_id_from=333.337.search-card.all.click&vd_source=8bf01fd021c3cafa6d7547606a0fe543"
+  },
+  {
+    "技术点": "Flask",
+    "title": "Flask+Vue 前后端分离开发",
+    "url": "https://www.bilibili.com/video/BV1Z54y1q7BZ/?spm_id_from=333.337.search-card.all.click&vd_source=8bf01fd021c3cafa6d7547606a0fe543"
+  },
+  {
+    "技术点": "NoSQL",
+    "title": "Flutter 组件 reaxdb_dart 适配鸿蒙 HarmonyOS 实战：响应式 NoSQL 数据库，构建高性能本地持久化与分布式状态同步架构",
+    "url": "https://blog.csdn.net/2609_95049439/article/details/158883624?spm=1000.2115.3001.10526&utm_medium=distribute.pc_feed_blog_category.none-task-blog-classify_tag-6-158883624-null-null.nonecase&depth_1-utm_source=distribute.pc_feed_blog_category.none-task-blog-classify_tag-6-158883624-null-null.nonecase"
+  },
+  {
+    "技术点": "Django",
+    "title": "【玩转全栈】----Django模板语法、请求与响应",
+    "url": "https://blog.csdn.net/2403_83182682/article/details/144835841?spm=1000.2115.3001.10526&utm_medium=distribute.pc_feed_blog_category.none-task-blog-classify_tag-17-144835841-null-null.nonecase&depth_1-utm_source=distribute.pc_feed_blog_category.none-task-blog-classify_tag-17-144835841-null-null.nonecase"
+  }
+]
 }
