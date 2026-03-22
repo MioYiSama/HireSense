@@ -1,6 +1,3 @@
-chroma_db_data/
-docs/
-Embedding_model/
-neo4j_data/
-Score_model/
-GraphRag_Builder.py
+**/.idea
+**/.vscode
+**/.DS_Store
