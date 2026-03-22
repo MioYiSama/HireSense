@@ -13,100 +13,26 @@
         <option value="90">近90天</option>
       </select>
     </div>
-    <!-- SVG 图表 -->
-    <div class="relative h-64">
-      <svg
-        width="100%"
-        height="100%"
-        viewBox="0 0 600 200"
-        preserveAspectRatio="none"
-      >
-        <!-- 网格线 -->
-        <line x1="0" y1="50" x2="600" y2="50" stroke="rgba(255,255,255,0.05)" />
-        <line
-          x1="0"
-          y1="100"
-          x2="600"
-          y2="100"
-          stroke="rgba(255,255,255,0.05)"
-        />
-        <line
-          x1="0"
-          y1="150"
-          x2="600"
-          y2="150"
-          stroke="rgba(255,255,255,0.05)"
-        />
-        <line
-          x1="0"
-          y1="200"
-          x2="600"
-          y2="200"
-          stroke="rgba(255,255,255,0.05)"
-        />
 
-        <!-- 渐变定义 -->
-        <defs>
-          <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stop-color="#06b6d4" />
-            <stop offset="100%" stop-color="#a855f7" />
-          </linearGradient>
-          <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stop-color="rgba(6, 182, 212, 0.3)" />
-            <stop offset="100%" stop-color="rgba(6, 182, 212, 0)" />
-          </linearGradient>
-        </defs>
-
-        <!-- 填充区域 -->
-        <path :d="growthAreaPath" fill="url(#areaGradient)" />
-
-        <!-- 曲线 -->
-        <path
-          class="chart-glow"
-          :d="growthCurvePath"
-          fill="none"
-          stroke="url(#lineGradient)"
-          stroke-width="3"
-          stroke-linecap="round"
-        />
-
-        <!-- 数据点 -->
-        <circle
-          v-for="(point, index) in dataPoints"
-          :key="index"
-          :cx="point.x"
-          :cy="point.y"
-          r="4"
-          :fill="
-            index === 0 || index === dataPoints.length - 1
-              ? '#06b6d4'
-              : '#8b5cf6'
-          "
-          :class="{
-            'drop-shadow-lg': index === 0 || index === dataPoints.length - 1,
-          }"
-        />
-      </svg>
-      <!-- X轴标签 -->
-      <div
-        class="absolute bottom-0 left-0 right-0 flex justify-between text-xs text-gray-500 px-2 transform translate-y-6"
-      >
-        <span v-for="(label, index) in xAxisLabels" :key="index">{{
-          label
-        }}</span>
-      </div>
-    </div>
+    <div ref="chartRef" class="h-64 w-full overflow-hidden rounded-lg"></div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import type { ECharts, EChartsOption, SetOptionOpts } from "echarts/core";
 
-// 防抖函数
-const debounce = <T extends (...args: any[]) => any>(func: T, wait: number): ((...args: Parameters<T>) => void) => {
+const debounce = <T extends (...args: any[]) => void>(
+  func: T,
+  wait: number,
+): ((...args: Parameters<T>) => void) => {
   let timeout: ReturnType<typeof setTimeout> | null = null;
+
   return (...args: Parameters<T>) => {
-    if (timeout) clearTimeout(timeout);
+    if (timeout !== null) {
+      clearTimeout(timeout);
+    }
+
     timeout = setTimeout(() => {
       func(...args);
     }, wait);
@@ -118,27 +44,237 @@ interface GrowthData {
   date: Date;
 }
 
-// Props
 const props = defineProps<{
   data: GrowthData[];
   timeRange: string;
   title: string;
 }>();
 
-// Emits
 const emit = defineEmits<{
   (e: "update:timeRange", value: string): void;
 }>();
 
-// 本地时间范围
 const localTimeRange = ref(props.timeRange);
+const chartRef = ref<HTMLDivElement | null>(null);
 
-// 防抖处理时间范围变化
+let chartInstance: ECharts | null = null;
+let resizeObserver: ResizeObserver | null = null;
+let isUnmounted = false;
+let echartsModulePromise: Promise<typeof import("echarts/core")> | null = null;
+
+const formatDateLabel = (date: Date) => {
+  return `${date.getMonth() + 1}/${date.getDate()}`;
+};
+
+const filteredData = computed(() => {
+  const parsedDays = Number.parseInt(props.timeRange, 10);
+  const days = Number.isFinite(parsedDays) ? parsedDays : 30;
+  const cutoffDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+  return props.data
+    .map((item) => {
+      const date = item.date instanceof Date ? item.date : new Date(item.date);
+      return {
+        date,
+        score: Number(item.score),
+      };
+    })
+    .filter((item) => Number.isFinite(item.score) && item.date >= cutoffDate)
+    .sort((left, right) => left.date.getTime() - right.date.getTime());
+});
+
+const xAxisLabels = computed(() => {
+  return filteredData.value.map((item) => formatDateLabel(item.date));
+});
+
+const scoreValues = computed(() => {
+  return filteredData.value.map((item) => item.score);
+});
+
+const yAxisRange = computed(() => {
+  if (scoreValues.value.length === 0) {
+    return { min: 0, max: 10 };
+  }
+
+  const minScore = Math.min(...scoreValues.value);
+  const maxScore = Math.max(...scoreValues.value);
+
+  if (minScore === maxScore) {
+    const padding = Math.max(Math.abs(minScore) * 0.15, 1);
+    return {
+      min: Number(Math.max(0, minScore - padding).toFixed(1)),
+      max: Number((maxScore + padding).toFixed(1)),
+    };
+  }
+
+  const padding = Math.max((maxScore - minScore) * 0.2, 0.5);
+  return {
+    min: Number(Math.max(0, minScore - padding).toFixed(1)),
+    max: Number((maxScore + padding).toFixed(1)),
+  };
+});
+
+const loadECharts = async () => {
+  if (!echartsModulePromise) {
+    echartsModulePromise = (async () => {
+      const [echartsModule, chartsModule, componentsModule, renderersModule] = await Promise.all([
+        import("echarts/core"),
+        import("echarts/charts"),
+        import("echarts/components"),
+        import("echarts/renderers"),
+      ]);
+
+      echartsModule.use([
+        chartsModule.LineChart,
+        componentsModule.GridComponent,
+        componentsModule.TooltipComponent,
+        renderersModule.CanvasRenderer,
+      ]);
+
+      return echartsModule;
+    })();
+  }
+
+  return echartsModulePromise;
+};
+
+const createChartOption = (echartsModule: typeof import("echarts/core")): EChartsOption => {
+  return {
+    animationDuration: 500,
+    animationDurationUpdate: 300,
+    grid: {
+      left: 8,
+      right: 8,
+      top: 16,
+      bottom: 32,
+      containLabel: true,
+    },
+    tooltip: {
+      trigger: "axis",
+      backgroundColor: "rgba(15, 23, 42, 0.92)",
+      borderColor: "rgba(148, 163, 184, 0.2)",
+      borderWidth: 1,
+      textStyle: {
+        color: "#e2e8f0",
+        fontSize: 12,
+      },
+      axisPointer: {
+        type: "line",
+        lineStyle: {
+          color: "rgba(6, 182, 212, 0.35)",
+          width: 1,
+        },
+      },
+    },
+    xAxis: {
+      type: "category",
+      boundaryGap: false,
+      data: xAxisLabels.value,
+      axisLine: {
+        show: false,
+      },
+      axisTick: {
+        show: false,
+      },
+      axisLabel: {
+        color: "rgba(148, 163, 184, 0.85)",
+        fontSize: 12,
+        margin: 16,
+        hideOverlap: true,
+      },
+    },
+    yAxis: {
+      type: "value",
+      min: yAxisRange.value.min,
+      max: yAxisRange.value.max,
+      splitNumber: 4,
+      axisLine: {
+        show: false,
+      },
+      axisTick: {
+        show: false,
+      },
+      axisLabel: {
+        show: false,
+      },
+      splitLine: {
+        show: true,
+        lineStyle: {
+          color: "rgba(255,255,255,0.05)",
+        },
+      },
+    },
+    series: [
+      {
+        name: "得分",
+        type: "line",
+        data: scoreValues.value,
+        smooth: 0.35,
+        clip: true,
+        showSymbol: true,
+        symbol: "circle",
+        symbolSize: 8,
+        lineStyle: {
+          width: 3,
+          color: new echartsModule.graphic.LinearGradient(0, 0, 1, 0, [
+            { offset: 0, color: "#06b6d4" },
+            { offset: 1, color: "#a855f7" },
+          ]),
+        },
+        areaStyle: {
+          color: new echartsModule.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: "rgba(6, 182, 212, 0.28)" },
+            { offset: 1, color: "rgba(6, 182, 212, 0)" },
+          ]),
+        },
+        itemStyle: {
+          color: "#8b5cf6",
+          borderColor: "#0f172a",
+          borderWidth: 2,
+        },
+        emphasis: {
+          scale: true,
+          itemStyle: {
+            color: "#06b6d4",
+          },
+        },
+      },
+    ],
+  };
+};
+
+const renderChart = async () => {
+  if (!chartRef.value) {
+    return;
+  }
+
+  const echartsModule = await loadECharts();
+
+  if (!chartRef.value || isUnmounted) {
+    return;
+  }
+
+  if (!chartInstance) {
+    chartInstance = echartsModule.init(chartRef.value);
+  }
+
+  const updateOptions: SetOptionOpts = {
+    notMerge: true,
+    lazyUpdate: true,
+  };
+
+  chartInstance.setOption(createChartOption(echartsModule), updateOptions);
+  chartInstance.resize();
+};
+
+const handleTimeRangeChange = () => {
+  debouncedEmitTimeRange(localTimeRange.value);
+};
+
 const debouncedEmitTimeRange = debounce((value: string) => {
   emit("update:timeRange", value);
 }, 300);
 
-// 监听props变化
 watch(
   () => props.timeRange,
   (newValue) => {
@@ -146,203 +282,39 @@ watch(
   },
 );
 
-// 处理时间范围变化
-const handleTimeRangeChange = () => {
-  debouncedEmitTimeRange(localTimeRange.value);
-};
+watch(
+  [filteredData, () => props.title],
+  async () => {
+    await nextTick();
+    await renderChart();
+  },
+  { deep: true },
+);
 
-// 图表配置常量
-const CHART_CONFIG = {
-  width: 600,
-  height: 160,
-  padding: 20,
-} as const;
+onMounted(async () => {
+  isUnmounted = false;
+  await nextTick();
+  await renderChart();
 
-// 计算数据范围和有效点
-const chartData = computed(() => {
-  const data = filteredData.value;
-  if (data.length === 0) {
-    return {
-      minScore: 0,
-      maxScore: 0,
-      scoreRange: 100,
-      validPoints: [] as { x: number; y: number }[],
-    };
+  if (chartRef.value && typeof ResizeObserver !== "undefined") {
+    resizeObserver = new ResizeObserver(() => {
+      chartInstance?.resize();
+    });
+    resizeObserver.observe(chartRef.value);
   }
-
-  const minScore = Math.min(...data.map((d) => d.score));
-  const maxScore = Math.max(...data.map((d) => d.score));
-  const scoreRange = maxScore - minScore || 100;
-
-  const points = data.map((d, i) => {
-    if (!d) {
-      return { x: 0, y: 0 };
-    }
-    const ratio = data.length === 1 ? 0.5 : i / (data.length - 1);
-    const x =
-      CHART_CONFIG.padding +
-      ratio * (CHART_CONFIG.width - CHART_CONFIG.padding * 2);
-    const y =
-      CHART_CONFIG.height -
-      CHART_CONFIG.padding -
-      ((d.score - minScore) / scoreRange) *
-        (CHART_CONFIG.height - CHART_CONFIG.padding * 2);
-    return { x, y };
-  });
-
-  const validPoints: { x: number; y: number }[] = points.filter(
-    (p): p is { x: number; y: number } => p !== undefined,
-  );
-
-  return { minScore, maxScore, scoreRange, validPoints };
 });
 
-// 过滤后的数据
-const filteredData = computed(() => {
-  const now = new Date();
-  const days = parseInt(props.timeRange);
-  const cutoffDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+onBeforeUnmount(() => {
+  isUnmounted = true;
+  resizeObserver?.disconnect();
+  resizeObserver = null;
 
-  return props.data.filter((item) => item.date >= cutoffDate);
-});
-
-// 生成成长曲线SVG路径
-const growthCurvePath = computed(() => {
-  const { validPoints } = chartData.value;
-
-  if (validPoints.length === 0) {
-    return "M0,100";
-  }
-
-  if (validPoints.length === 1) {
-    const firstPoint = validPoints[0];
-    if (firstPoint) {
-      const { x, y } = firstPoint;
-      return `M${x},${y}`;
-    }
-    return "M0,100";
-  }
-
-  const firstPoint = validPoints[0];
-  if (!firstPoint) {
-    return "M0,100";
-  }
-
-  let path = `M${firstPoint.x},${firstPoint.y}`;
-
-  if (validPoints.length >= 2) {
-    const secondPoint = validPoints[1];
-    if (secondPoint) {
-      const midX = (firstPoint.x + secondPoint.x) / 2;
-      path += ` Q${midX},${firstPoint.y} ${secondPoint.x},${secondPoint.y}`;
-    }
-
-    for (let i = 2; i < validPoints.length; i++) {
-      const currentPoint = validPoints[i];
-      if (currentPoint) {
-        path += ` T${currentPoint.x},${currentPoint.y}`;
-      }
-    }
-  }
-
-  const lastPoint = validPoints[validPoints.length - 1];
-  if (lastPoint) {
-    path += ` L${lastPoint.x},${lastPoint.y}`;
-  }
-
-  return path;
-});
-
-// 生成填充区域路径
-const growthAreaPath = computed(() => {
-  const { validPoints } = chartData.value;
-
-  if (validPoints.length === 0) {
-    return "M0,100 V200 H0 Z";
-  }
-
-  if (validPoints.length === 1) {
-    const firstPoint = validPoints[0];
-    if (firstPoint) {
-      const { x, y } = firstPoint;
-      return `M${x},${y} L${x},${CHART_CONFIG.height - CHART_CONFIG.padding} L${CHART_CONFIG.padding},${CHART_CONFIG.height - CHART_CONFIG.padding} Z`;
-    }
-    return "M0,100 V200 H0 Z";
-  }
-
-  const firstPoint = validPoints[0];
-  if (!firstPoint) {
-    return "M0,100 V200 H0 Z";
-  }
-
-  let path = `M${firstPoint.x},${firstPoint.y}`;
-
-  if (validPoints.length >= 2) {
-    const secondPoint = validPoints[1];
-    if (secondPoint) {
-      const midX = (firstPoint.x + secondPoint.x) / 2;
-      path += ` Q${midX},${firstPoint.y} ${secondPoint.x},${secondPoint.y}`;
-    }
-
-    for (let i = 2; i < validPoints.length; i++) {
-      const currentPoint = validPoints[i];
-      if (currentPoint) {
-        path += ` T${currentPoint.x},${currentPoint.y}`;
-      }
-    }
-  }
-
-  const lastPoint = validPoints[validPoints.length - 1];
-  if (lastPoint) {
-    path += ` L${lastPoint.x},${lastPoint.y}`;
-  }
-  path += ` L${CHART_CONFIG.width - CHART_CONFIG.padding},${CHART_CONFIG.height - CHART_CONFIG.padding} L${CHART_CONFIG.padding},${CHART_CONFIG.height - CHART_CONFIG.padding} Z`;
-  return path;
-});
-
-// 生成数据点
-const dataPoints = computed(() => {
-  const { validPoints } = chartData.value;
-  return validPoints.map((point, index) => ({
-    ...point,
-    score: filteredData.value[index]?.score || 0,
-  }));
-});
-
-// 生成X轴标签
-const xAxisLabels = computed(() => {
-  const data = filteredData.value;
-  if (data.length === 0) {
-    return [];
-  }
-
-  // 取5个均匀分布的点
-  const labels = [];
-  const step = Math.max(1, Math.floor((data.length - 1) / 4));
-
-  for (let i = 0; i < data.length; i += step) {
-    const currentData = data[i];
-    if (!currentData || !currentData.date) {
-      continue;
-    }
-    const date = currentData.date;
-    labels.push(`${date.getMonth() + 1}/${date.getDate()}`);
-  }
-
-  // 确保最后一个标签是今天
-  if (labels.length > 0) {
-    labels[labels.length - 1] = "今天";
-  }
-
-  return labels;
+  chartInstance?.dispose();
+  chartInstance = null;
 });
 </script>
 
 <style scoped>
-.chart-glow {
-  filter: drop-shadow(0 0 8px rgba(6, 182, 212, 0.5));
-}
-
 .card-hover {
   transition: all 0.3s ease;
 }
