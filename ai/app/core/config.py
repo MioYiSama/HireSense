@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     FAST_LLM_MODEL: str = "qwen-turbo"
     SMART_LLM_MODEL: str = "qwen-max"
     REPORT_LLM_MODEL: str = "qwen-plus"
-    NEO4J_URI: str = "bolt://localhost:7687"
+    NEO4J_URI: str = "bolt://127.0.0.1:7687"
     NEO4J_USER: str = "neo4j"
     NEO4J_PASSWORD: str
     CHROMA_PERSIST_DIR: str = "./chroma_db_data"

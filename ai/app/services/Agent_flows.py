@@ -304,13 +304,23 @@ class AgentFlow:
         personalization = (req.personalization or "").strip()
         resume_text = req.resume or ""
 
-        # 首题快速路径：先用图谱兜底题单秒级返回，耗时的简历富化放到后台补齐。
-        final_concepts = await self.neo4j_client.get_icebreaker_concept(
-            resume_concepts=[],
-            visited_concepts=[],
-        )
-        question_menu = await self.neo4j_client.get_batch_questions_brief(concept_list=final_concepts)
-        selected_concept, q_id, question_brief = self._pick_initial_question(question_menu)
+        # 首题快速路径：优先从基础题题库随机抽题；若题库缺失则回退到既有破冰逻辑。
+        basic_question = await self.neo4j_client.get_random_basic_question()
+        if basic_question and all(
+            str(basic_question.get(key) or "").strip()
+            for key in ("concept", "q_id", "brief")
+        ):
+            selected_concept = str(basic_question.get("concept") or "").strip()
+            q_id = str(basic_question.get("q_id") or "").strip()
+            question_brief = str(basic_question.get("brief") or "").strip()
+        else:
+            final_concepts = await self.neo4j_client.get_icebreaker_concept(
+                resume_concepts=[],
+                visited_concepts=[],
+            )
+            question_menu = await self.neo4j_client.get_batch_questions_brief(concept_list=final_concepts)
+            selected_concept, q_id, question_brief = self._pick_initial_question(question_menu)
+
         opening_speech = self._build_fast_opening_speech(
             personalization=personalization,
             concept=selected_concept,

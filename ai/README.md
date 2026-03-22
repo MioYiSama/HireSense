@@ -46,7 +46,7 @@ SMART_LLM_MODEL=qwen-max
 REPORT_LLM_MODEL=qwen-plus
 
 # Neo4j 数据库（使用 docker-compose 默认配置）
-NEO4J_URI=bolt://localhost:7687
+NEO4J_URI=bolt://127.0.0.1:7687
 NEO4J_USER=neo4j
 NEO4J_PASSWORD=password
 

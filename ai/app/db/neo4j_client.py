@@ -53,6 +53,42 @@ class Neo4jClient:
             return [{"concept" : None, "question_info": None}]
 
 
+    async def get_random_basic_question(
+        self, root_name: str = "basis"
+    ) -> Optional[Dict[str, str]]:
+        """
+        从基础题题库中随机抽取一道题，作为首题快速返回。
+        """
+        try:
+            cypher = """
+                MATCH (root:Concept {name: $root_name, is_root: true})<-[:BELONGS_TO_DOMAIN]-(c:Concept)-[:HAS_QUESTION]->(q:Question)
+                WITH DISTINCT c.name AS concept, q.q_id AS q_id, q.brief AS brief
+                WHERE concept IS NOT NULL AND q_id IS NOT NULL AND brief IS NOT NULL
+                RETURN concept, q_id, brief
+                ORDER BY rand()
+                LIMIT 1
+            """
+
+            async with self.driver.session() as session:
+                result = await session.run(cypher, root_name=root_name)
+                record = await result.single()
+
+            if not record:
+                return None
+
+            concept = str(record.get("concept") or "").strip()
+            q_id = str(record.get("q_id") or "").strip()
+            brief = str(record.get("brief") or "").strip()
+
+            if not (concept and q_id and brief):
+                return None
+
+            return {"concept": concept, "q_id": q_id, "brief": brief}
+        except Exception as e:
+            print(f"[Neo4j Error] get_random_basic_question failed: {e}")
+            return None
+
+
 
     async def get_icebreaker_concept(self, resume_concepts: List[str], visited_concepts: List[str]) -> list:
         """
@@ -227,7 +263,6 @@ class Neo4jClient:
         except Exception as e:
             print(f"[Neo4j Error] get_action_space_candidates failed: {e}")
             return {}
-
 
 
 

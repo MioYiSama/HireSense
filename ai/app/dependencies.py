@@ -26,6 +26,15 @@ os.environ["DASHSCOPE_BASE_URL"] = settings.LLM_BASE_URL
 # ==========================================
 
 
+def _normalize_neo4j_uri(uri: str) -> str:
+    """
+    Windows 本地 Neo4j 使用 localhost 时会触发明显的回环解析延迟，优先固定到 IPv4。
+    """
+    if "://localhost" in uri:
+        return uri.replace("://localhost", "://127.0.0.1", 1)
+    return uri
+
+
 #  Embedding 模型
 bge_embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(
             model_name=str(EMBEDDING_MODEL),
@@ -41,7 +50,7 @@ nli_model = CrossEncoder(str(NLI), device="cpu")
 
 # 数据库客户端
 neo4j_client = Neo4jClient(
-    uri=settings.NEO4J_URI,
+    uri=_normalize_neo4j_uri(settings.NEO4J_URI),
     user=settings.NEO4J_USER,
     password=settings.NEO4J_PASSWORD
 )
