@@ -306,8 +306,10 @@ class AgentFlow:
     async def _async_generate_and_save_advice(self, state: AgentState, round_index: int, question: str,
                                               user_answer: str, std_answer: str, score: float,
                                               score_breakdown: Dict[str, float],
+                                              strength_points: List[str],
                                               missing_points: List[str], logic_status: str,
-                                              reason_tags: List[str]):
+                                              reason_tags: List[str],
+                                              score_rationale: str):
         try:
             advice = await self.llm_gen.gen_single_advice(
                 question=question,
@@ -315,9 +317,11 @@ class AgentFlow:
                 std_ans=std_answer,
                 score=score,
                 score_breakdown=score_breakdown,
+                strength_points=strength_points,
                 missing_points=missing_points,
                 logic_status=logic_status,
                 reason_tags=reason_tags,
+                score_rationale=score_rationale,
             )
             state.interview_logs[round_index].async_advice = advice
         except Exception as e:
@@ -350,8 +354,10 @@ class AgentFlow:
                 "consistency_score": float(score_res.get("consistency_score", 0.0)),
                 "completeness_score": float(score_res.get("completeness_score", 0.0)),
             },
+            strength_points=list(score_res.get("strength_points", [])),
             missing_points=list(score_res.get("missing_points", [])),
             reason_tags=list(score_res.get("reason_tags", [])),
+            score_rationale=str(score_res.get("score_rationale", "")),
             probe_count=state.probe_num + 1,
             final_score=float(score_res.get("mastery_score", 0.0)),
             async_advice="",
@@ -372,9 +378,11 @@ class AgentFlow:
                     "consistency_score": float(score_res.get("consistency_score", 0.0)),
                     "completeness_score": float(score_res.get("completeness_score", 0.0)),
                 },
+                strength_points=list(score_res.get("strength_points", [])),
                 missing_points=list(score_res.get("missing_points", [])),
                 logic_status=str(score_res.get("logic_status", "Neutral")),
                 reason_tags=list(score_res.get("reason_tags", [])),
+                score_rationale=str(score_res.get("score_rationale", "")),
             )
         )
         self._track_background_task(task)
@@ -485,12 +493,30 @@ class AgentFlow:
             if not std_ans:
                 std_ans = "暂无标准答案"
 
-            score_res = self.evaluator.evaluate_mastery(state.current_concept_cumulative_answer, std_ans)
+            score_res = self.evaluator.evaluate_mastery(
+                state.current_concept_cumulative_answer,
+                std_ans,
+                question_brief=question_brief,
+                concept=state.current_concept or "",
+                job=state.job,
+                difficulty_label=state.current_question_difficulty,
+            )
 
             # 防御性检查：确保 score_res 是字典
             if not isinstance(score_res, dict):
                 print(f"[Warning] evaluate_mastery returned non-dict: {type(score_res)}, {score_res}")
-                score_res = {"mastery_score": 0.0, "logic_status": "Neutral", "coverage_raw": 0.0}
+                score_res = {
+                    "mastery_score": 0.0,
+                    "logic_status": "Neutral",
+                    "coverage_raw": 0.0,
+                    "coverage_score": 0.0,
+                    "consistency_score": 0.0,
+                    "completeness_score": 0.0,
+                    "strength_points": [],
+                    "missing_points": [],
+                    "reason_tags": ["评分结果异常"],
+                    "score_rationale": "评分服务返回异常，按保守规则处理。",
+                }
 
             m_score, l_status, c_score = score_res["mastery_score"], score_res["logic_status"], score_res["coverage_raw"]
 

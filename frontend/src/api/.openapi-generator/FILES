@@ -5,6 +5,7 @@ base.ts
 common.ts
 configuration.ts
 docs/AuthenticationApi.md
+docs/DimensionDetail.md
 docs/Interview.md
 docs/InterviewApi.md
 docs/InterviewReplyRequest.md
@@ -22,6 +23,7 @@ docs/PutReportRequest.md
 docs/PutReportResponse.md
 docs/Report.md
 docs/ReportReview.md
+docs/ScoreBreakdown.md
 docs/SignInRequest.md
 docs/SignInResponse.md
 docs/SignOutResponse.md

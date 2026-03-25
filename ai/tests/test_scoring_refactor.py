@@ -20,7 +20,7 @@ class FakeEvaluator:
     def __init__(self, results):
         self._results = list(results)
 
-    def evaluate_mastery(self, user_answer: str, standard_answer: str):
+    def evaluate_mastery(self, user_answer: str, standard_answer: str, **kwargs):
         return self._results.pop(0)
 
 
@@ -80,17 +80,17 @@ class FakeStrategy:
         return 1, 1, 1
 
 
-class FakeStsModel:
-    def predict(self, pairs):
-        return [0.1]
+class FakeJudgeLLM:
+    def __init__(self, payload):
+        self.payload = payload
 
+    def with_structured_output(self, model_class, include_raw=False):
+        payload = model_class(**self.payload)
 
-class FakeNliModel:
-    def __init__(self, logits):
-        self._logits = logits
+        def runner(_):
+            return {"parsed": payload, "raw": None, "parsing_error": None}
 
-    def predict(self, pairs):
-        return [self._logits]
+        return runner
 
 
 class FakeStructuredLLM:
@@ -105,9 +105,90 @@ class FakeNarrativeLLM:
     def with_structured_output(self, model_class):
         return FakeStructuredLLM(
             model_class(
-                feedback="整体表现中等，能答主线，但深度不稳定。",
-                shortcomings=["底层原理不够扎实", "边界条件覆盖不足", "细节展开不够稳定"],
-                advice="建议把高频题拆成原理、实现、边界三段式复盘。",
+                general_dimensions=[
+                    {
+                        "name": "逻辑思维",
+                        "score": 5.5,
+                        "summary": "主线能跟上，但论证不够稳定。",
+                        "strength_points": ["知道主线方案"],
+                        "missing_points": ["缺少边界分析"],
+                    },
+                    {
+                        "name": "沟通表达",
+                        "score": 5.8,
+                        "summary": "表达基本清晰，但细节展开不足。",
+                        "strength_points": ["回答能成段表达"],
+                        "missing_points": ["缺少结构化总结"],
+                    },
+                    {
+                        "name": "应变能力",
+                        "score": 5.2,
+                        "summary": "追问后能补充，但恢复速度一般。",
+                        "strength_points": ["能在追问后补主线"],
+                        "missing_points": ["临场展开偏慢"],
+                    },
+                    {
+                        "name": "自信度",
+                        "score": 5.0,
+                        "summary": "作答姿态平稳，但结论不够笃定。",
+                        "strength_points": ["回答语气平稳"],
+                        "missing_points": ["关键结论不够明确"],
+                    },
+                    {
+                        "name": "学习能力",
+                        "score": 5.6,
+                        "summary": "能理解提示并补充答案。",
+                        "strength_points": ["追问后能补关键点"],
+                        "missing_points": ["迁移总结不足"],
+                    },
+                    {
+                        "name": "团队协同",
+                        "score": 4.9,
+                        "summary": "能提协作场景，但缺少落地细节。",
+                        "strength_points": ["提到了联调协作"],
+                        "missing_points": ["缺少跨团队推进细节"],
+                    },
+                ],
+                specific_dimensions=[
+                    {
+                        "name": "后端基础",
+                        "score": 5.1,
+                        "summary": "基础主线能答到，但深度不稳。",
+                        "strength_points": ["能说明 Redis 主线"],
+                        "missing_points": ["底层原理展开不足"],
+                    },
+                    {
+                        "name": "数据库与缓存",
+                        "score": 4.8,
+                        "summary": "数据库与缓存问题能识别，但边界不够完整。",
+                        "strength_points": ["提到了联合索引"],
+                        "missing_points": ["没有展开回表代价"],
+                    },
+                    {
+                        "name": "分布式与高可用",
+                        "score": 6.2,
+                        "summary": "高可用主线方向正确，但极端场景不足。",
+                        "strength_points": ["提到了锁续期"],
+                        "missing_points": ["未展开主从切换风险"],
+                    },
+                    {
+                        "name": "接口设计与工程化",
+                        "score": 5.4,
+                        "summary": "接口设计有概念，但补偿链路不完整。",
+                        "strength_points": ["知道幂等 token 方案"],
+                        "missing_points": ["补偿策略未说明"],
+                    },
+                    {
+                        "name": "稳定性与安全",
+                        "score": 4.7,
+                        "summary": "稳定性意识一般，安全视角偏弱。",
+                        "strength_points": ["知道基本容错思路"],
+                        "missing_points": ["监控告警与权限控制不足"],
+                    },
+                ],
+                feedback="整体表现中等，能答主线，但岗位深度还不稳定。",
+                shortcomings=["底层原理不够扎实", "边界条件覆盖不足", "高可用风险分析偏弱"],
+                advice="建议按原理、实现、边界、取舍四段式复盘高频题，并补高可用与补偿链路。",
                 urls=["MySQL索引详解  https://example.com/mysql"],
             )
         )
@@ -166,8 +247,10 @@ class AgentFlowScoringRefactorTest(unittest.IsolatedAsyncioTestCase):
                         "consistency_score": 82.0,
                         "completeness_score": 55.0,
                         "nli_probs": {"Entailment": 0.7, "Neutral": 0.2, "Contradiction": 0.1},
+                        "strength_points": ["答到了 RDB 和 AOF"],
                         "missing_points": ["边界条件"],
                         "reason_tags": ["核心方向基本对齐", "逻辑基本自洽", "关键点覆盖不足"],
+                        "score_rationale": "回答答到主线，但边界条件没展开。",
                     }
                 ]
             ),
@@ -183,6 +266,7 @@ class AgentFlowScoringRefactorTest(unittest.IsolatedAsyncioTestCase):
                             "reply_speech": "这场面试到这里就可以结束了。",
                             "selected_node": None,
                             "q_id_and_brief": None,
+                            "reasoning": "信息足够。",
                         },
                     )()
                 ]
@@ -201,6 +285,7 @@ class AgentFlowScoringRefactorTest(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(state.is_finished)
         self.assertEqual(state.current_concept, "MySQL")
         self.assertEqual(state.q_id_list[-1], ["mysql-2", "介绍一下 MySQL 索引"])
+        self.assertEqual(state.interview_logs[0].score_rationale, "回答答到主线，但边界条件没展开。")
 
     async def test_repeated_poor_answers_can_end_interview(self):
         state = build_state()
@@ -215,8 +300,10 @@ class AgentFlowScoringRefactorTest(unittest.IsolatedAsyncioTestCase):
                 nli_logic="Neutral",
                 nli_probs={},
                 score_breakdown=ScoreBreakdown(coverage_score=20.0, consistency_score=40.0, completeness_score=10.0),
+                strength_points=[],
                 missing_points=["内存模型"],
                 reason_tags=["与标答覆盖偏低"],
+                score_rationale="回答没有进入核心原理。",
                 probe_count=1,
                 final_score=28.0,
                 async_advice="核心原理没有答到。",
@@ -231,8 +318,10 @@ class AgentFlowScoringRefactorTest(unittest.IsolatedAsyncioTestCase):
                 nli_logic="Neutral",
                 nli_probs={},
                 score_breakdown=ScoreBreakdown(coverage_score=18.0, consistency_score=35.0, completeness_score=12.0),
+                strength_points=[],
                 missing_points=["最左前缀"],
                 reason_tags=["与标答覆盖偏低"],
+                score_rationale="回答没有覆盖索引失效场景。",
                 probe_count=1,
                 final_score=32.0,
                 async_advice="索引失效场景没有答到。",
@@ -253,8 +342,10 @@ class AgentFlowScoringRefactorTest(unittest.IsolatedAsyncioTestCase):
                         "consistency_score": 45.0,
                         "completeness_score": 20.0,
                         "nli_probs": {"Entailment": 0.1, "Neutral": 0.8, "Contradiction": 0.1},
+                        "strength_points": [],
                         "missing_points": ["核心原理"],
                         "reason_tags": ["与标答覆盖偏低", "关键点覆盖不足"],
+                        "score_rationale": "回答偏离主线，关键点没有覆盖。",
                     }
                 ]
             ),
@@ -270,6 +361,7 @@ class AgentFlowScoringRefactorTest(unittest.IsolatedAsyncioTestCase):
                             "reply_speech": "这场面试先到这里。",
                             "selected_node": None,
                             "q_id_and_brief": None,
+                            "reasoning": "结论已经明确。",
                         },
                     )()
                 ]
@@ -299,8 +391,10 @@ class AgentFlowScoringRefactorTest(unittest.IsolatedAsyncioTestCase):
                 nli_logic="Entailment",
                 nli_probs={},
                 score_breakdown=ScoreBreakdown(coverage_score=88.0, consistency_score=90.0, completeness_score=82.0),
+                strength_points=["答到了内存模型"],
                 missing_points=[],
                 reason_tags=["核心方向基本对齐", "回答较完整"],
+                score_rationale="主线和关键点覆盖较完整。",
                 probe_count=1,
                 final_score=86.0,
                 async_advice="回答完整。",
@@ -315,8 +409,10 @@ class AgentFlowScoringRefactorTest(unittest.IsolatedAsyncioTestCase):
                 nli_logic="Entailment",
                 nli_probs={},
                 score_breakdown=ScoreBreakdown(coverage_score=86.0, consistency_score=89.0, completeness_score=80.0),
+                strength_points=["答到了 B+ 树结构"],
                 missing_points=[],
                 reason_tags=["核心方向基本对齐", "回答较完整"],
+                score_rationale="回答较完整，但高阶样本还不够。",
                 probe_count=1,
                 final_score=84.0,
                 async_advice="回答完整。",
@@ -338,8 +434,10 @@ class AgentFlowScoringRefactorTest(unittest.IsolatedAsyncioTestCase):
                         "consistency_score": 92.0,
                         "completeness_score": 84.0,
                         "nli_probs": {"Entailment": 0.85, "Neutral": 0.1, "Contradiction": 0.05},
+                        "strength_points": ["答到了恢复路径"],
                         "missing_points": [],
                         "reason_tags": ["核心方向基本对齐", "回答较完整"],
+                        "score_rationale": "当前题回答较好，但有效样本仍不足。",
                     }
                 ]
             ),
@@ -355,6 +453,7 @@ class AgentFlowScoringRefactorTest(unittest.IsolatedAsyncioTestCase):
                             "reply_speech": "我觉得已经够了，可以结束。",
                             "selected_node": None,
                             "q_id_and_brief": None,
+                            "reasoning": "表现稳定。",
                         },
                     )()
                 ]
@@ -391,8 +490,10 @@ class AgentFlowScoringRefactorTest(unittest.IsolatedAsyncioTestCase):
                         "consistency_score": 68.0,
                         "completeness_score": 46.0,
                         "nli_probs": {"Entailment": 0.3, "Neutral": 0.6, "Contradiction": 0.1},
+                        "strength_points": ["答到了持久化类型"],
                         "missing_points": ["边界条件"],
                         "reason_tags": ["核心方向基本对齐", "关键点覆盖不足"],
+                        "score_rationale": "主线答到，但缺少边界条件。",
                     },
                     {
                         "mastery_score": 74.0,
@@ -402,8 +503,10 @@ class AgentFlowScoringRefactorTest(unittest.IsolatedAsyncioTestCase):
                         "consistency_score": 88.0,
                         "completeness_score": 63.0,
                         "nli_probs": {"Entailment": 0.8, "Neutral": 0.15, "Contradiction": 0.05},
+                        "strength_points": ["答到了恢复速度取舍"],
                         "missing_points": ["极端场景"],
                         "reason_tags": ["核心方向基本对齐", "逻辑基本自洽", "关键点覆盖不足"],
+                        "score_rationale": "补充了主线取舍，但极端场景仍缺失。",
                     },
                 ]
             ),
@@ -419,6 +522,7 @@ class AgentFlowScoringRefactorTest(unittest.IsolatedAsyncioTestCase):
                             "reply_speech": "再补一下 AOF 和 RDB 的取舍。",
                             "selected_node": None,
                             "q_id_and_brief": None,
+                            "reasoning": "还有提升空间。",
                         },
                     )(),
                     type(
@@ -429,6 +533,7 @@ class AgentFlowScoringRefactorTest(unittest.IsolatedAsyncioTestCase):
                             "reply_speech": "这题先到这，我们切到 MySQL 索引。",
                             "selected_node": "MySQL",
                             "q_id_and_brief": ["mysql-2", "介绍一下 MySQL 索引"],
+                            "reasoning": "采样已足够。",
                         },
                     )(),
                 ]
@@ -460,29 +565,45 @@ class AgentFlowScoringRefactorTest(unittest.IsolatedAsyncioTestCase):
         self.assertIn("Redis 有 RDB 和 AOF。", log.interviewee)
         self.assertIn("RDB 恢复快，AOF 数据更完整。", log.interviewee)
         self.assertEqual(log.score_breakdown.coverage_score, 78.0)
+        self.assertEqual(log.strength_points, ["答到了恢复速度取舍"])
         self.assertEqual(log.async_advice, "能回答主线，但深度和边界不足。")
 
 
 class EvaluatorRefactorTest(unittest.TestCase):
-    def test_contradiction_answer_no_longer_collapses_to_zero(self):
+    def test_contradiction_answer_is_capped_and_explained(self):
         evaluator = Evaluator(
-            sts_model=FakeStsModel(),
-            nli_model=FakeNliModel([0.2, 0.3, 2.0]),
+            llm=FakeJudgeLLM(
+                {
+                    "coverage_score": 72.0,
+                    "consistency_score": 22.0,
+                    "completeness_score": 58.0,
+                    "logic_status": "Contradiction",
+                    "reason_tags": ["存在逻辑冲突", "关键点覆盖不足"],
+                    "strength_points": ["提到了线程安全"],
+                    "missing_points": ["没有说明 ConcurrentHashMap"],
+                    "score_rationale": "回答抓到了相关概念，但结论与标准答案冲突。",
+                }
+            )
         )
 
         result = evaluator.evaluate_mastery(
             user_answer="HashMap 是线程安全的，多线程可以直接用。",
             standard_answer="HashMap 线程不安全，多线程下应该使用 ConcurrentHashMap。",
+            question_brief="HashMap 线程安全吗？",
+            concept="Java 集合",
+            job="backend",
+            difficulty_label="basic",
         )
 
         self.assertGreater(result["mastery_score"], 0.0)
         self.assertLessEqual(result["mastery_score"], 55.0)
         self.assertIn("存在逻辑冲突", result["reason_tags"])
         self.assertTrue(isinstance(result["missing_points"], list))
+        self.assertEqual(result["score_rationale"], "回答抓到了相关概念，但结论与标准答案冲突。")
 
 
 class ReportAggregationTest(unittest.IsolatedAsyncioTestCase):
-    async def test_report_uses_machine_aggregated_dimension_scores(self):
+    async def test_report_uses_llm_dimension_scores_and_explanations(self):
         state = AgentState(
             session_id="report-state",
             job="backend",
@@ -509,8 +630,10 @@ class ReportAggregationTest(unittest.IsolatedAsyncioTestCase):
                         consistency_score=68.0,
                         completeness_score=42.0,
                     ),
+                    strength_points=["提到了联合索引"],
                     missing_points=["回表代价", "范围查询影响"],
                     reason_tags=["回答偏概念化", "关键点覆盖不足"],
+                    score_rationale="回答触及主线，但缺少索引代价和范围查询影响。",
                     probe_count=1,
                     final_score=40.0,
                     async_advice="索引主线提到了，但深度不够。",
@@ -528,8 +651,10 @@ class ReportAggregationTest(unittest.IsolatedAsyncioTestCase):
                         consistency_score=83.0,
                         completeness_score=58.0,
                     ),
+                    strength_points=["提到了加锁和解锁"],
                     missing_points=["续期", "主从切换风险"],
                     reason_tags=["核心方向基本对齐", "关键点覆盖不足"],
+                    score_rationale="分布式锁主线正确，但高可用风险和续期没展开。",
                     probe_count=2,
                     final_score=60.0,
                     async_advice="分布式锁主线正确，但极端场景缺失。",
@@ -547,8 +672,10 @@ class ReportAggregationTest(unittest.IsolatedAsyncioTestCase):
                         consistency_score=79.0,
                         completeness_score=54.0,
                     ),
+                    strength_points=["提到了 token 方案"],
                     missing_points=["重试窗口", "补偿策略"],
                     reason_tags=["核心方向基本对齐", "回答较完整"],
+                    score_rationale="幂等方案答到了，但补偿链路没展开。",
                     probe_count=1,
                     final_score=50.0,
                     async_advice="幂等方案答到了，但补偿链路没展开。",
@@ -556,6 +683,7 @@ class ReportAggregationTest(unittest.IsolatedAsyncioTestCase):
             ],
             probe_num=0,
             MAX_probe_num=3,
+            current_question_difficulty="intermediate",
             current_concept_cumulative_answer="",
             recent_messages="",
             candidate_fact_sheet=[],
@@ -563,12 +691,13 @@ class ReportAggregationTest(unittest.IsolatedAsyncioTestCase):
 
         report = await FinalReport(llm=FakeNarrativeLLM()).build_report(state)
 
+        self.assertEqual(report.job, "backend")
         self.assertEqual(report.score, 50.0)
-        self.assertAlmostEqual(report.specific["数据库"], 4.0, places=1)
-        self.assertAlmostEqual(report.specific["分布式"], 6.0, places=1)
-        self.assertAlmostEqual(report.specific["API"], 5.0, places=1)
-        self.assertLessEqual(max(report.general.values()), 6.5)
-        self.assertLessEqual(max(report.specific.values()), 6.8)
+        self.assertAlmostEqual(report.general["逻辑思维"], 5.5, places=1)
+        self.assertAlmostEqual(report.specific["分布式与高可用"], 6.2, places=1)
+        self.assertEqual(report.general_details["沟通表达"].summary, "表达基本清晰，但细节展开不足。")
+        self.assertEqual(report.specific_details["数据库与缓存"].missing_points, ["没有展开回表代价"])
         self.assertEqual(report.reviews[0].concept, "MySQL")
-        self.assertTrue(report.reviews[1].reason_tags)
+        self.assertEqual(report.reviews[1].strength_points, ["提到了加锁和解锁"])
+        self.assertEqual(report.reviews[2].score_breakdown.completeness_score, 54.0)
         self.assertEqual(report.resources, ["MySQL索引详解  https://example.com/mysql"])

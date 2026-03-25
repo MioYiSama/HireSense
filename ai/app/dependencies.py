@@ -1,9 +1,7 @@
 import os
-from functools import lru_cache
-from app.core.config import NLI,EMBEDDING_MODEL,NEO4J_DATA,CHROMA_DATA,BGE_RERANKER
+from app.core.config import EMBEDDING_MODEL, CHROMA_DATA
 from chromadb.utils import embedding_functions
 from langchain_openai import ChatOpenAI
-from sentence_transformers import CrossEncoder
 
 from app.core.history_manager import HistoryManager
 # 引入之前写好的所有底层设施和服务
@@ -41,13 +39,6 @@ bge_embedding_function = embedding_functions.SentenceTransformerEmbeddingFunctio
             device="cpu"  # 如果服务器有显卡，请务必改为 "cuda" 以获得 10 倍以上加速
         )
 
-
-# sts 模型
-sts_model = CrossEncoder(str(BGE_RERANKER), device="cpu")
-
-# NLI 模型
-nli_model = CrossEncoder(str(NLI), device="cpu")
-
 # 数据库客户端
 neo4j_client = Neo4jClient(
     uri=_normalize_neo4j_uri(settings.NEO4J_URI),
@@ -56,10 +47,6 @@ neo4j_client = Neo4jClient(
 )
 chroma_client = ChromaClient(persist_directory=str(CHROMA_DATA), bge_embedding_function=bge_embedding_function)
 
-# 本地打分小模型（加载极其耗时，必须全局唯一）
-# 如果有独立显卡，务必将 device 改为 "cuda"
-evaluator = Evaluator(sts_model=sts_model,nli_model=nli_model)
-
 # . 大语言模型实例
 # 极速小模型（用于意图识别，追求 200ms 的极致低延迟，Temperature 锁死 0）
 fast_llm = ChatOpenAI(
@@ -67,6 +54,13 @@ fast_llm = ChatOpenAI(
     api_key=settings.LLM_API_KEY,
     base_url=settings.LLM_BASE_URL,
     temperature=0.1
+)
+
+judge_llm = ChatOpenAI(
+    model=settings.FAST_LLM_MODEL,
+    api_key=settings.LLM_API_KEY,
+    base_url=settings.LLM_BASE_URL,
+    temperature=0.0
 )
 
 # 聪明大模型（用于聊天生成、简历解析、出表总结，需要强大的逻辑推理能力）
@@ -88,6 +82,7 @@ llm_plus = ChatOpenAI(
 # 2. 领域服务组装 (Domain Services)
 # ==========================================
 intent_gateway = IntentGateway(fast_llm=fast_llm)
+evaluator = Evaluator(llm=judge_llm)
 llm_generator = LLMGenerator(llm=smart_llm, fast_llm=fast_llm)
 resume_analyzer = ResumeAnalyzer(llm=smart_llm)
 report_generator = FinalReport(llm=llm_plus)

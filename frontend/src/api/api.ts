@@ -24,6 +24,27 @@ import type { RequestArgs } from './base';
 import { BASE_PATH, COLLECTION_FORMATS, BaseAPI, RequiredError, operationServerMap } from './base';
 
 /**
+ * 维度级解释详情
+ */
+export interface DimensionDetail {
+    /**
+     * 维度分（十分制）
+     */
+    'score': number;
+    /**
+     * 该维度的一句话总结
+     */
+    'summary': string;
+    /**
+     * 该维度下答到的证据点
+     */
+    'strength_points': Array<string>;
+    /**
+     * 该维度下缺失的证据点
+     */
+    'missing_points': Array<string>;
+}
+/**
  * 单场面试的模型表示
  */
 export interface Interview {
@@ -170,6 +191,10 @@ export interface PutReportResponse {
  */
 export interface Report {
     /**
+     * 本场面试的岗位类型
+     */
+    'job': ReportJobEnum;
+    /**
      * 总评分（百分制）
      */
     'score': number;
@@ -178,9 +203,17 @@ export interface Report {
      */
     'general': { [key: string]: number; };
     /**
+     * 通用能力维度的结构化解释
+     */
+    'general_details': { [key: string]: DimensionDetail; };
+    /**
      * 专业能力硬性技能打分（十分制）
      */
     'specific': { [key: string]: number; };
+    /**
+     * 岗位维度的结构化解释
+     */
+    'specific_details': { [key: string]: DimensionDetail; };
     /**
      * 面试表现综合反馈
      */
@@ -202,6 +235,14 @@ export interface Report {
      */
     'reviews': Array<ReportReview>;
 }
+
+export const ReportJobEnum = {
+    Backend: 'backend',
+    Frontend: 'frontend'
+} as const;
+
+export type ReportJobEnum = typeof ReportJobEnum[keyof typeof ReportJobEnum];
+
 /**
  * 单轮问答微观复盘详情
  */
@@ -222,6 +263,48 @@ export interface ReportReview {
      * AI 点评与纠误建议
      */
     'advice': string;
+    /**
+     * 当前题目的考点
+     */
+    'concept'?: string;
+    /**
+     * 当前题目的难度标签
+     */
+    'difficulty_label': string;
+    'score_breakdown': ScoreBreakdown;
+    /**
+     * 支撑该分数的机器标签
+     */
+    'reason_tags': Array<string>;
+    /**
+     * 本题回答中已经答到的点
+     */
+    'strength_points': Array<string>;
+    /**
+     * 本题回答中缺失的点
+     */
+    'missing_points': Array<string>;
+    /**
+     * 对题级分数的结构化解释
+     */
+    'score_rationale': string;
+}
+/**
+ * 题级分项得分
+ */
+export interface ScoreBreakdown {
+    /**
+     * 对标准答案主线的覆盖度
+     */
+    'coverage_score': number;
+    /**
+     * 回答内部与标准答案的一致性
+     */
+    'consistency_score': number;
+    /**
+     * 对关键点和边界条件的完整度
+     */
+    'completeness_score': number;
 }
 /**
  * 登录请求实体

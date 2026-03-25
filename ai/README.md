@@ -41,8 +41,11 @@ cp .env.example .env
 # 大模型 API（必填）
 LLM_API_KEY=sk-your-api-key-here
 LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+# 用于意图识别和题级评分
 FAST_LLM_MODEL=qwen-turbo
+# 用于面试对话生成、简历解析
 SMART_LLM_MODEL=qwen-max
+# 用于最终报告聚合与总结
 REPORT_LLM_MODEL=qwen-plus
 
 # Neo4j 数据库（使用 docker-compose 默认配置）
@@ -86,6 +89,7 @@ uv run uvicorn app.main:app --host 0.0.0.0 --port 8081
 
 如需使用 OpenAI、千问或其他兼容 OpenAI API 的模型，直接修改 `.env` 里的
 `FAST_LLM_MODEL`、`SMART_LLM_MODEL`、`REPORT_LLM_MODEL` 即可，无需改源码。
+其中 `FAST_LLM_MODEL` 同时承担意图识别与题级评分。
 
 ## 目录结构
 

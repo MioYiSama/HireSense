@@ -559,6 +559,12 @@ components:
       type: object
       description: AI 面试综合复盘报告
       properties:
+        job:
+          type: string
+          description: 本场面试的岗位类型
+          enum: ["backend", "frontend"]
+          examples:
+            - "backend"
         score:
           type: number
           description: 总评分（百分制）
@@ -576,18 +582,27 @@ components:
               "自信度": 8.0
               "学习能力": 7.5
               "团队协同": 6.0
+        general_details:
+          type: object
+          description: 通用能力维度的结构化解释
+          additionalProperties:
+            $ref: "#/components/schemas/DimensionDetail"
         specific:
           type: object
           description: 专业能力硬性技能打分（十分制）
           additionalProperties:
             type: number
           examples:
-            - "设计": 7.0
-              "性能": 6.5
-              "工程化": 8.0
-              "组件化": 7.5
-              "数据流": 7.5
-              "安全": 7.5
+            - "后端基础": 7.0
+              "数据库与缓存": 6.5
+              "分布式与高可用": 8.0
+              "接口设计与工程化": 7.5
+              "稳定性与安全": 7.5
+        specific_details:
+          type: object
+          description: 岗位维度的结构化解释
+          additionalProperties:
+            $ref: "#/components/schemas/DimensionDetail"
         feedback:
           type: string
           description: 面试表现综合反馈
@@ -624,15 +639,71 @@ components:
             $ref: "#/components/schemas/ReportReview"
       required:
         [
+          job,
           score,
           general,
+          general_details,
           specific,
+          specific_details,
           feedback,
           shortcomings,
           advice,
           resources,
           reviews,
         ]
+
+    DimensionDetail:
+      type: object
+      description: 维度级解释详情
+      properties:
+        score:
+          type: number
+          description: 维度分（十分制）
+          examples:
+            - 7.5
+        summary:
+          type: string
+          description: 该维度的一句话总结
+          examples:
+            - "主线方向基本正确，但边界和取舍分析不够稳定。"
+        strength_points:
+          type: array
+          description: 该维度下答到的证据点
+          items:
+            type: string
+          examples:
+            - - "能说明接口幂等的常见方案"
+              - "回答里提到了缓存一致性风险"
+        missing_points:
+          type: array
+          description: 该维度下缺失的证据点
+          items:
+            type: string
+          examples:
+            - - "没有展开失败补偿"
+              - "没有说明监控和回滚策略"
+      required: [score, summary, strength_points, missing_points]
+
+    ScoreBreakdown:
+      type: object
+      description: 题级分项得分
+      properties:
+        coverage_score:
+          type: number
+          description: 对标准答案主线的覆盖度
+          examples:
+            - 72
+        consistency_score:
+          type: number
+          description: 回答内部与标准答案的一致性
+          examples:
+            - 68
+        completeness_score:
+          type: number
+          description: 对关键点和边界条件的完整度
+          examples:
+            - 61
+      required: [coverage_score, consistency_score, completeness_score]
 
     ReportReview:
       type: object
@@ -658,4 +729,57 @@ components:
           description: AI 点评与纠误建议
           examples:
             - "回答基本正确，但缺少对极速退化情况（例如哈希表性能降为O(N)）以及不同探测策略（如二次探测、双重哈希）的补充说明与对比考量。"
-      required: [interviewer, interviewee, score, advice]
+        concept:
+          type: string
+          description: 当前题目的考点
+          examples:
+            - "Redis 分布式锁"
+        difficulty_label:
+          type: string
+          description: 当前题目的难度标签
+          examples:
+            - "advanced"
+        score_breakdown:
+          $ref: "#/components/schemas/ScoreBreakdown"
+        reason_tags:
+          type: array
+          description: 支撑该分数的机器标签
+          items:
+            type: string
+          examples:
+            - - "核心方向基本对齐"
+              - "关键点覆盖不足"
+        strength_points:
+          type: array
+          description: 本题回答中已经答到的点
+          items:
+            type: string
+          examples:
+            - - "说明了锁续期"
+              - "提到了 Lua 保证原子性"
+        missing_points:
+          type: array
+          description: 本题回答中缺失的点
+          items:
+            type: string
+          examples:
+            - - "没有展开主从切换风险"
+              - "没有说明锁误删"
+        score_rationale:
+          type: string
+          description: 对题级分数的结构化解释
+          examples:
+            - "回答覆盖主线，但高可用风险和边界处理没有展开，限制了最终得分。"
+      required:
+        [
+          interviewer,
+          interviewee,
+          score,
+          advice,
+          difficulty_label,
+          score_breakdown,
+          reason_tags,
+          strength_points,
+          missing_points,
+          score_rationale,
+        ]

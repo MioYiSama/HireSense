@@ -351,9 +351,11 @@ class LLMGenerator:
         std_ans: str,
         score: float,
         score_breakdown: Optional[Dict[str, float]] = None,
+        strength_points: Optional[List[str]] = None,
         missing_points: Optional[List[str]] = None,
         logic_status: str = "",
         reason_tags: Optional[List[str]] = None,
+        score_rationale: str = "",
     ):
         prompt_template = ChatPromptTemplate.from_messages([
             ("system", """
@@ -365,7 +367,9 @@ class LLMGenerator:
       【分项得分】: {score_breakdown}
       【逻辑状态】: {logic_status}
       【原因标签】: {reason_tags}
+      【答到的点】: {strength_points}
       【缺失点】: {missing_points}
+      【题级解释】: {score_rationale}
 
       【输出格式要求】
       必须输出 JSON 格式，包含以下字段：
@@ -390,7 +394,9 @@ class LLMGenerator:
                 "score_breakdown": json.dumps(score_breakdown or {}, ensure_ascii=False),
                 "logic_status": logic_status or "Unknown",
                 "reason_tags": json.dumps(reason_tags or [], ensure_ascii=False),
+                "strength_points": json.dumps(strength_points or [], ensure_ascii=False),
                 "missing_points": json.dumps(missing_points or [], ensure_ascii=False),
+                "score_rationale": score_rationale or "",
             },
             model_class=SingleAdvice,
             llm=self.fast_llm,

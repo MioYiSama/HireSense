@@ -75,22 +75,68 @@ const goBack = () => {
   router.push("/dashboard");
 };
 
-// 计算通用能力和专业能力数据
+type DimensionView = {
+  name: string;
+  score: number;
+  summary: string;
+  strengthPoints: string[];
+  missingPoints: string[];
+};
+
+const normalizePoints = (points: unknown): string[] => {
+  if (!Array.isArray(points)) return [];
+  return points
+    .map((item) => String(item ?? "").trim())
+    .filter((item, index, array) => item.length > 0 && array.indexOf(item) === index)
+    .slice(0, 3);
+};
+
+const buildDimensionViews = (
+  scores?: Record<string, number>,
+  details?: Record<
+    string,
+    {
+      score?: number;
+      summary?: string;
+      strength_points?: string[];
+      missing_points?: string[];
+    }
+  >,
+): DimensionView[] => {
+  const scoreEntries = Object.entries(scores ?? {});
+  return scoreEntries.map(([name, rawScore]) => {
+    const detail = details?.[name];
+    const score = Number(detail?.score ?? rawScore);
+    return {
+      name,
+      score: Number.isFinite(score) ? score : 0,
+      summary: String(detail?.summary ?? "").trim(),
+      strengthPoints: normalizePoints(detail?.strength_points),
+      missingPoints: normalizePoints(detail?.missing_points),
+    };
+  });
+};
+
 const generalSkills = computed(() => {
-  if (!reportData.value || !reportData.value.general) return [];
-  return Object.entries(reportData.value.general).map(([name, score]) => ({
-    name,
-    score: Number(score),
-  }));
+  return buildDimensionViews(reportData.value?.general, reportData.value?.general_details);
 });
 
 const specificSkills = computed(() => {
-  if (!reportData.value || !reportData.value.specific) return [];
-  return Object.entries(reportData.value.specific).map(([name, score]) => ({
-    name,
-    score: Number(score),
-  }));
+  return buildDimensionViews(reportData.value?.specific, reportData.value?.specific_details);
 });
+
+const reportJobLabel = computed(() => {
+  if (reportData.value?.job === "backend") return "后端开发工程师";
+  if (reportData.value?.job === "frontend") return "前端开发工程师";
+  return "技术岗位";
+});
+
+const formatDifficultyLabel = (difficulty?: string) => {
+  if (difficulty === "basic") return "基础";
+  if (difficulty === "intermediate") return "中等";
+  if (difficulty === "advanced") return "高阶";
+  return "未知难度";
+};
 
 // 格式化日期
 const formatDate = (timestamp: number) => {
@@ -226,7 +272,7 @@ const generateRadarPolygon = (
             ></div>
             <div class="relative flex flex-col lg:flex-row items-center gap-8">
               <!-- 分数展示 -->
-              <div v-if="reportData.score" class="relative">
+              <div v-if="typeof reportData.score === 'number'" class="relative">
                 <svg class="w-44 h-44 progress-ring" viewBox="0 0 100 100">
                   <circle
                     cx="50"
@@ -288,7 +334,7 @@ const generateRadarPolygon = (
                     formatDate(interviewData.created_at)
                   }}</span>
                 </div>
-                <h2 class="text-3xl font-bold text-white mb-3">前端开发工程师面试报告</h2>
+                <h2 class="text-3xl font-bold text-white mb-3">{{ reportJobLabel }}面试报告</h2>
                 <p v-if="reportData.feedback" class="text-slate-400 max-w-2xl">
                   {{ reportData.feedback }}
                 </p>
@@ -398,6 +444,39 @@ const generateRadarPolygon = (
                 </template>
               </svg>
             </div>
+            <div class="mt-4 space-y-3">
+              <div
+                v-for="skill in generalSkills"
+                :key="skill.name"
+                class="rounded-2xl border border-white/6 bg-white/3 p-4"
+              >
+                <div class="flex items-center justify-between gap-4">
+                  <h4 class="text-sm font-medium text-white">{{ skill.name }}</h4>
+                  <span class="text-sm font-semibold text-cyan-300">{{ skill.score.toFixed(1) }}</span>
+                </div>
+                <p v-if="skill.summary" class="mt-2 text-sm leading-relaxed text-slate-400">
+                  {{ skill.summary }}
+                </p>
+                <div v-if="skill.strengthPoints.length > 0" class="mt-3 flex flex-wrap gap-2">
+                  <span
+                    v-for="point in skill.strengthPoints"
+                    :key="point"
+                    class="rounded-full bg-cyan-500/10 px-3 py-1 text-xs text-cyan-300"
+                  >
+                    答到：{{ point }}
+                  </span>
+                </div>
+                <div v-if="skill.missingPoints.length > 0" class="mt-2 flex flex-wrap gap-2">
+                  <span
+                    v-for="point in skill.missingPoints"
+                    :key="point"
+                    class="rounded-full bg-amber-500/10 px-3 py-1 text-xs text-amber-300"
+                  >
+                    待补：{{ point }}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- 专业能力 -->
@@ -501,6 +580,41 @@ const generateRadarPolygon = (
                 </template>
               </svg>
             </div>
+            <div class="mt-4 space-y-3">
+              <div
+                v-for="skill in specificSkills"
+                :key="skill.name"
+                class="rounded-2xl border border-white/6 bg-white/3 p-4"
+              >
+                <div class="flex items-center justify-between gap-4">
+                  <h4 class="text-sm font-medium text-white">{{ skill.name }}</h4>
+                  <span class="text-sm font-semibold text-fuchsia-300">
+                    {{ skill.score.toFixed(1) }}
+                  </span>
+                </div>
+                <p v-if="skill.summary" class="mt-2 text-sm leading-relaxed text-slate-400">
+                  {{ skill.summary }}
+                </p>
+                <div v-if="skill.strengthPoints.length > 0" class="mt-3 flex flex-wrap gap-2">
+                  <span
+                    v-for="point in skill.strengthPoints"
+                    :key="point"
+                    class="rounded-full bg-fuchsia-500/10 px-3 py-1 text-xs text-fuchsia-300"
+                  >
+                    答到：{{ point }}
+                  </span>
+                </div>
+                <div v-if="skill.missingPoints.length > 0" class="mt-2 flex flex-wrap gap-2">
+                  <span
+                    v-for="point in skill.missingPoints"
+                    :key="point"
+                    class="rounded-full bg-amber-500/10 px-3 py-1 text-xs text-amber-300"
+                  >
+                    待补：{{ point }}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -557,6 +671,19 @@ const generateRadarPolygon = (
                   <div class="flex-1">
                     <p class="text-xs text-slate-400 mb-1">面试官提问</p>
                     <p class="text-white">{{ review.interviewer }}</p>
+                    <div class="mt-3 flex flex-wrap gap-2">
+                      <span
+                        v-if="review.concept"
+                        class="rounded-full bg-blue-500/10 px-3 py-1 text-xs text-blue-300"
+                      >
+                        {{ review.concept }}
+                      </span>
+                      <span
+                        class="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300"
+                      >
+                        {{ formatDifficultyLabel(review.difficulty_label) }}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -591,25 +718,92 @@ const generateRadarPolygon = (
                       <span class="text-xs text-slate-400">得分</span>
                       <span class="text-lg font-bold text-yellow-400">{{ review.score }}</span>
                     </div>
-                    <div class="h-4 w-px bg-white/10"></div>
-                    <div class="flex items-center gap-1">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        class="h-4 w-4 text-yellow-400"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
+                  </div>
+                  <div
+                    v-if="review.reason_tags && review.reason_tags.length > 0"
+                    class="flex flex-wrap justify-end gap-2"
+                  >
+                    <span
+                      v-for="tag in review.reason_tags"
+                      :key="tag"
+                      class="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300"
+                    >
+                      {{ tag }}
+                    </span>
+                  </div>
+                </div>
+
+                <div
+                  v-if="review.score_breakdown"
+                  class="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3"
+                >
+                  <div class="rounded-xl border border-cyan-500/10 bg-cyan-500/5 p-3">
+                    <p class="text-xs text-cyan-300">主线覆盖</p>
+                    <p class="mt-1 text-lg font-semibold text-white">
+                      {{ Number(review.score_breakdown.coverage_score ?? 0).toFixed(1) }}
+                    </p>
+                  </div>
+                  <div class="rounded-xl border border-blue-500/10 bg-blue-500/5 p-3">
+                    <p class="text-xs text-blue-300">逻辑一致</p>
+                    <p class="mt-1 text-lg font-semibold text-white">
+                      {{ Number(review.score_breakdown.consistency_score ?? 0).toFixed(1) }}
+                    </p>
+                  </div>
+                  <div class="rounded-xl border border-fuchsia-500/10 bg-fuchsia-500/5 p-3">
+                    <p class="text-xs text-fuchsia-300">完整度</p>
+                    <p class="mt-1 text-lg font-semibold text-white">
+                      {{ Number(review.score_breakdown.completeness_score ?? 0).toFixed(1) }}
+                    </p>
+                  </div>
+                </div>
+
+                <div
+                  v-if="
+                    (review.strength_points && review.strength_points.length > 0) ||
+                    (review.missing_points && review.missing_points.length > 0)
+                  "
+                  class="mb-4 grid grid-cols-1 gap-3 lg:grid-cols-2"
+                >
+                  <div
+                    v-if="review.strength_points && review.strength_points.length > 0"
+                    class="rounded-xl border border-emerald-500/15 bg-emerald-500/8 p-4"
+                  >
+                    <p class="mb-2 text-xs font-medium text-emerald-300">答到的点</p>
+                    <div class="flex flex-wrap gap-2">
+                      <span
+                        v-for="point in review.strength_points"
+                        :key="point"
+                        class="rounded-full bg-emerald-500/10 px-3 py-1 text-xs text-emerald-200"
                       >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-                        />
-                      </svg>
-                      <span class="text-xs text-slate-400">待提升</span>
+                        {{ point }}
+                      </span>
                     </div>
                   </div>
+                  <div
+                    v-if="review.missing_points && review.missing_points.length > 0"
+                    class="rounded-xl border border-amber-500/15 bg-amber-500/8 p-4"
+                  >
+                    <p class="mb-2 text-xs font-medium text-amber-300">缺失的点</p>
+                    <div class="flex flex-wrap gap-2">
+                      <span
+                        v-for="point in review.missing_points"
+                        :key="point"
+                        class="rounded-full bg-amber-500/10 px-3 py-1 text-xs text-amber-200"
+                      >
+                        {{ point }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  v-if="review.score_rationale"
+                  class="mb-4 rounded-xl border border-white/6 bg-white/3 p-4"
+                >
+                  <p class="text-xs text-slate-400">分数解释</p>
+                  <p class="mt-1 text-sm leading-relaxed text-slate-300">
+                    {{ review.score_rationale }}
+                  </p>
                 </div>
 
                 <div class="mt-4 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">

@@ -6,8 +6,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 CHROMA_DATA = BASE_DIR/"chroma_db_data"
 NEO4J_DATA  = BASE_DIR/"neo4j_data"
 EMBEDDING_MODEL = BASE_DIR/"Embedding_model"/"bge-m3"
-BGE_RERANKER = BASE_DIR/"Score_model"/"BAAI"/"bge-reranker-v2-m3"
-NLI          = BASE_DIR/"Score_model"/"MoritzLaurer"/"mDeBERTa-v3-base-mnli-xnli"
 RECOMMEND_DATA = BASE_DIR/"data_source"/"recommend_data.json"
 ENV_FILE_PATH  = BASE_DIR/".env"
 

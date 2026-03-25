@@ -88,21 +88,44 @@ class ScoreBreakdown(BaseModel):
     completeness_score: float = 0.0
 
 
+class DimensionDetail(BaseModel):
+    score: float = 0.0
+    summary: str = ""
+    strength_points: List[str] = Field(default_factory=list)
+    missing_points: List[str] = Field(default_factory=list)
+
+
 class ReviewItem(BaseModel):
     interviewer: str = Field(description="面试官问题")
     interviewee: str = Field(description="用户回答")
-    score: float = Field(description="CrossEncoder和NLI得出的最终评分")
+    score: float = Field(description="大模型评估与本地聚合后的最终评分")
     advice: str
     concept: Optional[str] = Field(default=None, description="当前题目的考点")
+    difficulty_label: str = Field(default="unknown", description="当前题目的难度标签")
+    score_breakdown: ScoreBreakdown = Field(
+        default_factory=ScoreBreakdown, description="题级分项得分"
+    )
     reason_tags: List[str] = Field(
         default_factory=list, description="支持该分数的机器标签"
+    )
+    strength_points: List[str] = Field(
+        default_factory=list, description="本题回答中做得好的点"
+    )
+    missing_points: List[str] = Field(
+        default_factory=list, description="本题回答中缺失的点"
+    )
+    score_rationale: str = Field(
+        default="", description="对题级分数的结构化解释"
     )
 
 
 class ReportContent(BaseModel):
+    job: Literal["backend", "frontend"]
     score: float
     general: Dict[str, float]
+    general_details: Dict[str, DimensionDetail] = Field(default_factory=dict)
     specific: Dict[str, float]
+    specific_details: Dict[str, DimensionDetail] = Field(default_factory=dict)
     feedback: str
     shortcomings: List[str]
     advice: str
@@ -131,8 +154,10 @@ class InterviewRoundLog(BaseModel):
     nli_logic: str  # NLI 算出的逻辑状态 (Entailment/Contradiction/Neutral)
     nli_probs: Dict[str, float] = Field(default_factory=dict)  # NLI 全量概率
     score_breakdown: ScoreBreakdown = Field(default_factory=ScoreBreakdown)
+    strength_points: List[str] = Field(default_factory=list)  # 回答中的亮点
     missing_points: List[str] = Field(default_factory=list)  # 未覆盖的关键点
     reason_tags: List[str] = Field(default_factory=list)  # 机器标签，用于解释分数
+    score_rationale: str = ""  # 题级得分解释
     probe_count: int = 1  # 同一题被追问的轮数
     final_score: float  # 融合打分公式算出的本题最终得分
     async_advice: str = ""  # 【后台异步写入】LLM 对这一轮的评价

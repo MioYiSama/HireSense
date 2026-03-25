@@ -20,10 +20,10 @@ async def lifespan(app: FastAPI):
     控制整个应用从启动到销毁的生命周期。
     """
     # ------------------[启动阶段 Startup] ------------------
-    # 由于依赖注入文件 (dependencies.py) 被导入，底层的 CrossEncoder、
-    # NLI 模型和 ChromaDB 此时已经自动加载到内存中了。
+    # 由于依赖注入文件 (dependencies.py) 被导入，向量引擎、
+    # LLM 评分器和图谱客户端此时已经自动加载到内存中了。
     print("[System] AI 面试智能体后端服务开始启动...")
-    print("[System] 认知打分模型与向量引擎已成功挂载入内存。")
+    print("[System] LLM 评分器与向量引擎已成功挂载入内存。")
 
     # 可以在这里加入一些数据库连通性自检代码 (Health Check)
     # await neo4j_client.driver.verify_connectivity()
