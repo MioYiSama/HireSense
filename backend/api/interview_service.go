@@ -137,9 +137,10 @@ func (s *InterviewService) Start(ctx context.Context, session InterviewSession) 
 }
 
 func (s *InterviewService) Reply(ctx context.Context, request InterviewReplyRequestData) (InterviewReplyResult, error) {
+	trimmedText := strings.TrimSpace(request.Text)
 	payload := interviewReplyPayload{
 		InterviewID: request.InterviewID,
-		Text:        strings.TrimSpace(request.Text),
+		Text:        request.Text,
 	}
 
 	if request.Audio != nil {
@@ -165,6 +166,7 @@ func (s *InterviewService) Reply(ctx context.Context, request InterviewReplyRequ
 
 		payload.Transcript = &transcript
 		payload.Text = strings.TrimSpace(transcript.Text)
+		trimmedText = payload.Text
 		slog.InfoContext(ctx, "interview audio transcribed",
 			"interview_id", request.InterviewID,
 			"audio_bytes", len(request.Audio.Data),
@@ -179,7 +181,7 @@ func (s *InterviewService) Reply(ctx context.Context, request InterviewReplyRequ
 		}
 	}
 
-	if payload.Text == "" {
+	if trimmedText == "" {
 		return InterviewReplyResult{}, ErrInterviewTextRequired
 	}
 

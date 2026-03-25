@@ -117,7 +117,7 @@ func TestSanitizeAudioFilename(t *testing.T) {
 	}
 }
 
-func TestInterviewServiceReplyTrimsTextBeforeCallingBackend(t *testing.T) {
+func TestInterviewServiceReplyPreservesTextBeforeCallingBackend(t *testing.T) {
 	t.Parallel()
 
 	backend := &stubInterviewBackend{
@@ -129,7 +129,7 @@ func TestInterviewServiceReplyTrimsTextBeforeCallingBackend(t *testing.T) {
 
 	result, err := service.Reply(context.Background(), InterviewReplyRequestData{
 		InterviewID: "interview-1",
-		Text:        "  hello world  ",
+		Text:        "  function solve() {\n    return 42;\n  }  ",
 	})
 	if err != nil {
 		t.Fatalf("Reply() error = %v", err)
@@ -140,8 +140,12 @@ func TestInterviewServiceReplyTrimsTextBeforeCallingBackend(t *testing.T) {
 	if len(backend.replyCalls) != 1 {
 		t.Fatalf("backend reply calls = %d, want 1", len(backend.replyCalls))
 	}
-	if backend.replyCalls[0].Text != "hello world" {
-		t.Fatalf("backend text = %q, want %q", backend.replyCalls[0].Text, "hello world")
+	if backend.replyCalls[0].Text != "  function solve() {\n    return 42;\n  }  " {
+		t.Fatalf(
+			"backend text = %q, want %q",
+			backend.replyCalls[0].Text,
+			"  function solve() {\n    return 42;\n  }  ",
+		)
 	}
 	if backend.replyCalls[0].Transcript != nil {
 		t.Fatal("backend transcript should be nil for text replies")

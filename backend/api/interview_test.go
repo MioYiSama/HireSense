@@ -262,11 +262,11 @@ func TestDecodeInterviewReplyRequest(t *testing.T) {
 		wantMessage     string
 	}{
 		{
-			name:        "json body",
+			name:        "json body preserves whitespace",
 			contentType: "application/json",
-			body:        []byte(`{"text":"  hello world  "}`),
+			body:        []byte("{\"text\":\"  function solve() {\\n    return 42;\\n  }  \"}"),
 			wantStatus:  fiber.StatusOK,
-			wantText:    "hello world",
+			wantText:    "  function solve() {\n    return 42;\n  }  ",
 		},
 		{
 			name:            "audio body",

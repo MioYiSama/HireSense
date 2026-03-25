@@ -1,22 +1,21 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useMutation, useQueryClient } from "@tanstack/vue-query";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
+
+import CodeEditorDialog from "@/components/CodeEditorDialog.vue";
+import ConfirmDialog from "@/components/ConfirmDialog.vue";
+import InterviewInput from "@/components/InterviewInput.vue";
+import { getApiErrorMessage, queryKeys, replyInterview, stopInterview } from "@/lib/api";
+import { getCodeLanguageForJob, getCodeLanguageLabel, type CodeLanguage } from "@/lib/codeEditor";
 import {
   getAccessToken,
   getInterviewId,
   getInitialReply,
+  getUserInfo,
   removeInterviewId,
   removeInitialReply,
 } from "@/utils/token";
-import {
-  getApiErrorMessage,
-  queryKeys,
-  replyInterview,
-  stopInterview,
-} from "@/lib/api";
-import ConfirmDialog from "@/components/ConfirmDialog.vue";
-import InterviewInput from "@/components/InterviewInput.vue";
 
 // 常量定义
 const INITIAL_LOADING_DELAY = 1500;
@@ -31,6 +30,7 @@ const interviewTime = ref(0);
 const timerInterval = ref<number | null>(null);
 const errorMessage = ref("");
 const interviewId = ref(getInterviewId());
+const storedUserInfo = getUserInfo();
 
 // 录音状态
 const isRecording = ref(false);
@@ -43,21 +43,26 @@ const answerCountdown = ref(ANSWER_COUNTDOWN_TIME);
 const countdownInterval = ref<number | null>(null);
 
 // 定义消息类型
+type MessageType = "text" | "audio" | "code";
+
 interface Message {
   id: number;
   role: "ai" | "user";
+  type: MessageType;
   content: string;
   timestamp: string;
   audioBlob?: Blob;
   duration?: number;
-  isAudio?: boolean;
+  codeLanguage?: CodeLanguage;
 }
 
 // 对话相关状态
 const messages = ref<Message[]>([]);
-const userInput = ref("");
 const isInterviewEnded = ref(false);
 const chatContainer = ref<HTMLElement | null>(null);
+const isCodeEditorOpen = ref(false);
+const codeDraft = ref("");
+const codeLanguage = ref<CodeLanguage>(getCodeLanguageForJob(storedUserInfo?.job));
 
 // 音频播放状态
 const audioElements = ref<{ [key: number]: HTMLAudioElement }>({});
@@ -78,16 +83,58 @@ const cleanupAudioResources = (messageId: number) => {
   }
 };
 
+const createMessageId = () => Date.now() + Math.floor(Math.random() * 1000);
+
+const pushTextMessage = (role: Message["role"], content: string) => {
+  messages.value.push({
+    id: createMessageId(),
+    role,
+    type: "text",
+    content,
+    timestamp: new Date().toLocaleTimeString(),
+  });
+};
+
+const pushCodeMessage = (content: string, language: CodeLanguage) => {
+  messages.value.push({
+    id: createMessageId(),
+    role: "user",
+    type: "code",
+    content,
+    timestamp: new Date().toLocaleTimeString(),
+    codeLanguage: language,
+  });
+};
+
+const pushErrorReply = (content: string) => {
+  pushTextMessage("ai", content);
+};
+
 // 处理输入消息
 const handleInputMessage = (message: string) => {
-  userInput.value = message;
-  sendMessage();
+  void sendTextMessage(message);
+};
+
+const handleOpenCodeEditor = () => {
+  if (isRecording.value || isSubmitting.value || isInterviewEnded.value) {
+    return;
+  }
+
+  isCodeEditorOpen.value = true;
+};
+
+const handleCloseCodeEditor = () => {
+  if (isSubmitting.value) {
+    return;
+  }
+
+  isCodeEditorOpen.value = false;
 };
 
 // 播放音频消息
 const toggleAudioPlayback = (messageId: number) => {
   const message = messages.value.find((msg) => msg.id === messageId);
-  if (!message || !message.isAudio || !message.audioBlob) return;
+  if (!message || message.type !== "audio" || !message.audioBlob) return;
 
   // 停止其他正在播放的音频
   Object.keys(audioElements.value).forEach((key) => {
@@ -167,14 +214,7 @@ const isSubmitting = computed(() => replyInterviewMutation.isPending.value);
 const sendInterviewReply = async (payload: InterviewReplyPayload) => {
   const data = await replyInterviewMutation.mutateAsync(payload);
 
-  // 添加AI回复
-  const aiMessage = {
-    id: Date.now() + 1,
-    role: "ai" as const,
-    content: data.reply,
-    timestamp: new Date().toLocaleTimeString(),
-  };
-  messages.value.push(aiMessage);
+  pushTextMessage("ai", data.reply);
 
   // 检查是否面试结束
   if (data.ending) {
@@ -197,36 +237,37 @@ const sendInterviewReply = async (payload: InterviewReplyPayload) => {
   }
 };
 
-const sendMessage = async () => {
-  if (!userInput.value.trim() || isSubmitting.value) return;
+const sendTextMessage = async (message: string) => {
+  const inputContent = message.trim();
+  if (!inputContent || isSubmitting.value || isInterviewEnded.value) return;
 
-  // 添加用户消息
-  const userMessage = {
-    id: Date.now(),
-    role: "user" as const,
-    content: userInput.value.trim(),
-    timestamp: new Date().toLocaleTimeString(),
-  };
-  messages.value.push(userMessage);
-
-  // 清空输入框
-  const inputContent = userInput.value.trim();
-  userInput.value = "";
-
+  pushTextMessage("user", inputContent);
   console.log("用户输入:", inputContent);
 
   try {
     await sendInterviewReply({ text: inputContent });
   } catch (error) {
     console.error("发送消息失败:", error);
-    // 添加错误提示消息
-    const errorMsg = {
-      id: Date.now() + 1,
-      role: "ai" as const,
-      content: "抱歉，我暂时无法回复，请稍后再试。",
-      timestamp: new Date().toLocaleTimeString(),
-    };
-    messages.value.push(errorMsg);
+    pushErrorReply("抱歉，我暂时无法回复，请稍后再试。");
+  }
+};
+
+const handleCodeSubmit = async () => {
+  const content = codeDraft.value;
+  if (!content.trim() || isSubmitting.value || isInterviewEnded.value) {
+    return;
+  }
+
+  const language = codeLanguage.value;
+  pushCodeMessage(content, language);
+  isCodeEditorOpen.value = false;
+
+  try {
+    await sendInterviewReply({ text: content });
+    codeDraft.value = "";
+  } catch (error) {
+    console.error("发送代码失败:", error);
+    pushErrorReply("抱歉，我暂时无法处理这段代码，请稍后再试。");
   }
 };
 
@@ -253,6 +294,7 @@ onMounted(() => {
     messages.value.push({
       id: 1,
       role: "ai",
+      type: "text",
       content:
         initialReply ||
         "你好！我是你的AI面试官。欢迎参加今天的面试。请先做一个简短的自我介绍，然后我们将开始技术问题的讨论。",
@@ -547,11 +589,11 @@ const sendAudioMessage = async (audioBlob: Blob, duration: number) => {
   const newMessage: Message = {
     id,
     role: "user",
+    type: "audio",
     content: `[语音消息] ${formatRecordingTime(duration)}`,
     timestamp: new Date().toLocaleTimeString(),
     audioBlob,
     duration,
-    isAudio: true,
   };
   messages.value.push(newMessage);
 
@@ -559,14 +601,7 @@ const sendAudioMessage = async (audioBlob: Blob, duration: number) => {
     await sendInterviewReply(audioBlob);
   } catch (error) {
     console.error("发送语音消息失败:", error);
-    // 添加错误提示消息
-    const errorMsg = {
-      id: Date.now() + 1,
-      role: "ai" as const,
-      content: "抱歉，我暂时无法处理语音消息，请稍后再试。",
-      timestamp: new Date().toLocaleTimeString(),
-    };
-    messages.value.push(errorMsg);
+    pushErrorReply("抱歉，我暂时无法处理语音消息，请稍后再试。");
   }
 };
 
@@ -576,32 +611,36 @@ const formatRecordingTime = (seconds: number) => {
   const secs = seconds % 60;
   return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
 };
+
+const formatCodeLanguage = (language: string | undefined) => {
+  return getCodeLanguageLabel(language);
+};
 </script>
 
 <template>
   <div
-    class="min-h-screen bg-linear-to-br from-gray-900 via-gray-800 to-gray-900 relative overflow-hidden"
+    class="relative min-h-screen overflow-hidden bg-linear-to-br from-gray-900 via-gray-800 to-gray-900"
   >
     <!-- 背景 -->
-    <div class="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
-    <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
+    <div class="absolute top-0 left-1/4 h-96 w-96 rounded-full bg-blue-500/10 blur-3xl"></div>
+    <div class="absolute right-1/4 bottom-0 h-96 w-96 rounded-full bg-purple-500/10 blur-3xl"></div>
 
     <!-- 导航栏 -->
     <div
-      class="navbar bg-gray-900/60 backdrop-blur-md border-b border-gray-700/50 shadow-lg relative z-10"
+      class="navbar relative z-10 border-b border-gray-700/50 bg-gray-900/60 shadow-lg backdrop-blur-md"
     >
       <div class="flex-1">
         <div class="flex items-center gap-2">
           <img src="/favicon.png" alt="HireSense" class="h-8 w-8 rounded-md object-contain" />
-          <span class="text-xl font-bold text-white tracking-tight">Hire Sense</span>
+          <span class="text-xl font-bold tracking-tight text-white">Hire Sense</span>
         </div>
       </div>
-      <div class="flex-none flex items-center gap-4">
+      <div class="flex flex-none items-center gap-4">
         <!-- 面试时长计时器 -->
         <div
-          class="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-gray-800/50 border border-gray-700/50 shadow-lg"
+          class="flex items-center gap-2 rounded-xl border border-gray-700/50 bg-gray-800/50 px-4 py-1.5 shadow-lg"
         >
-          <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg class="h-4 w-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               stroke-linecap="round"
               stroke-linejoin="round"
@@ -609,7 +648,7 @@ const formatRecordingTime = (seconds: number) => {
               d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          <span class="text-gray-300 font-mono text-sm">
+          <span class="font-mono text-sm text-gray-300">
             {{ formatTime(interviewTime) }}
           </span>
         </div>
@@ -618,11 +657,11 @@ const formatRecordingTime = (seconds: number) => {
         <button
           @click="endInterview"
           :disabled="messages.length < 3"
-          class="group px-4 py-1.5 rounded-xl bg-linear-to-r from-red-500/20 to-red-600/20 hover:from-red-500 hover:to-red-600 text-red-400 hover:text-white font-semibold transition-all duration-300 border border-red-500/40 hover:border-red-500 shadow-lg shadow-red-500/10 hover:shadow-red-500/30 cursor-pointer flex items-center gap-2 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:from-red-500/20 disabled:hover:to-red-600/20 disabled:hover:text-red-400 disabled:hover:scale-100"
+          class="group flex cursor-pointer items-center gap-2 rounded-xl border border-red-500/40 bg-linear-to-r from-red-500/20 to-red-600/20 px-4 py-1.5 font-semibold text-red-400 shadow-lg shadow-red-500/10 transition-all duration-300 hover:scale-105 hover:border-red-500 hover:from-red-500 hover:to-red-600 hover:text-white hover:shadow-red-500/30 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100 disabled:hover:from-red-500/20 disabled:hover:to-red-600/20 disabled:hover:text-red-400"
         >
           <div class="relative">
             <svg
-              class="w-4 h-4 transition-transform duration-300 group-hover:rotate-90"
+              class="h-4 w-4 transition-transform duration-300 group-hover:rotate-90"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -637,7 +676,7 @@ const formatRecordingTime = (seconds: number) => {
           </div>
           <span>结束面试</span>
           <svg
-            class="w-3 h-3 opacity-0 -ml-2 group-hover:opacity-100 group-hover:ml-0 transition-all duration-300"
+            class="-ml-2 h-3 w-3 opacity-0 transition-all duration-300 group-hover:ml-0 group-hover:opacity-100"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -654,20 +693,20 @@ const formatRecordingTime = (seconds: number) => {
     </div>
 
     <!-- 主内容区 -->
-    <div class="flex-1 p-4 md:p-8 flex justify-center">
+    <div class="flex flex-1 justify-center p-4 md:p-8">
       <div
-        class="h-[calc(100vh-8rem)] flex flex-col bg-gray-900/60 backdrop-blur-md border border-gray-700/50 rounded-2xl shadow-xl overflow-hidden max-w-4xl w-full"
+        class="flex h-[calc(100vh-8rem)] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-gray-700/50 bg-gray-900/60 shadow-xl backdrop-blur-md"
       >
         <!-- 对话内容展示区 -->
-        <div ref="chatContainer" class="flex-1 overflow-y-auto p-6 space-y-6">
+        <div ref="chatContainer" class="flex-1 space-y-6 overflow-y-auto p-6">
           <!-- 初始加载状态 -->
-          <div v-if="isInitialLoading" class="flex justify-center items-center h-full">
+          <div v-if="isInitialLoading" class="flex h-full items-center justify-center">
             <div class="text-center">
               <div
-                class="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-500/20 flex items-center justify-center animate-pulse"
+                class="mx-auto mb-4 flex h-16 w-16 animate-pulse items-center justify-center rounded-full bg-blue-500/20"
               >
                 <svg
-                  class="w-8 h-8 text-blue-400 animate-spin"
+                  class="h-8 w-8 animate-spin text-blue-400"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -689,17 +728,17 @@ const formatRecordingTime = (seconds: number) => {
             <div
               v-for="message in messages"
               :key="message.id"
-              class="flex animate-message-in"
+              class="animate-message-in flex"
               :class="message.role === 'ai' ? 'justify-start' : 'justify-end'"
             >
               <!-- AI面试官消息 -->
-              <div v-if="message.role === 'ai'" class="flex flex-col items-start gap-1 max-w-[80%]">
+              <div v-if="message.role === 'ai'" class="flex max-w-[80%] flex-col items-start gap-1">
                 <div class="flex items-start gap-3">
                   <div
-                    class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0"
+                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/20"
                   >
                     <svg
-                      class="w-5 h-5 text-blue-400"
+                      class="h-5 w-5 text-blue-400"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -713,19 +752,19 @@ const formatRecordingTime = (seconds: number) => {
                     </svg>
                   </div>
                   <div
-                    class="bg-gray-800/50 rounded-2xl rounded-tl-none p-4 shadow-lg shadow-gray-900/50"
+                    class="rounded-2xl rounded-tl-none bg-gray-800/50 p-4 shadow-lg shadow-gray-900/50"
                   >
-                    <div class="flex items-center mb-2">
+                    <div class="mb-2 flex items-center">
                       <span class="text-sm font-medium text-blue-400">AI面试官</span>
                     </div>
-                    <div v-if="message.isAudio" class="flex items-center gap-3">
+                    <div v-if="message.type === 'audio'" class="flex items-center gap-3">
                       <button
                         @click="toggleAudioPlayback(message.id)"
-                        class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center hover:bg-blue-500/30 transition-colors"
+                        class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/20 transition-colors hover:bg-blue-500/30"
                       >
                         <svg
                           v-if="!isPlaying[message.id]"
-                          class="w-5 h-5 text-blue-400"
+                          class="h-5 w-5 text-blue-400"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -745,7 +784,7 @@ const formatRecordingTime = (seconds: number) => {
                         </svg>
                         <svg
                           v-else
-                          class="w-5 h-5 text-blue-400"
+                          class="h-5 w-5 text-blue-400"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -760,7 +799,22 @@ const formatRecordingTime = (seconds: number) => {
                       </button>
                       <span class="text-gray-300">{{ message.content }}</span>
                     </div>
-                    <p v-else class="text-gray-300 leading-relaxed">
+                    <div v-else-if="message.type === 'code'" class="space-y-3">
+                      <div class="flex items-center gap-2">
+                        <span
+                          class="inline-flex items-center rounded-full border border-blue-500/30 bg-blue-500/10 px-2.5 py-1 text-xs font-medium text-blue-200"
+                        >
+                          代码
+                        </span>
+                        <span class="text-xs text-gray-400">
+                          {{ formatCodeLanguage(message.codeLanguage) }}
+                        </span>
+                      </div>
+                      <pre
+                        class="max-h-80 overflow-auto rounded-2xl border border-gray-700/70 bg-[#060b16] p-4 font-mono text-[13px] leading-6 text-slate-100"
+                      ><code>{{ message.content }}</code></pre>
+                    </div>
+                    <p v-else class="leading-relaxed text-gray-300">
                       {{ message.content }}
                     </p>
                   </div>
@@ -771,22 +825,22 @@ const formatRecordingTime = (seconds: number) => {
               </div>
 
               <!-- 用户消息 -->
-              <div v-else class="flex flex-col items-end gap-1 max-w-[80%]">
+              <div v-else class="flex max-w-[80%] flex-col items-end gap-1">
                 <div class="flex items-start gap-3">
                   <div
-                    class="bg-linear-to-r from-blue-500/20 to-purple-500/20 rounded-2xl rounded-tr-none p-4 shadow-lg shadow-blue-900/20"
+                    class="rounded-2xl rounded-tr-none bg-linear-to-r from-blue-500/20 to-purple-500/20 p-4 shadow-lg shadow-blue-900/20"
                   >
-                    <div class="flex items-center mb-2">
+                    <div class="mb-2 flex items-center">
                       <span class="text-sm font-medium text-blue-300">你</span>
                     </div>
-                    <div v-if="message.isAudio" class="flex items-center gap-3">
+                    <div v-if="message.type === 'audio'" class="flex items-center gap-3">
                       <button
                         @click="toggleAudioPlayback(message.id)"
-                        class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center hover:bg-blue-500/30 transition-colors"
+                        class="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/20 transition-colors hover:bg-blue-500/30"
                       >
                         <svg
                           v-if="!isPlaying[message.id]"
-                          class="w-5 h-5 text-blue-400"
+                          class="h-5 w-5 text-blue-400"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -806,7 +860,7 @@ const formatRecordingTime = (seconds: number) => {
                         </svg>
                         <svg
                           v-else
-                          class="w-5 h-5 text-blue-400"
+                          class="h-5 w-5 text-blue-400"
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -821,14 +875,29 @@ const formatRecordingTime = (seconds: number) => {
                       </button>
                       <span class="text-gray-200">{{ message.content }}</span>
                     </div>
-                    <p v-else class="text-gray-200 leading-relaxed">
+                    <div v-else-if="message.type === 'code'" class="space-y-3">
+                      <div class="flex items-center gap-2">
+                        <span
+                          class="inline-flex items-center rounded-full border border-cyan-400/30 bg-cyan-500/10 px-2.5 py-1 text-xs font-medium text-cyan-100"
+                        >
+                          代码
+                        </span>
+                        <span class="text-xs text-blue-100/80">
+                          {{ formatCodeLanguage(message.codeLanguage) }}
+                        </span>
+                      </div>
+                      <pre
+                        class="max-h-80 overflow-auto rounded-2xl border border-white/10 bg-[#050b16]/90 p-4 font-mono text-[13px] leading-6 text-slate-100"
+                      ><code>{{ message.content }}</code></pre>
+                    </div>
+                    <p v-else class="leading-relaxed text-gray-200">
                       {{ message.content }}
                     </p>
                   </div>
                   <div
-                    class="w-10 h-10 rounded-full bg-linear-to-br from-blue-500 to-purple-600 flex items-center justify-center shrink-0"
+                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-blue-500 to-purple-600"
                   >
-                    <span class="text-white font-medium text-sm">你</span>
+                    <span class="text-sm font-medium text-white">你</span>
                   </div>
                 </div>
                 <div class="mr-[52px]">
@@ -840,14 +909,14 @@ const formatRecordingTime = (seconds: number) => {
             <!-- 面试结束提示 -->
             <div v-if="isInterviewEnded" class="mt-8">
               <div
-                class="bg-linear-to-r from-blue-500/20 to-purple-600/20 border border-blue-500/30 rounded-2xl p-6 shadow-lg text-center"
+                class="rounded-2xl border border-blue-500/30 bg-linear-to-r from-blue-500/20 to-purple-600/20 p-6 text-center shadow-lg"
               >
-                <div class="flex justify-center mb-4">
+                <div class="mb-4 flex justify-center">
                   <div
-                    class="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center"
+                    class="flex h-16 w-16 items-center justify-center rounded-full bg-green-500/20"
                   >
                     <svg
-                      class="w-8 h-8 text-green-400"
+                      class="h-8 w-8 text-green-400"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -861,15 +930,15 @@ const formatRecordingTime = (seconds: number) => {
                     </svg>
                   </div>
                 </div>
-                <h3 class="text-xl font-semibold text-white mb-2">面试已完成</h3>
-                <p class="text-gray-300 mb-6">
+                <h3 class="mb-2 text-xl font-semibold text-white">面试已完成</h3>
+                <p class="mb-6 text-gray-300">
                   感谢您的精彩表现！面试官已收到您的回答，我们将尽快生成面试报告。
                   <br /><br />
                   请回到面试中心耐心等待结果通知。
                 </p>
                 <button
                   @click="goBackToDashboard"
-                  class="px-6 py-3 bg-linear-to-r from-blue-500 to-purple-600 text-white font-semibold rounded-xl hover:from-blue-600 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-blue-500/20"
+                  class="transform rounded-xl bg-linear-to-r from-blue-500 to-purple-600 px-6 py-3 font-semibold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-blue-600 hover:to-purple-700 hover:shadow-blue-500/20"
                 >
                   返回面试中心
                 </button>
@@ -877,13 +946,13 @@ const formatRecordingTime = (seconds: number) => {
             </div>
 
             <!-- 加载状态 -->
-            <div v-if="isSubmitting" class="flex justify-start animate-message-in">
-              <div class="flex items-start gap-3 max-w-[80%]">
+            <div v-if="isSubmitting" class="animate-message-in flex justify-start">
+              <div class="flex max-w-[80%] items-start gap-3">
                 <div
-                  class="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0"
+                  class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/20"
                 >
                   <svg
-                    class="w-5 h-5 text-blue-400 animate-spin"
+                    class="h-5 w-5 animate-spin text-blue-400"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -897,19 +966,19 @@ const formatRecordingTime = (seconds: number) => {
                   </svg>
                 </div>
                 <div
-                  class="bg-gray-800/50 rounded-2xl rounded-tl-none p-4 shadow-lg shadow-gray-900/50"
+                  class="rounded-2xl rounded-tl-none bg-gray-800/50 p-4 shadow-lg shadow-gray-900/50"
                 >
                   <div class="flex space-x-1.5">
                     <div
-                      class="w-2 h-2 bg-blue-400 rounded-full animate-bounce"
+                      class="h-2 w-2 animate-bounce rounded-full bg-blue-400"
                       style="animation-delay: 0s"
                     ></div>
                     <div
-                      class="w-2 h-2 bg-blue-400 rounded-full animate-bounce"
+                      class="h-2 w-2 animate-bounce rounded-full bg-blue-400"
                       style="animation-delay: 0.2s"
                     ></div>
                     <div
-                      class="w-2 h-2 bg-blue-400 rounded-full animate-bounce"
+                      class="h-2 w-2 animate-bounce rounded-full bg-blue-400"
                       style="animation-delay: 0.4s"
                     ></div>
                   </div>
@@ -921,7 +990,7 @@ const formatRecordingTime = (seconds: number) => {
 
         <!-- 底部输入区域 -->
         <div
-          class="border-t border-gray-700/50 p-4 bg-gray-900/90 backdrop-blur-sm transition-all duration-300 hover:border-gray-600/50"
+          class="border-t border-gray-700/50 bg-gray-900/90 p-4 backdrop-blur-sm transition-all duration-300 hover:border-gray-600/50"
         >
           <InterviewInput
             :is-recording="isRecording"
@@ -933,10 +1002,22 @@ const formatRecordingTime = (seconds: number) => {
             @start-recording="startRecording"
             @stop-recording="stopRecording"
             @cancel-recording="cancelRecording"
+            @open-code-editor="handleOpenCodeEditor"
           />
         </div>
       </div>
     </div>
+
+    <CodeEditorDialog
+      v-if="isCodeEditorOpen"
+      :show="isCodeEditorOpen"
+      :code="codeDraft"
+      :language="codeLanguage"
+      :is-submitting="isSubmitting"
+      @update:code="codeDraft = $event"
+      @close="handleCloseCodeEditor"
+      @submit="handleCodeSubmit"
+    />
 
     <!-- 确认对话框 -->
     <ConfirmDialog

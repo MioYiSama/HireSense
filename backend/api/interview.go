@@ -278,14 +278,13 @@ func decodeInterviewReplyRequest(c fiber.Ctx, interviewID string) (InterviewRepl
 			return InterviewReplyRequestData{}, NewError(fiber.StatusBadRequest, "invalid request body")
 		}
 
-		text := strings.TrimSpace(request.Text)
-		if text == "" {
+		if strings.TrimSpace(request.Text) == "" {
 			return InterviewReplyRequestData{}, NewError(fiber.StatusBadRequest, "text is required")
 		}
 
 		return InterviewReplyRequestData{
 			InterviewID: interviewID,
-			Text:        text,
+			Text:        request.Text,
 		}, nil
 	case strings.HasPrefix(mediaType, "audio/"):
 		audio := append([]byte(nil), c.BodyRaw()...)
