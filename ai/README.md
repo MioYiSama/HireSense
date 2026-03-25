@@ -4,78 +4,72 @@
 
 ## 环境要求
 
-- Python 3.8+
-- Docker & Docker Compose
-- 阿里云 DashScope API Key（或 OpenAI API Key）
-- 模型文件，本地数据库都在项目目录下（因为文件过大所以使用qq传输）
+- `uv`
+- Python `3.12`
+- 可用的 Neo4j 实例
+- 阿里云 DashScope API Key 或兼容 OpenAI API 的 Key
+- 本地模型文件和数据库目录
 
 ## 快速启动
 
-### 0. 设置环境信息
+### 1. 配置环境变量
 
-根据.env.example 的要求 设置.env
-
-### 1. 安装依赖
-
-```bash
-pip install -r requirements.txt
-```
-
-### 2. 启动 Neo4j 数据库
-
-```bash
-docker-compose up -d
-```
-
-访问 http://localhost:7474 验证 Neo4j 是否启动成功（账号: neo4j, 密码: password）
-
-### 3. 配置环境变量
+先根据 `.env.example` 生成 `.env`，再补齐实际配置：
 
 ```bash
 cp .env.example .env
 ```
 
-编辑 `.env` 文件，填入必要配置：
+关键字段示例：
 
 ```env
-# 大模型 API（必填）
 LLM_API_KEY=sk-your-api-key-here
 LLM_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-# 用于意图识别和题级评分
 FAST_LLM_MODEL=qwen-turbo
-# 用于面试对话生成、简历解析
 SMART_LLM_MODEL=qwen-max
-# 用于最终报告聚合与总结
 REPORT_LLM_MODEL=qwen-plus
 
-# Neo4j 数据库（使用 docker-compose 默认配置）
 NEO4J_URI=bolt://127.0.0.1:7687
 NEO4J_USER=neo4j
-NEO4J_PASSWORD=password
+NEO4J_PASSWORD=your_neo4j_password_here
 
-# 向量库路径
 CHROMA_PERSIST_DIR=./chroma_db_data
-
-# 报告推送地址（可选）
 TARGET_SERVER_URL=http://127.0.0.1:8000/api/interview/report
 INTERNAL_SECRET=your-secret-key
 ```
 
-### 4. 构建知识图谱
-
-将面试题库文件放入 `data_source/` 目录，然后运行：
+### 2. 同步 Python 3.12 环境
 
 ```bash
-python GraphRag_Builder.py
+uv python install 3.12
+uv sync --python 3.12
 ```
 
-### 5. 启动服务
+如果目录里已有旧的 `.venv`，`uv sync --python 3.12` 会把环境切到 Python 3.12。
+
+### 3. 准备 Neo4j
+
+确保一个可用的 Neo4j 实例，并让 `.env` 中的连接信息与之匹配。默认端口是 `7687`。
+
+### 4. 启动服务
 
 ```bash
-uv run uvicorn app.main:app --host 0.0.0.0 --port 8081
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8081 --reload
 ```
 
-访问 http://localhost:8000/docs 查看 API 文档
+访问 `http://localhost:8081/docs` 查看 API 文档。
+
+### 5. 运行测试
+
+```bash
+uv run python -m unittest discover -s tests
+```
+
+如需使用 `pytest`，可以执行：
+
+```bash
+uv run pytest
+```
 
 ## 使用说明
 
@@ -93,25 +87,28 @@ uv run uvicorn app.main:app --host 0.0.0.0 --port 8081
 
 ## 目录结构
 
-```
-├── app/                # FastAPI 应用
+```text
+├── app/               # FastAPI 应用
 │   ├── api/           # API 路由
 │   ├── core/          # 核心逻辑
+│   ├── db/            # Neo4j / Chroma 访问层
+│   ├── models/        # 请求与状态模型
 │   ├── services/      # 业务服务
 │   └── main.py        # 入口文件
-├── data_source/       # 面试题库数据
-├── neo4j_data/        # Neo4j 数据持久化
 ├── chroma_db_data/    # 向量库数据
-└── GraphRag_Builder.py # 知识图谱构建脚本
+├── data_source/       # 题库与数据源
+├── tests/             # 回归测试
+├── .python-version    # Python 版本固定到 3.12
+└── pyproject.toml     # uv 项目配置
 ```
 
 ## 常见问题
 
 **Q: Neo4j 连接失败？**
-A: 确保 Docker 容器已启动，检查端口 7687 是否被占用
+A: 确认 Neo4j 已启动，并检查 `.env` 中的 `NEO4J_URI`、账号和密码是否正确。
+
+**Q: 旧 `.venv` 还是 Python 3.10？**
+A: 在 `ai/` 目录重新执行 `uv sync --python 3.12`，让 uv 重新建立环境。
 
 **Q: API Key 无效？**
-A: 检查 `.env` 文件中的 `LLM_API_KEY` 是否正确填写
-
-**Q: 知识图谱为空？**
-A: 确保 `data_source/` 目录有数据文件，重新运行 `GraphRag_Builder.py`
+A: 检查 `.env` 文件中的 `LLM_API_KEY` 和 `LLM_BASE_URL` 是否正确。

@@ -1,4 +1,6 @@
 **/__pycache__
+.venv
+.pytest_cache
 chroma_db_data
 Embedding_model
 Score_model
