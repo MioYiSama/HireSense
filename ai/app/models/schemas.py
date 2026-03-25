@@ -82,11 +82,21 @@ class StopResponse(BaseModel):
 # ==========================================
 # 4. /api/interview/report
 # ==========================================
+class ScoreBreakdown(BaseModel):
+    coverage_score: float = 0.0
+    consistency_score: float = 0.0
+    completeness_score: float = 0.0
+
+
 class ReviewItem(BaseModel):
     interviewer: str = Field(description="面试官问题")
     interviewee: str = Field(description="用户回答")
     score: float = Field(description="CrossEncoder和NLI得出的最终评分")
     advice: str
+    concept: Optional[str] = Field(default=None, description="当前题目的考点")
+    reason_tags: List[str] = Field(
+        default_factory=list, description="支持该分数的机器标签"
+    )
 
 
 class ReportContent(BaseModel):
@@ -112,10 +122,18 @@ class ReportPushRequest(BaseModel):
 
 
 class InterviewRoundLog(BaseModel):
+    q_id: str = ""  # 当前题目的唯一标识
+    concept: str = ""  # 当前题目考察的核心概念
+    difficulty_label: str = "unknown"  # 当前题目的难度标签
     interviewer: str  # 考官提问
     interviewee: str  # 用户的回答
     sts_coverage: float  # CrossEncoder 算出的覆盖率
     nli_logic: str  # NLI 算出的逻辑状态 (Entailment/Contradiction/Neutral)
+    nli_probs: Dict[str, float] = Field(default_factory=dict)  # NLI 全量概率
+    score_breakdown: ScoreBreakdown = Field(default_factory=ScoreBreakdown)
+    missing_points: List[str] = Field(default_factory=list)  # 未覆盖的关键点
+    reason_tags: List[str] = Field(default_factory=list)  # 机器标签，用于解释分数
+    probe_count: int = 1  # 同一题被追问的轮数
     final_score: float  # 融合打分公式算出的本题最终得分
     async_advice: str = ""  # 【后台异步写入】LLM 对这一轮的评价
 
@@ -151,6 +169,7 @@ class AgentState(BaseModel):
     # 同问题追问控制区
     probe_num: int = 0
     MAX_probe_num: int = 3
+    current_question_difficulty: str = "unknown"
     current_concept_cumulative_answer: (
         str  # 用于对于多次追问时 答案的拼接 用来最终形成准确答案
     )

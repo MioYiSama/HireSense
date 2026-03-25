@@ -1,157 +1,188 @@
 import math
+import re
+from typing import Dict, List, Tuple
+
 import numpy as np
-from sentence_transformers import CrossEncoder
-from app.core.config import BGE_RERANKER, NLI
+
 
 class Evaluator:
     def __init__(self, sts_model, nli_model):
-        # 语义覆盖率打分模型
         self.sts_model = sts_model
-
-        # 逻辑诊断模型 (NLI)
         self.nli_model = nli_model
 
-    def _parse_nli_logits(self, logits: np.ndarray) -> dict:
-        """
-        处理 NLI 模型的原始输出 (Logits)，转化为概率分布
-        """
-        # Softmax 归一化 (减去最大值防止指数爆炸溢出)
+    def _parse_nli_logits(self, logits: np.ndarray) -> Dict[str, float]:
         exp_logits = np.exp(logits - np.max(logits))
         probs = exp_logits / np.sum(exp_logits)
-
-        # ：此处的 Index 映射必须严格对齐 MoritzLaurer/mDeBERTa 模型的 config.json
-        # 0: entailment (蕴含/一致), 1: neutral (中立/无关), 2: contradiction (矛盾/对立)
         return {
             "Entailment": float(probs[0]),
             "Neutral": float(probs[1]),
-            "Contradiction": float(probs[2])
+            "Contradiction": float(probs[2]),
         }
 
-    def evaluate_mastery(self, user_answer: str, standard_answer: str) -> dict:
-        """
-        综合评估候选人的知识掌握度
-        """
-        # 防御性编程：处理用户沉默或极短回答
+    @staticmethod
+    def _empty_result() -> Dict[str, object]:
+        return {
+            "mastery_score": 0.0,
+            "coverage_raw": 0.0,
+            "coverage_score": 0.0,
+            "consistency_score": 0.0,
+            "completeness_score": 0.0,
+            "logic_status": "Neutral",
+            "nli_probs": {"Entailment": 0.0, "Neutral": 1.0, "Contradiction": 0.0},
+            "missing_points": [],
+            "reason_tags": ["回答过短"],
+        }
+
+    @staticmethod
+    def _extract_keypoints(text: str) -> List[str]:
+        parts = re.split(r"[，。；;、\n]+", text or "")
+        keypoints: List[str] = []
+        for part in parts:
+            normalized = part.strip()
+            if len(normalized) < 4:
+                continue
+            if normalized not in keypoints:
+                keypoints.append(normalized)
+        return keypoints[:6]
+
+    @staticmethod
+    def _extract_tokens(text: str) -> List[str]:
+        raw_tokens = re.findall(r"[A-Za-z0-9_+#./-]+|[\u4e00-\u9fff]+", text or "")
+        tokens: List[str] = []
+        for token in raw_tokens:
+            normalized = token.strip().lower()
+            if len(normalized) < 2:
+                continue
+            tokens.append(normalized)
+        return tokens
+
+    def _compute_completeness(
+        self, user_answer: str, standard_answer: str, coverage_ratio: float
+    ) -> Tuple[float, List[str], float]:
+        keypoints = self._extract_keypoints(standard_answer)
+        if not keypoints:
+            return min(1.0, max(0.25, coverage_ratio)), [], 1.0
+
+        user_text = (user_answer or "").lower()
+        hit_count = 0
+        missing_points: List[str] = []
+
+        for point in keypoints:
+            point_tokens = self._extract_tokens(point)
+            if not point_tokens:
+                continue
+
+            matched = sum(1 for token in point_tokens if token in user_text)
+            ratio = matched / len(point_tokens)
+            if point.lower() in user_text or ratio >= 0.4:
+                hit_count += 1
+            else:
+                missing_points.append(point)
+
+        keypoint_ratio = hit_count / len(keypoints)
+        normalized_len = min(len((user_answer or "").strip()) / 120, 1.0)
+        completeness = min(1.0, 0.65 * keypoint_ratio + 0.25 * coverage_ratio + 0.10 * normalized_len)
+        return completeness, missing_points[:4], keypoint_ratio
+
+    @staticmethod
+    def _build_reason_tags(
+        coverage_score: float,
+        consistency_score: float,
+        completeness_score: float,
+        logic_status: str,
+        missing_points: List[str],
+    ) -> List[str]:
+        tags: List[str] = []
+
+        if coverage_score >= 75:
+            tags.append("核心方向基本对齐")
+        elif coverage_score < 40:
+            tags.append("与标答覆盖偏低")
+
+        if logic_status == "Contradiction" or consistency_score < 45:
+            tags.append("存在逻辑冲突")
+        elif logic_status == "Neutral":
+            tags.append("回答偏概念化")
+        else:
+            tags.append("逻辑基本自洽")
+
+        if completeness_score >= 75:
+            tags.append("回答较完整")
+        elif missing_points:
+            tags.append("关键点覆盖不足")
+        else:
+            tags.append("细节深度不足")
+
+        return tags
+
+    def evaluate_mastery(self, user_answer: str, standard_answer: str) -> Dict[str, object]:
         if not user_answer or len(user_answer.strip()) < 2:
-            return {
-                "mastery_score": 0.0,
-                "coverage_raw": 0.0,
-                "logic_status": "Neutral",
-                "nli_probs": {"Entailment": 0.0, "Neutral": 1.0, "Contradiction": 0.0}
-            }
+            return self._empty_result()
 
-        # --------------------------------------------------
-        # Step 1: 测算知识点覆盖率 (STS)
-        # --------------------------------------------------
         sts_logits = self.sts_model.predict([[standard_answer, user_answer]])[0]
-        # BGE 模型的输出是未归一化的 logit，使用 Sigmoid 映射到 0.0 ~ 1.0
-        coverage = 1 / (1 + math.exp(-sts_logits))
+        coverage_ratio = 1 / (1 + math.exp(-sts_logits))
+        coverage_score = round(coverage_ratio * 100, 2)
 
-        # --------------------------------------------------
-        # Step 2: 逻辑诊断 (NLI)
-        # --------------------------------------------------
         nli_logits = self.nli_model.predict([[user_answer, standard_answer]])[0]
         nli_probs = self._parse_nli_logits(nli_logits)
-
-        Pe = nli_probs["Entailment"]
-        Pn = nli_probs["Neutral"]
-        Pc = nli_probs["Contradiction"]
-
-        # 提取占据主导地位的逻辑状态
         logic_status = max(nli_probs, key=nli_probs.get)
 
-        # --------------------------------------------------
-        # Step 3: 融合计算真实掌握度 (True Mastery Score)
-        # --------------------------------------------------
-        # 【融合公式设计原则】：
-        # 1. 逻辑一致 (Pe)：完美继承覆盖率
-        # 2. 逻辑中立/废话 (Pn)：对覆盖率打折 (0.8)，防止瞎猫碰死耗子
-        # 3. 逻辑矛盾 (Pc)：实施断崖式惩罚 (扣除 1.5 倍权重)
-        logic_multiplier = (Pe * 1.0) + (Pn * 0.8) - (Pc * 1.5)
+        consistency_ratio = (
+            nli_probs["Entailment"] * 1.0
+            + nli_probs["Neutral"] * 0.7
+            + nli_probs["Contradiction"] * 0.25
+        )
+        consistency_score = round(consistency_ratio * 100, 2)
 
-        # 计算基础得分并裁剪到 0~1 范围
-        m_score = coverage * logic_multiplier
-        m_score = max(0.0, min(1.0, m_score))
+        completeness_ratio, missing_points, keypoint_ratio = self._compute_completeness(
+            user_answer=user_answer,
+            standard_answer=standard_answer,
+            coverage_ratio=coverage_ratio,
+        )
+        completeness_score = round(completeness_ratio * 100, 2)
+
+        mastery_ratio = (
+            coverage_ratio * 0.5
+            + consistency_ratio * 0.3
+            + completeness_ratio * 0.2
+        )
+        mastery_score = round(max(0.0, min(1.0, mastery_ratio)) * 100, 2)
+
+        if logic_status == "Contradiction" and mastery_score > 55:
+            mastery_score = 55.0
+
+        if coverage_score < 25 and keypoint_ratio == 0:
+            missing_points = self._extract_keypoints(standard_answer)[:4]
+
+        reason_tags = self._build_reason_tags(
+            coverage_score=coverage_score,
+            consistency_score=consistency_score,
+            completeness_score=completeness_score,
+            logic_status=logic_status,
+            missing_points=missing_points,
+        )
 
         return {
-            "mastery_score": round(m_score * 100, 2),  # 综合掌握度 (0~100)
-            "coverage_raw": round(coverage * 100, 2),  # 原始覆盖率 (0~100)
-            "logic_status": logic_status,  # 主导逻辑状态
-            "nli_probs": nli_probs  # 全量概率分布，供外层精细控制
+            "mastery_score": mastery_score,
+            "coverage_raw": coverage_score,
+            "coverage_score": coverage_score,
+            "consistency_score": consistency_score,
+            "completeness_score": completeness_score,
+            "logic_status": logic_status,
+            "nli_probs": nli_probs,
+            "missing_points": missing_points,
+            "reason_tags": reason_tags,
         }
-
-
-from typing import Tuple
 
 
 class PruningStrategy:
-    """
-    图谱剪枝配额策略引擎
-    职责：根据底层诊断的掌握度 (m_score) 和逻辑状态 (l_status)，
-    动态分配下一次图谱查询中 [深挖(Forward), 平移(Sibling), 降级(Backward)] 的节点名额限制。
-    """
-
     @staticmethod
     def calculate_quota(mastery_score: float, logic_status: str) -> Tuple[int, int, int]:
-        """
-        返回格式: (limit_fwd, limit_sib, limit_bwd)
-        """
-        # ==========================================
-        # 优先级 1：一票否决（逻辑刺客 / 严重反常识）
-        # ==========================================
         if logic_status == "Contradiction":
-            # 表现：不仅不会，还在胡编乱造。
-            # 策略：绝对禁止深挖 (0)，给一个平移机会试探 (1)，重点给出降级回溯节点 (3)
             return 0, 1, 3
 
-        # ==========================================
-        # 优先级 2：分数硬切分（根据真实掌握度）
-        # ==========================================
         if mastery_score >= 80:
-            # 碾压局 (学霸模式)
-            # 表现：核心词汇全中，逻辑顺畅。
-            # 策略：重点给进阶深挖题 (3)，少量平移侧写 (1)，绝对不给降级基础题 (0)
             return 3, 1, 0
-
-        elif mastery_score < 40:
-            # 崩溃局 (逃兵/基础极差)
-            # 表现：没踩中任何得分点。
-            # 策略：停止深挖 (0)，给平移台阶 (1)，重点降级回溯 (3)
+        if mastery_score < 35:
             return 0, 1, 3
-
-        else:
-            # 僵持局 (半懂不懂 / 挤牙膏区)
-            # 表现：40 ~ 79 分。说对了一部分，或者说了一堆正确的废话。
-            # 策略：各给一点选择。重点放在平移侧探 (2)，轻微保留深挖 (1) 和降级 (1) 的可能性。
-            # 此时大模型 (LLM) 拿到的菜单最丰富，它将结合对话历史自主决定该上还是该下。
-            return 1, 2, 1
-
-
-
-if __name__ == "__main__":
-    # 测试时可以设为 cpu，有 NVIDIA 显卡请改为 cuda 以获得极致速度
-    evaluator = Evaluator(device="cpu")
-
-    std_ans = "HashMap 是线程不安全的。在多线程环境下，建议使用 ConcurrentHashMap 来保证线程安全。"
-
-    # 模拟场景 1：学霸 (完美命中)
-    ans_1 = "HashMap 不能在多线程里用，不安全，得换成 ConcurrentHashMap。"
-
-    # 模拟场景 2：废话流 (覆盖率低)
-    ans_2 = "HashMap 底层是数组和链表，我平时经常用它来存键值对。"
-
-    # 模拟场景 3：逻辑刺客 (因果倒置，命中关键词但逻辑全错)
-    ans_3 = "HashMap 绝对是线程安全的，它里面加了锁，多线程随便用。"
-
-    print("--- 测试场景 1 (学霸) ---")
-    print(evaluator.evaluate_mastery(ans_1, std_ans))
-
-    print("\n--- 测试场景 2 (废话/没答到点子上) ---")
-    print(evaluator.evaluate_mastery(ans_2, std_ans))
-
-    print("\n--- 测试场景 3 (逻辑刺客) ---")
-    print(evaluator.evaluate_mastery(ans_3, std_ans))
-
-    user_ans = "A一定要B"
-    stand_ans = "A不一定要B"
-    print(evaluator.evaluate_mastery(stand_ans,user_ans))
+        return 1, 2, 1

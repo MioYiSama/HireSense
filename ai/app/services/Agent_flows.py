@@ -1,6 +1,6 @@
 import asyncio
 from dataclasses import dataclass
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 from app.models.schemas import AgentState, IntentResult, InterviewRoundLog, StartRequest, ParsedResume
 from app.core.history_manager import HistoryManager
 from app.db import chroma_client, neo4j_client
@@ -17,6 +17,13 @@ class TurnReply:
 
 
 class AgentFlow:
+    MIN_COMPLETED_ROUNDS_BEFORE_END = 3
+    LOW_SCORE_THRESHOLD = 40.0
+    LOW_RECENT_SCORE_THRESHOLD = 45.0
+    LOW_AVG_SCORE_THRESHOLD = 50.0
+    HIGH_SCORE_THRESHOLD = 85.0
+    HIGH_AVG_SCORE_THRESHOLD = 80.0
+
     def __init__(self,
                  intent_router_: intent_router.IntentGateway,
                  evaluator_: evaluator.Evaluator,
@@ -44,8 +51,78 @@ class AgentFlow:
         task.add_done_callback(self._background_tasks.discard)
 
     @staticmethod
+    def _iter_menu_items(question_menu) -> List[dict]:
+        if isinstance(question_menu, dict):
+            items: List[dict] = []
+            for value in question_menu.values():
+                if isinstance(value, list):
+                    items.extend(item for item in value if isinstance(item, dict))
+            return items
+        if isinstance(question_menu, list):
+            return [item for item in question_menu if isinstance(item, dict)]
+        return []
+
+    @staticmethod
+    def _map_bucket_to_difficulty(bucket_name: Optional[str]) -> str:
+        normalized = (bucket_name or "").strip()
+        if "问题深入" in normalized:
+            return "advanced"
+        if "问题降级" in normalized:
+            return "basic"
+        if "问题平移" in normalized or "扩展" in normalized or "跳跃" in normalized:
+            return "intermediate"
+        return "intermediate" if normalized else "unknown"
+
+    def _infer_question_difficulty(
+        self,
+        question_menu,
+        q_id: Optional[str],
+        concept: Optional[str],
+    ) -> str:
+        target_q_id = str(q_id or "").strip()
+        target_concept = str(concept or "").strip()
+
+        if isinstance(question_menu, dict):
+            for bucket_name, items in question_menu.items():
+                for item in self._iter_menu_items(items):
+                    concept_name = str(item.get("concept") or "").strip()
+                    if target_concept and concept_name and target_concept != concept_name:
+                        continue
+
+                    question_info = item.get("question_info") or []
+                    if not isinstance(question_info, list):
+                        continue
+
+                    for question in question_info:
+                        if not isinstance(question, dict):
+                            continue
+                        current_q_id = str(question.get("q_id") or "").strip()
+                        if target_q_id and current_q_id == target_q_id:
+                            return self._map_bucket_to_difficulty(bucket_name)
+            return "unknown"
+
+        if isinstance(question_menu, list):
+            for item in self._iter_menu_items(question_menu):
+                concept_name = str(item.get("concept") or "").strip()
+                if target_concept and concept_name and target_concept != concept_name:
+                    continue
+
+                question_info = item.get("question_info") or []
+                if not isinstance(question_info, list):
+                    continue
+
+                for question in question_info:
+                    if not isinstance(question, dict):
+                        continue
+                    current_q_id = str(question.get("q_id") or "").strip()
+                    if target_q_id and current_q_id == target_q_id:
+                        return "intermediate"
+
+        return "unknown"
+
+    @staticmethod
     def _pick_initial_question(question_menu: list) -> Tuple[str, str, str]:
-        for item in question_menu:
+        for item in AgentFlow._iter_menu_items(question_menu):
             if not isinstance(item, dict):
                 continue
 
@@ -67,6 +144,129 @@ class AgentFlow:
                     return concept, q_id, brief
 
         raise ValueError("No valid opening question available")
+
+    def _build_prospective_rounds(
+        self,
+        state: AgentState,
+        include_current_answer: bool,
+        score_res: Optional[Dict[str, object]],
+    ) -> List[Dict[str, object]]:
+        rounds = [
+            {
+                "score": float(log.final_score),
+                "difficulty": str(log.difficulty_label or "unknown"),
+            }
+            for log in state.interview_logs
+        ]
+
+        if include_current_answer and state.current_concept_cumulative_answer.strip() and score_res:
+            rounds.append(
+                {
+                    "score": float(score_res.get("mastery_score", 0.0)),
+                    "difficulty": str(state.current_question_difficulty or "unknown"),
+                }
+            )
+
+        return rounds
+
+    def _qualifies_for_poor_end(self, rounds: List[Dict[str, object]]) -> bool:
+        if len(rounds) < self.MIN_COMPLETED_ROUNDS_BEFORE_END:
+            return False
+
+        scores = [float(item["score"]) for item in rounds]
+        recent_scores = scores[-2:]
+        low_score_count = sum(score <= self.LOW_SCORE_THRESHOLD for score in scores)
+        average_score = sum(scores) / len(scores)
+        return (
+            low_score_count >= 2
+            and len(recent_scores) == 2
+            and all(score <= self.LOW_RECENT_SCORE_THRESHOLD for score in recent_scores)
+            and average_score <= self.LOW_AVG_SCORE_THRESHOLD
+        )
+
+    def _qualifies_for_strong_end(self, rounds: List[Dict[str, object]]) -> bool:
+        if len(rounds) < self.MIN_COMPLETED_ROUNDS_BEFORE_END:
+            return False
+
+        scores = [float(item["score"]) for item in rounds]
+        average_score = sum(scores) / len(scores)
+        has_advanced_high_score = any(
+            str(item.get("difficulty") or "") == "advanced"
+            and float(item.get("score") or 0.0) >= self.HIGH_SCORE_THRESHOLD
+            for item in rounds
+        )
+        no_clear_collapse = all(score >= 60.0 for score in scores[-2:])
+        return (
+            has_advanced_high_score
+            and average_score >= self.HIGH_AVG_SCORE_THRESHOLD
+            and scores[-1] >= self.HIGH_SCORE_THRESHOLD
+            and no_clear_collapse
+        )
+
+    def _allow_end(
+        self,
+        state: AgentState,
+        include_current_answer: bool,
+        score_res: Optional[Dict[str, object]] = None,
+    ) -> bool:
+        rounds = self._build_prospective_rounds(
+            state=state,
+            include_current_answer=include_current_answer,
+            score_res=score_res,
+        )
+        return self._qualifies_for_poor_end(rounds) or self._qualifies_for_strong_end(rounds)
+
+    def _build_forced_transition_reply(
+        self,
+        current_topic: Optional[str],
+        next_concept: str,
+        next_question_brief: str,
+    ) -> str:
+        question = self._format_opening_question(next_question_brief)
+        if current_topic and current_topic != next_concept:
+            return f"这个点我先记下，我们继续扩大样本，接下来换到{next_concept}。{question}"
+        return f"这个点先到这，我换个角度继续考察。{question}"
+
+    def _build_forced_probe_reply(self, score_res: Dict[str, object]) -> str:
+        missing_points = [str(item).strip() for item in score_res.get("missing_points", []) if str(item).strip()]
+        if missing_points:
+            return f"先别急着结束，我再追问一个关键点：你补充一下{missing_points[0]}这部分。"
+        if float(score_res.get("mastery_score", 0.0)) >= 70:
+            return "先别急着结束，我再追问一个细节：把刚才的实现取舍和边界条件展开一下。"
+        return "先别急着结束，我再换个角度追问一下，把核心原理、实现细节和边界条件补充完整。"
+
+    def _stabilize_early_end(
+        self,
+        state: AgentState,
+        res: TacticalDecision,
+        question_menu,
+        score_res: Optional[Dict[str, object]],
+        include_current_answer: bool,
+    ) -> TacticalDecision:
+        if res.action != "END" or self._allow_end(state, include_current_answer, score_res):
+            return res
+
+        try:
+            next_concept, next_q_id, next_brief = self._pick_initial_question(question_menu)
+            return TacticalDecision(
+                reasoning=f"{res.reasoning} | 系统兜底：当前有效题数不足，禁止结束，改为继续采样。",
+                action="TRANSITION",
+                selected_node=next_concept,
+                reply_speech=self._build_forced_transition_reply(
+                    current_topic=state.current_concept,
+                    next_concept=next_concept,
+                    next_question_brief=next_brief,
+                ),
+                q_id_and_brief=[next_q_id, next_brief],
+            )
+        except Exception:
+            return TacticalDecision(
+                reasoning=f"{res.reasoning} | 系统兜底：当前有效题数不足，且暂无可靠新题，改为追问。",
+                action="PROBE",
+                selected_node=None,
+                reply_speech=self._build_forced_probe_reply(score_res or {}),
+                q_id_and_brief=None,
+            )
 
     @staticmethod
     def _format_opening_question(question_brief: str) -> str:
@@ -104,17 +304,84 @@ class AgentFlow:
             print(f"[Start Warmup Error] Session {state.session_id}: {e}")
 
     async def _async_generate_and_save_advice(self, state: AgentState, round_index: int, question: str,
-                                              user_answer: str, std_answer: str, score: float):
+                                              user_answer: str, std_answer: str, score: float,
+                                              score_breakdown: Dict[str, float],
+                                              missing_points: List[str], logic_status: str,
+                                              reason_tags: List[str]):
         try:
-            advice = await self.llm_gen.gen_single_advice(question, user_answer, std_answer, score)
+            advice = await self.llm_gen.gen_single_advice(
+                question=question,
+                user_ans=user_answer,
+                std_ans=std_answer,
+                score=score,
+                score_breakdown=score_breakdown,
+                missing_points=missing_points,
+                logic_status=logic_status,
+                reason_tags=reason_tags,
+            )
             state.interview_logs[round_index].async_advice = advice
         except Exception as e:
             print(f"[Async Advice Error] 第 {round_index} 题点评生成失败: {e}")
             state.interview_logs[round_index].async_advice = "暂无点评"
 
+    def _finalize_question_log(
+        self,
+        state: AgentState,
+        q_id: str,
+        question_brief: str,
+        std_answer: str,
+        score_res: Dict[str, object],
+    ) -> Optional[int]:
+        cumulative_answer = state.current_concept_cumulative_answer.strip()
+        if not cumulative_answer:
+            return None
+
+        round_log = InterviewRoundLog(
+            q_id=q_id,
+            concept=state.current_concept or "",
+            difficulty_label=state.current_question_difficulty or "unknown",
+            interviewer=question_brief,
+            interviewee=cumulative_answer,
+            sts_coverage=float(score_res.get("coverage_raw", 0.0)),
+            nli_logic=str(score_res.get("logic_status", "Neutral")),
+            nli_probs=dict(score_res.get("nli_probs", {})),
+            score_breakdown={
+                "coverage_score": float(score_res.get("coverage_score", 0.0)),
+                "consistency_score": float(score_res.get("consistency_score", 0.0)),
+                "completeness_score": float(score_res.get("completeness_score", 0.0)),
+            },
+            missing_points=list(score_res.get("missing_points", [])),
+            reason_tags=list(score_res.get("reason_tags", [])),
+            probe_count=state.probe_num + 1,
+            final_score=float(score_res.get("mastery_score", 0.0)),
+            async_advice="",
+        )
+        state.interview_logs.append(round_log)
+        round_index = len(state.interview_logs) - 1
+
+        task = asyncio.create_task(
+            self._async_generate_and_save_advice(
+                state=state,
+                round_index=round_index,
+                question=question_brief,
+                user_answer=cumulative_answer,
+                std_answer=std_answer,
+                score=float(score_res.get("mastery_score", 0.0)),
+                score_breakdown={
+                    "coverage_score": float(score_res.get("coverage_score", 0.0)),
+                    "consistency_score": float(score_res.get("consistency_score", 0.0)),
+                    "completeness_score": float(score_res.get("completeness_score", 0.0)),
+                },
+                missing_points=list(score_res.get("missing_points", [])),
+                logic_status=str(score_res.get("logic_status", "Neutral")),
+                reason_tags=list(score_res.get("reason_tags", [])),
+            )
+        )
+        self._track_background_task(task)
+        return round_index
+
     async def process_turn(self, state: AgentState, user_text: str) -> TurnReply:
         # 1. 记忆更新与切片
-        interviewer = state.chat_history[-1].content
         self.history_manager.add_messages(state=state, content=user_text, role="interviewee",
                                           concept=state.current_concept)
         self.history_manager.add_track_memory(state=state)
@@ -178,7 +445,15 @@ class AgentFlow:
                 history=state.recent_messages,
                 candidate_fact_sheet=state.candidate_fact_sheet,
                 resume_star=state.resume_star,
-                max_turn=state.MAX_probe_num
+                max_turn=state.MAX_probe_num,
+                allow_end=self._allow_end(state, include_current_answer=False, score_res=None),
+            )
+            res = self._stabilize_early_end(
+                state=state,
+                res=res,
+                question_menu=question_menu,
+                score_res=None,
+                include_current_answer=False,
             )
 
             if res.action == "END":
@@ -188,7 +463,7 @@ class AgentFlow:
                 return TurnReply(reply_speech=res.reply_speech, ending=True)
 
             if res.action == "TRANSITION":
-                self._execute_transition(state, res)
+                self._execute_transition(state, res, question_menu)
             else:
                 self.history_manager.add_messages(state=state, content=res.reply_speech, role="interviewer",
                                                   concept=state.current_concept)
@@ -219,22 +494,7 @@ class AgentFlow:
 
             m_score, l_status, c_score = score_res["mastery_score"], score_res["logic_status"], score_res["coverage_raw"]
 
-            # 3. 记录日志，供最终出表用
-            round_log = InterviewRoundLog(
-                interviewer=interviewer, interviewee=user_text,
-                sts_coverage=c_score, nli_logic=l_status, final_score=m_score, async_advice=""
-            )
-            state.interview_logs.append(round_log)
-            current_round_index = len(state.interview_logs) - 1
-
-            # 4. 【核心修复】：真正的非阻塞后台任务触发
-            task = asyncio.create_task(
-                self._async_generate_and_save_advice(state, current_round_index, state.current_concept, user_text,
-                                                     std_ans, m_score)
-            )
-            self._track_background_task(task)
-
-            # 5. 图谱菜单剪枝 (结合真实分数)
+            # 3. 图谱菜单剪枝 (结合真实分数)
             limit_fwd, limit_sib, limit_bwd = self.strategy.calculate_quota(m_score, l_status)
             menu = await self.neo4j_client.get_action_space_candidates(
                 current_concept=state.current_concept, visited=state.visited_concept,
@@ -250,7 +510,7 @@ class AgentFlow:
             if menu_extend and isinstance(menu_extend, list):
                 menu["用户发散扩展"] = menu_extend
 
-            # 6. LLM 中枢决断 (传入真实的 m_score)
+            # 4. LLM 中枢决断 (传入真实的 m_score)
             res: TacticalDecision = await self.llm_gen.decide_tactics_and_generate(
                 current_topic=state.current_concept,
                 question_brief=question_brief,
@@ -263,18 +523,40 @@ class AgentFlow:
                 history=state.recent_messages,
                 candidate_fact_sheet=state.candidate_fact_sheet,
                 resume_star=state.resume_star,
-                max_turn=state.MAX_probe_num
+                max_turn=state.MAX_probe_num,
+                allow_end=self._allow_end(state, include_current_answer=True, score_res=score_res),
+            )
+            res = self._stabilize_early_end(
+                state=state,
+                res=res,
+                question_menu=menu,
+                score_res=score_res,
+                include_current_answer=True,
             )
 
-            # 7. 状态机推进
+            # 5. 状态机推进
             if res.action == "END":
+                self._finalize_question_log(
+                    state=state,
+                    q_id=q_id,
+                    question_brief=question_brief,
+                    std_answer=std_ans,
+                    score_res=score_res,
+                )
                 state.is_finished = True
                 self.history_manager.add_messages(state=state, content=res.reply_speech, role="interviewer",
                                                   concept=state.current_concept)
                 return TurnReply(reply_speech=res.reply_speech, ending=True)
 
             if res.action == "TRANSITION":
-                self._execute_transition(state, res)
+                self._finalize_question_log(
+                    state=state,
+                    q_id=q_id,
+                    question_brief=question_brief,
+                    std_answer=std_ans,
+                    score_res=score_res,
+                )
+                self._execute_transition(state, res, menu)
             elif res.action == "PROBE":
                 state.probe_num += 1
                 self.history_manager.add_messages(state=state, content=res.reply_speech, role="interviewer",
@@ -285,12 +567,18 @@ class AgentFlow:
     # ==========================================
     # 辅助私有方法
     # ==========================================
-    def _execute_transition(self, state: AgentState, res: TacticalDecision):
+    def _execute_transition(self, state: AgentState, res: TacticalDecision, question_menu=None):
         """统一封装状态跳转逻辑，保持主流程整洁"""
         if res.selected_node:
+            inferred_difficulty = self._infer_question_difficulty(
+                question_menu=question_menu,
+                q_id=(res.q_id_and_brief[0] if res.q_id_and_brief else None),
+                concept=res.selected_node,
+            )
             state.current_concept = res.selected_node
             state.visited_concept.append(res.selected_node)
             state.probe_num = 0
+            state.current_question_difficulty = inferred_difficulty
             state.current_concept_cumulative_answer = ""  # 清空上题的累积回答
 
         if res.q_id_and_brief:
@@ -341,6 +629,7 @@ class AgentFlow:
             chat_history=[],
             interview_logs=[],
             candidate_fact_sheet=[],
+            current_question_difficulty="basic",
             current_concept_cumulative_answer="",
             recent_messages=""
         )

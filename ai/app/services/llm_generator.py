@@ -234,7 +234,8 @@ class LLMGenerator:
                                           menu: list,
                                           history: str,
                                           candidate_fact_sheet: List[str],
-                                          resume_star: str
+                                          resume_star: str,
+                                          allow_end: bool = True,
                                           ) -> TacticalDecision:
             final_menu = self._formatted_menu(menu)
 
@@ -242,6 +243,14 @@ class LLMGenerator:
                 ("system", """你是拥有绝对控制权的技术面试官。当前正在考察【{current_topic}】题目为【{question_brief}】。
                 候选人已在该题拉扯了 {current_turn}/{max_turn} 轮。底层评估掌握度为 {mastery_score}/100分。
                 候选人累计已完成 {completed_rounds} 轮有效问答。
+                当前系统是否允许结束整场面试：{allow_end}。
+
+                【系统硬约束】
+                - 如果 allow_end 为 false，你绝对不能选择 END，只能在 PROBE 和 TRANSITION 里二选一。
+                - 如果 allow_end 为 true，也只有两种情况可以 END：
+                  1. 候选人已经连续多轮表现较差，继续追问价值很低；
+                  2. 候选人已经在高难度问题上回答得很好，评估信息已经充分。
+                - 除了这两种情况，不要 END；在样本不足或结论不稳时，优先继续采样。
 
                 【你的双重任务】：
                 结合【对话历史】和候选人的【累计回答】【简历信息】，决定是继续追问、更换题目，还是结束整场面试。
@@ -291,6 +300,7 @@ class LLMGenerator:
                     "history": history,
                     "candidate_fact_sheet": candidate_fact_sheet,
                     "cumulative_answer": cumulative_answer,
+                    "allow_end": allow_end,
                 },
                 model_class=TacticalDecision,
                 llm=self.llm,
@@ -334,7 +344,17 @@ class LLMGenerator:
 
             return res
 
-    async def gen_single_advice(self, question: str, user_ans: str, std_ans: str, score: float):
+    async def gen_single_advice(
+        self,
+        question: str,
+        user_ans: str,
+        std_ans: str,
+        score: float,
+        score_breakdown: Optional[Dict[str, float]] = None,
+        missing_points: Optional[List[str]] = None,
+        logic_status: str = "",
+        reason_tags: Optional[List[str]] = None,
+    ):
         prompt_template = ChatPromptTemplate.from_messages([
             ("system", """
       你是一个技术评价建议师，以下是一个面试片段的问答
@@ -342,12 +362,20 @@ class LLMGenerator:
       【标答】: {std_answer}
       【用户回答】: {user_answer}
       【机器打分】: {score}/100
+      【分项得分】: {score_breakdown}
+      【逻辑状态】: {logic_status}
+      【原因标签】: {reason_tags}
+      【缺失点】: {missing_points}
 
       【输出格式要求】
       必须输出 JSON 格式，包含以下字段：
       1. advice: 你的评价建议（字符串，必需）
 
-      请用第三人称客观评价该回答。如果对齐标答，肯定其方向；如果得分低，指出其缺失的极端退化情况、边界条件或底层原理。
+      请把 advice 写成对机器分数的解释，而不是重新发明另一套评分。
+      如果 score >= 70，必须明确肯定回答方向或核心点；
+      如果 40 <= score < 70，必须明确指出“答到了哪些、还缺哪些”；
+      如果 score < 40，必须明确说明回答偏离、冲突或关键点缺失；
+      绝对不要出现与分数相反的措辞，例如低分却说“回答正确”。
       严格控制在一句话，不超过 50 个字。不要有废话。"""
              )
         ])
@@ -359,6 +387,10 @@ class LLMGenerator:
                 "std_answer": std_ans,
                 "user_answer": user_ans,
                 "score": score,
+                "score_breakdown": json.dumps(score_breakdown or {}, ensure_ascii=False),
+                "logic_status": logic_status or "Unknown",
+                "reason_tags": json.dumps(reason_tags or [], ensure_ascii=False),
+                "missing_points": json.dumps(missing_points or [], ensure_ascii=False),
             },
             model_class=SingleAdvice,
             llm=self.fast_llm,
