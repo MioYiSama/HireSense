@@ -12,4 +12,7 @@ export default defineConfig({
       polyfill: false,
     },
   },
+  server: {
+    allowedHosts: ["hiresense.mioyi.net"],
+  },
 });

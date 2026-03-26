@@ -1,3 +1,7 @@
+import { useQuery } from "@tanstack/vue-query";
+import { isAxiosError } from "axios";
+import { computed, toValue, type MaybeRefOrGetter } from "vue";
+
 import type {
   Interview,
   InterviewReplyRequest,
@@ -6,13 +10,11 @@ import type {
   InterviewStartResponseData,
   InterviewStopRequest,
   Profile,
+  ResumeAnalysis,
   SignInRequest,
   SignUpRequest,
 } from "@/api";
 import { AuthenticationApi, Configuration, InterviewApi, UserApi } from "@/api";
-import { useQuery } from "@tanstack/vue-query";
-import { isAxiosError } from "axios";
-import { computed, toValue, type MaybeRefOrGetter } from "vue";
 import { clearAll, getAccessToken, getUserInfo, setUserInfo } from "@/utils/token";
 
 type ApiEnvelope<T> = {
@@ -36,6 +38,7 @@ export const interviewApi = new InterviewApi(configuration);
 
 export const queryKeys = {
   profile: () => ["user", "profile"] as const,
+  resumeAnalysis: () => ["user", "resume-analysis"] as const,
   interviews: () => ["user", "interviews"] as const,
 };
 
@@ -117,6 +120,13 @@ export const fetchInterviews = async () => {
   });
 };
 
+export const fetchResumeAnalysis = async () => {
+  return withAuthenticatedRequest(async () => {
+    const response = unwrapResponse(await userApi.apiUserResumeAnalysisGet());
+    return response.analysis ?? null;
+  });
+};
+
 export const signIn = async (request: SignInRequest) => {
   return unwrapResponse(await authApi.apiAuthSigninPost(request));
 };
@@ -138,9 +148,17 @@ export const updateProfile = async (profile: Profile) => {
   });
 };
 
+export const generateResumeAnalysis = async () => {
+  return withAuthenticatedRequest(async () => {
+    return unwrapResponse<ResumeAnalysis>(await userApi.apiUserResumeAnalysisPost());
+  });
+};
+
 export const startInterview = async (request?: InterviewStartRequest) => {
   return withAuthenticatedRequest(async () => {
-    return unwrapResponse<InterviewStartResponseData>(await interviewApi.apiInterviewStartPost(request));
+    return unwrapResponse<InterviewStartResponseData>(
+      await interviewApi.apiInterviewStartPost(request),
+    );
   });
 };
 
@@ -178,6 +196,11 @@ export const getInterviewsQueryOptions = () => ({
   queryFn: fetchInterviews,
 });
 
+export const getResumeAnalysisQueryOptions = () => ({
+  queryKey: queryKeys.resumeAnalysis(),
+  queryFn: fetchResumeAnalysis,
+});
+
 export function useProfileQuery(options?: { enabled?: MaybeRefOrGetter<boolean> }) {
   return useQuery({
     ...getProfileQueryOptions(),
@@ -196,8 +219,17 @@ export function useInterviewsQuery(options?: { enabled?: MaybeRefOrGetter<boolea
   });
 }
 
+export function useResumeAnalysisQuery(options?: { enabled?: MaybeRefOrGetter<boolean> }) {
+  return useQuery({
+    ...getResumeAnalysisQueryOptions(),
+    enabled: computed(() => {
+      return Boolean(getAccessToken()) && Boolean(toValue(options?.enabled ?? true));
+    }),
+  });
+}
+
 export function useInterviews() {
   return useInterviewsQuery();
 }
 
-export type { Interview };
+export type { Interview, ResumeAnalysis };

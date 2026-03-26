@@ -52,10 +52,7 @@ export interface Interview {
      * 场次唯一 ID
      */
     'id': string;
-    /**
-     * 面试模式
-     */
-    'mode': InterviewModeEnum;
+    'mode': InterviewMode;
     /**
      * 当前面试所处的流程状态
      */
@@ -77,28 +74,17 @@ export const InterviewStatusEnum = {
 
 export type InterviewStatusEnum = typeof InterviewStatusEnum[keyof typeof InterviewStatusEnum];
 
-export const InterviewModeEnum = {
+/**
+ * 面试模式
+ */
+
+export const InterviewMode = {
     Single: 'single',
     PanelTrio: 'panel_trio'
 } as const;
 
-export type InterviewModeEnum = typeof InterviewModeEnum[keyof typeof InterviewModeEnum];
+export type InterviewMode = typeof InterviewMode[keyof typeof InterviewMode];
 
-export const InterviewSpeakerRoleEnum = {
-    Ai: 'ai',
-    Hr: 'hr',
-    TechLead: 'tech_lead',
-    Executive: 'executive'
-} as const;
-
-export type InterviewSpeakerRoleEnum = typeof InterviewSpeakerRoleEnum[keyof typeof InterviewSpeakerRoleEnum];
-
-export interface InterviewStartRequest {
-    /**
-     * 面试模式；默认为 single
-     */
-    'mode'?: InterviewModeEnum;
-}
 
 /**
  * 候选人的面试回答
@@ -123,15 +109,30 @@ export interface InterviewReplyResponseData {
      * 面试是否结束
      */
     'ending': boolean;
-    /**
-     * 当前面试模式
-     */
-    'mode': InterviewModeEnum;
-    /**
-     * 当前发言的面试官角色
-     */
-    'speaker_role': InterviewSpeakerRoleEnum;
+    'mode': InterviewMode;
+    'speaker_role': InterviewSpeakerRole;
 }
+
+
+/**
+ * 发言的 AI 面试官角色
+ */
+
+export const InterviewSpeakerRole = {
+    Ai: 'ai',
+    Hr: 'hr',
+    TechLead: 'tech_lead',
+    Executive: 'executive'
+} as const;
+
+export type InterviewSpeakerRole = typeof InterviewSpeakerRole[keyof typeof InterviewSpeakerRole];
+
+
+export interface InterviewStartRequest {
+    'mode'?: InterviewMode;
+}
+
+
 export interface InterviewStartResponse {
     'success': boolean;
     'message': string;
@@ -146,15 +147,11 @@ export interface InterviewStartResponseData {
      * AI 面试官返回的首个问题
      */
     'reply': string;
-    /**
-     * 当前面试模式
-     */
-    'mode': InterviewModeEnum;
-    /**
-     * 当前发言的面试官角色
-     */
-    'speaker_role': InterviewSpeakerRoleEnum;
+    'mode': InterviewMode;
+    'speaker_role': InterviewSpeakerRole;
 }
+
+
 export interface InterviewStopRequest {
     /**
      * 需要终止的面试 ID
@@ -237,10 +234,7 @@ export interface Report {
      * 本场面试的岗位类型
      */
     'job': ReportJobEnum;
-    /**
-     * 本场面试的模式
-     */
-    'mode'?: InterviewModeEnum;
+    'mode': InterviewMode;
     /**
      * 总评分（百分制）
      */
@@ -298,10 +292,7 @@ export interface ReportReview {
      * 面试官问题
      */
     'interviewer': string;
-    /**
-     * 当前提问角色
-     */
-    'interviewer_role'?: InterviewSpeakerRoleEnum;
+    'interviewer_role': InterviewSpeakerRole;
     /**
      * 求职者的实际回答
      */
@@ -339,6 +330,108 @@ export interface ReportReview {
      * 对题级分数的结构化解释
      */
     'score_rationale': string;
+}
+
+
+export interface ResumeAnalysis {
+    /**
+     * 结果结构版本
+     */
+    'version': string;
+    /**
+     * 当前简历对应岗位
+     */
+    'job': ResumeAnalysisJobEnum;
+    /**
+     * 分析结果生成时间
+     */
+    'generated_at': string;
+    /**
+     * 对整份简历的整体总结
+     */
+    'summary': string;
+    /**
+     * 简历整体观感
+     */
+    'overall_tone'?: string;
+    'blocks': Array<ResumeAnalysisBlock>;
+}
+
+export const ResumeAnalysisJobEnum = {
+    Frontend: 'frontend',
+    Backend: 'backend'
+} as const;
+
+export type ResumeAnalysisJobEnum = typeof ResumeAnalysisJobEnum[keyof typeof ResumeAnalysisJobEnum];
+
+export interface ResumeAnalysisBlock {
+    /**
+     * 简历分块唯一 ID
+     */
+    'id': string;
+    /**
+     * 分块原始文本
+     */
+    'text': string;
+    'label': ResumeAnalysisLabel;
+    /**
+     * 该分块为什么被这样标注
+     */
+    'reason'?: string;
+    'highlight_phrases'?: Array<ResumeAnalysisHighlightPhrase>;
+    'callout'?: ResumeAnalysisCallout;
+}
+
+
+export interface ResumeAnalysisCallout {
+    /**
+     * 批注标题
+     */
+    'title'?: string;
+    /**
+     * 批注正文
+     */
+    'body': string;
+}
+export interface ResumeAnalysisHighlightPhrase {
+    /**
+     * 需要被单独高亮的原文短语
+     */
+    'text': string;
+    'label': ResumeAnalysisLabel;
+    /**
+     * 对该高亮短语的简短说明
+     */
+    'comment'?: string;
+}
+
+
+/**
+ * 简历段落或短语的高亮等级
+ */
+
+export const ResumeAnalysisLabel = {
+    Strength: 'strength',
+    Probe: 'probe',
+    Risk: 'risk',
+    Neutral: 'neutral'
+} as const;
+
+export type ResumeAnalysisLabel = typeof ResumeAnalysisLabel[keyof typeof ResumeAnalysisLabel];
+
+
+export interface ResumeAnalysisLookupPayload {
+    'analysis'?: ResumeAnalysis;
+}
+export interface ResumeAnalysisLookupResponse {
+    'success': boolean;
+    'message': string;
+    'data': ResumeAnalysisLookupPayload;
+}
+export interface ResumeAnalysisResponse {
+    'success': boolean;
+    'message': string;
+    'data': ResumeAnalysis;
 }
 /**
  * 题级分项得分
@@ -1122,6 +1215,74 @@ export const UserApiAxiosParamCreator = function (configuration?: Configuration)
                 options: localVarRequestOptions,
             };
         },
+        /**
+         * 读取当前登录用户最近一次已保存的彩色高亮版简历分析结果。
+         * @summary 获取最近一次简历分析
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiUserResumeAnalysisGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/user/resume-analysis`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+            localVarHeaderParameter['Accept'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 基于当前登录用户已保存的岗位和简历文本，生成并保存最近一次彩色高亮版简历分析。
+         * @summary 生成简历分析
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiUserResumeAnalysisPost: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/user/resume-analysis`;
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            // authentication bearerAuth required
+            // http bearer authentication required
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+            localVarHeaderParameter['Accept'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
     }
 };
 
@@ -1181,6 +1342,30 @@ export const UserApiFp = function(configuration?: Configuration) {
             const localVarOperationServerBasePath = operationServerMap['UserApi.apiUserProfilePut']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
+        /**
+         * 读取当前登录用户最近一次已保存的彩色高亮版简历分析结果。
+         * @summary 获取最近一次简历分析
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiUserResumeAnalysisGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ResumeAnalysisLookupResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiUserResumeAnalysisGet(options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['UserApi.apiUserResumeAnalysisGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 基于当前登录用户已保存的岗位和简历文本，生成并保存最近一次彩色高亮版简历分析。
+         * @summary 生成简历分析
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiUserResumeAnalysisPost(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<ResumeAnalysisResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiUserResumeAnalysisPost(options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['UserApi.apiUserResumeAnalysisPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
     }
 };
 
@@ -1227,6 +1412,24 @@ export const UserApiFactory = function (configuration?: Configuration, basePath?
          */
         apiUserProfilePut(profile?: Profile, options?: RawAxiosRequestConfig): AxiosPromise<PutProfileResponse> {
             return localVarFp.apiUserProfilePut(profile, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 读取当前登录用户最近一次已保存的彩色高亮版简历分析结果。
+         * @summary 获取最近一次简历分析
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiUserResumeAnalysisGet(options?: RawAxiosRequestConfig): AxiosPromise<ResumeAnalysisLookupResponse> {
+            return localVarFp.apiUserResumeAnalysisGet(options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 基于当前登录用户已保存的岗位和简历文本，生成并保存最近一次彩色高亮版简历分析。
+         * @summary 生成简历分析
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiUserResumeAnalysisPost(options?: RawAxiosRequestConfig): AxiosPromise<ResumeAnalysisResponse> {
+            return localVarFp.apiUserResumeAnalysisPost(options).then((request) => request(axios, basePath));
         },
     };
 };
@@ -1276,5 +1479,27 @@ export class UserApi extends BaseAPI {
     public apiUserProfilePut(profile?: Profile, options?: RawAxiosRequestConfig) {
         return UserApiFp(this.configuration).apiUserProfilePut(profile, options).then((request) => request(this.axios, this.basePath));
     }
+
+    /**
+     * 读取当前登录用户最近一次已保存的彩色高亮版简历分析结果。
+     * @summary 获取最近一次简历分析
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public apiUserResumeAnalysisGet(options?: RawAxiosRequestConfig) {
+        return UserApiFp(this.configuration).apiUserResumeAnalysisGet(options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 基于当前登录用户已保存的岗位和简历文本，生成并保存最近一次彩色高亮版简历分析。
+     * @summary 生成简历分析
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public apiUserResumeAnalysisPost(options?: RawAxiosRequestConfig) {
+        return UserApiFp(this.configuration).apiUserResumeAnalysisPost(options).then((request) => request(this.axios, this.basePath));
+    }
 }
+
+
 

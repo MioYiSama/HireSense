@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Dict, List, Literal, Optional, Union
 
 from pydantic import BaseModel, Field
@@ -28,9 +29,7 @@ class StartRequest(BaseModel):
 class StartPayload(BaseModel):
     reply: str = Field(description="Agent生成的首轮回复话术")
     mode: Literal["single", "panel_trio"] = Field(default="single")
-    speaker_role: Literal["ai", "hr", "tech_lead", "executive"] = Field(
-        default="ai"
-    )
+    speaker_role: Literal["ai", "hr", "tech_lead", "executive"] = Field(default="ai")
 
 
 class StartResponse(BaseModel):
@@ -79,9 +78,7 @@ class ReplyResponse(BaseModel):
     reply: str = Field(description="Agent生成的回复话术")
     ending: bool = Field(description="面试官是否认为本场面试已经可以结束")
     mode: Literal["single", "panel_trio"] = Field(default="single")
-    speaker_role: Literal["ai", "hr", "tech_lead", "executive"] = Field(
-        default="ai"
-    )
+    speaker_role: Literal["ai", "hr", "tech_lead", "executive"] = Field(default="ai")
 
 
 # ==========================================
@@ -133,9 +130,7 @@ class ReviewItem(BaseModel):
     missing_points: List[str] = Field(
         default_factory=list, description="本题回答中缺失的点"
     )
-    score_rationale: str = Field(
-        default="", description="对题级分数的结构化解释"
-    )
+    score_rationale: str = Field(default="", description="对题级分数的结构化解释")
 
 
 class ReportContent(BaseModel):
@@ -186,9 +181,7 @@ class InterviewRoundLog(BaseModel):
 
 
 class ChatMessage(BaseModel):
-    role: Literal[
-        "ai", "hr", "tech_lead", "executive", "interviewer", "interviewee"
-    ]
+    role: Literal["ai", "hr", "tech_lead", "executive", "interviewer", "interviewee"]
     content: str
     concept: Optional[str]
     num_token: int
@@ -211,9 +204,7 @@ class AgentState(BaseModel):
     # 图谱路由控制区
     current_concept: Optional[str] = None
     current_interviewer_role: Literal["ai", "hr", "tech_lead", "executive"] = "ai"
-    current_question_type: Literal["technical", "behavioral", "executive"] = (
-        "technical"
-    )
+    current_question_type: Literal["technical", "behavioral", "executive"] = "technical"
     current_question_standard_answer: str = ""
     visited_concept: List[str] = []
     visited_question: List[str] = []  # q_id 作为识别标签
@@ -271,3 +262,66 @@ class ParsedResume(BaseModel):
     estimated_level: str = Field(
         description="根据简历评估候选人的职级深度（入门/应届, 初级, 中级, 高级/资深, 专家）。"
     )
+
+
+ResumeHighlightLabel = Literal["strength", "probe", "risk", "neutral"]
+
+
+class ResumeAnalysisRequest(BaseModel):
+    job: Literal["backend", "frontend"] = Field(description="候选人目标岗位")
+    resume: str = Field(description="候选人当前简历原文")
+
+
+class ResumeAnalysisHighlightPhrase(BaseModel):
+    text: str = Field(description="必须直接摘自原始 block 文本的短语")
+    label: ResumeHighlightLabel = Field(description="短语的高亮等级")
+    comment: str = Field(default="", description="对该短语的简短说明")
+
+
+class ResumeAnalysisCallout(BaseModel):
+    title: str = Field(default="", description="批注标题")
+    body: str = Field(description="批注正文")
+
+
+class ResumeAnalysisBlockDraft(BaseModel):
+    id: str = Field(description="block 唯一标识，必须与输入 block 的 id 一致")
+    label: ResumeHighlightLabel = Field(description="整段的主标签")
+    reason: str = Field(default="", description="为什么这样标注这段")
+    highlight_phrases: List[ResumeAnalysisHighlightPhrase] = Field(
+        default_factory=list,
+        description="需要高亮的关键短语，最多 3 个，必须从原文逐字摘取",
+    )
+    callout: Optional[ResumeAnalysisCallout] = Field(
+        default=None,
+        description="仅在 risk 段落需要时给出尖锐批注",
+    )
+
+
+class ResumeAnalysisDraft(BaseModel):
+    summary: str = Field(description="对整份简历的简短总结")
+    overall_tone: str = Field(description="整体观感，如 sharp / balanced / aggressive")
+    blocks: List[ResumeAnalysisBlockDraft] = Field(description="逐段标注结果")
+
+
+class ResumeAnalysisBlock(BaseModel):
+    id: str = Field(description="block 唯一标识")
+    text: str = Field(description="该 block 的原始文本")
+    label: ResumeHighlightLabel = Field(description="整段的主标签")
+    reason: str = Field(default="", description="为什么这样标注这段")
+    highlight_phrases: List[ResumeAnalysisHighlightPhrase] = Field(
+        default_factory=list,
+        description="需要高亮的关键短语",
+    )
+    callout: Optional[ResumeAnalysisCallout] = Field(
+        default=None,
+        description="红色高风险措辞旁边展示的批注",
+    )
+
+
+class ResumeAnalysis(BaseModel):
+    version: str = Field(default="v1", description="结果结构版本")
+    job: Literal["backend", "frontend"] = Field(description="当前简历对应的岗位")
+    generated_at: datetime = Field(description="分析生成时间")
+    summary: str = Field(description="整体总结")
+    overall_tone: str = Field(description="整体观感")
+    blocks: List[ResumeAnalysisBlock] = Field(description="逐段高亮分析结果")

@@ -14,6 +14,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"hire_sense/database"
 )
 
 const (
@@ -79,6 +81,11 @@ type InterviewReplyResult struct {
 	SpeakerRole string
 }
 
+type ResumeAnalysisRequest struct {
+	Job    string
+	Resume string
+}
+
 type Transcript struct {
 	Duration float64             `json:"duration"`
 	Segments []TranscriptSegment `json:"segments"`
@@ -108,6 +115,7 @@ type interviewConversationBackend interface {
 	Start(ctx context.Context, session InterviewSession) (InterviewStartResult, error)
 	Reply(ctx context.Context, payload interviewReplyPayload) (InterviewReplyResult, error)
 	Stop(ctx context.Context, interviewID string) error
+	AnalyzeResume(ctx context.Context, request ResumeAnalysisRequest) (database.ResumeAnalysis, error)
 }
 
 type InterviewService struct {
@@ -195,6 +203,17 @@ func (s *InterviewService) Reply(ctx context.Context, request InterviewReplyRequ
 
 func (s *InterviewService) Stop(ctx context.Context, interviewID string) error {
 	return s.backend.Stop(ctx, interviewID)
+}
+
+func (s *InterviewService) AnalyzeResume(
+	ctx context.Context,
+	request ResumeAnalysisRequest,
+) (database.ResumeAnalysis, error) {
+	if strings.TrimSpace(request.Resume) == "" {
+		return database.ResumeAnalysis{}, errors.New("resume is required")
+	}
+
+	return s.backend.AnalyzeResume(ctx, request)
 }
 
 type whisperClient struct {

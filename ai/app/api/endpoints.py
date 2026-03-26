@@ -5,10 +5,16 @@ from app.core.config import settings
 from app.core.state_manager import session_store
 
 # 假设你已经定义了获取工作流引擎和报告引擎的依赖注入函数
-from app.dependencies import get_agent_workflow, get_report_generator
+from app.dependencies import (
+    get_agent_workflow,
+    get_report_generator,
+    get_resume_analyzer,
+)
 from app.models.schemas import (
     ReplyRequest,
     ReplyResponse,
+    ResumeAnalysis,
+    ResumeAnalysisRequest,
     ReportPushRequest,  # 这里的 ReportPushRequest 实际上就是最终生成的报告外壳
     StartPayload,
     StartRequest,
@@ -71,6 +77,24 @@ async def start_interview(req: StartRequest, workflow=Depends(get_agent_workflow
     except Exception as e:
         print(f"[Start API Error]: {e}")
         return StartResponse(success=False, data="服务器连接失败")
+
+
+@router.post("/api/resume/analyze", response_model=ResumeAnalysis)
+async def analyze_resume(
+    req: ResumeAnalysisRequest, resume_analyzer=Depends(get_resume_analyzer)
+):
+    if not req.resume.strip():
+        raise HTTPException(status_code=400, detail="Resume text is required.")
+
+    try:
+        return await resume_analyzer.analyze_highlight_resume(
+            resume_text=req.resume,
+            job_domain=req.job,
+        )
+    except Exception as e:
+        print(f"[Resume Analysis API Error]: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail="Failed to analyze resume.")
 
 
 # ==========================================

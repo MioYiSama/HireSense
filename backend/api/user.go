@@ -11,8 +11,9 @@ import (
 )
 
 type userHandler struct {
-	store       *database.Store
-	authService *authpkg.Service
+	store            *database.Store
+	authService      *authpkg.Service
+	interviewService *InterviewService
 }
 
 type passwordRequest struct {
@@ -34,15 +35,22 @@ type interviewResponse struct {
 	Report    any    `json:"report"`
 }
 
+type resumeAnalysisLookupResponse struct {
+	Analysis *database.ResumeAnalysis `json:"analysis"`
+}
+
 func registerUserRoutes(router fiber.Router, deps Dependencies) {
 	handler := userHandler{
-		store:       deps.Store,
-		authService: deps.AuthService,
+		store:            deps.Store,
+		authService:      deps.AuthService,
+		interviewService: deps.InterviewService,
 	}
 
 	router.Put("/password", handler.updatePassword)
 	router.Get("/profile", handler.getProfile)
 	router.Put("/profile", handler.updateProfile)
+	router.Get("/resume-analysis", handler.getResumeAnalysis)
+	router.Post("/resume-analysis", handler.generateResumeAnalysis)
 	router.Get("/interviews", handler.listInterviews)
 }
 
@@ -145,4 +153,59 @@ func (h userHandler) listInterviews(c fiber.Ctx) error {
 	}
 
 	return respond(c, fiber.StatusOK, "拉取面试纪要成功", response)
+}
+
+func (h userHandler) getResumeAnalysis(c fiber.Ctx) error {
+	principal, ok := authpkg.CurrentPrincipal(c)
+	if !ok {
+		return NewError(fiber.StatusUnauthorized, "authentication required")
+	}
+
+	analysis, err := h.store.GetResumeAnalysis(c.Context(), principal.UserID)
+	if err != nil {
+		if errors.Is(err, database.ErrNotFound) {
+			return NewError(fiber.StatusNotFound, "user not found")
+		}
+		return err
+	}
+
+	return respond(c, fiber.StatusOK, "读取简历分析成功", resumeAnalysisLookupResponse{
+		Analysis: analysis,
+	})
+}
+
+func (h userHandler) generateResumeAnalysis(c fiber.Ctx) error {
+	principal, ok := authpkg.CurrentPrincipal(c)
+	if !ok {
+		return NewError(fiber.StatusUnauthorized, "authentication required")
+	}
+
+	profile, err := h.store.GetProfile(c.Context(), principal.UserID)
+	if err != nil {
+		if errors.Is(err, database.ErrNotFound) {
+			return NewError(fiber.StatusNotFound, "user not found")
+		}
+		return err
+	}
+
+	if strings.TrimSpace(profile.Resume) == "" {
+		return NewError(fiber.StatusBadRequest, "resume is required")
+	}
+
+	analysis, err := h.interviewService.AnalyzeResume(c.Context(), ResumeAnalysisRequest{
+		Job:    string(profile.Job),
+		Resume: profile.Resume,
+	})
+	if err != nil {
+		return mapInterviewServiceError(err)
+	}
+
+	if err := h.store.SaveResumeAnalysis(c.Context(), principal.UserID, analysis); err != nil {
+		if errors.Is(err, database.ErrNotFound) {
+			return NewError(fiber.StatusNotFound, "user not found")
+		}
+		return err
+	}
+
+	return respond(c, fiber.StatusOK, "简历分析生成成功", analysis)
 }

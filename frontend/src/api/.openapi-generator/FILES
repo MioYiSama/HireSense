@@ -8,9 +8,12 @@ docs/AuthenticationApi.md
 docs/DimensionDetail.md
 docs/Interview.md
 docs/InterviewApi.md
+docs/InterviewMode.md
 docs/InterviewReplyRequest.md
 docs/InterviewReplyResponse.md
 docs/InterviewReplyResponseData.md
+docs/InterviewSpeakerRole.md
+docs/InterviewStartRequest.md
 docs/InterviewStartResponse.md
 docs/InterviewStartResponseData.md
 docs/InterviewStopRequest.md
@@ -23,6 +26,14 @@ docs/PutReportRequest.md
 docs/PutReportResponse.md
 docs/Report.md
 docs/ReportReview.md
+docs/ResumeAnalysis.md
+docs/ResumeAnalysisBlock.md
+docs/ResumeAnalysisCallout.md
+docs/ResumeAnalysisHighlightPhrase.md
+docs/ResumeAnalysisLabel.md
+docs/ResumeAnalysisLookupPayload.md
+docs/ResumeAnalysisLookupResponse.md
+docs/ResumeAnalysisResponse.md
 docs/ScoreBreakdown.md
 docs/SignInRequest.md
 docs/SignInResponse.md

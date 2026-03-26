@@ -232,11 +232,85 @@ func (s *Store) UpdateProfile(ctx context.Context, userID string, profile Profil
 		SET name = $2,
 		    job = $3,
 		    resume = NULLIF($4, ''),
-		    personalization = NULLIF($5, '')
+		    personalization = NULLIF($5, ''),
+		    resume_analysis = CASE
+		        WHEN job <> $3 OR COALESCE(resume, '') <> COALESCE(NULLIF($4, ''), '')
+		            THEN NULL
+		        ELSE resume_analysis
+		    END,
+		    resume_analysis_generated_at = CASE
+		        WHEN job <> $3 OR COALESCE(resume, '') <> COALESCE(NULLIF($4, ''), '')
+		            THEN NULL
+		        ELSE resume_analysis_generated_at
+		    END
 		WHERE id = $1
 	`
 
 	result, err := s.db.ExecContext(ctx, query, userID, profile.Name, profile.Job, profile.Resume, profile.Personalization)
+	if err != nil {
+		return classifyError(err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("read affected rows: %w", err)
+	}
+	if rowsAffected == 0 {
+		return ErrNotFound
+	}
+
+	return nil
+}
+
+func (s *Store) GetResumeAnalysis(ctx context.Context, userID string) (*ResumeAnalysis, error) {
+	const query = `
+		SELECT resume_analysis, resume_analysis_generated_at
+		FROM "user"
+		WHERE id = $1
+	`
+
+	var (
+		payload     []byte
+		generatedAt sql.NullTime
+	)
+	if err := s.db.QueryRowContext(ctx, query, userID).Scan(&payload, &generatedAt); err != nil {
+		return nil, classifyError(err)
+	}
+
+	if len(payload) == 0 {
+		return nil, nil
+	}
+
+	var analysis ResumeAnalysis
+	if err := json.Unmarshal(payload, &analysis); err != nil {
+		return nil, fmt.Errorf("decode resume analysis: %w", err)
+	}
+
+	if analysis.GeneratedAt.IsZero() && generatedAt.Valid {
+		analysis.GeneratedAt = generatedAt.Time
+	}
+
+	return &analysis, nil
+}
+
+func (s *Store) SaveResumeAnalysis(ctx context.Context, userID string, analysis ResumeAnalysis) error {
+	if analysis.GeneratedAt.IsZero() {
+		analysis.GeneratedAt = time.Now().UTC()
+	}
+
+	payload, err := json.Marshal(analysis)
+	if err != nil {
+		return fmt.Errorf("encode resume analysis: %w", err)
+	}
+
+	const query = `
+		UPDATE "user"
+		SET resume_analysis = $2,
+		    resume_analysis_generated_at = $3
+		WHERE id = $1
+	`
+
+	result, err := s.db.ExecContext(ctx, query, userID, payload, analysis.GeneratedAt)
 	if err != nil {
 		return classifyError(err)
 	}

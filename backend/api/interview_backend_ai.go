@@ -8,6 +8,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+
+	"hire_sense/database"
 )
 
 type remoteInterviewBackend struct {
@@ -52,12 +54,17 @@ type aiInterviewStartPayload struct {
 }
 
 type aiInterviewStartResponse struct {
-	Success bool   `json:"success"`
-	Data    any    `json:"data"`
+	Success bool `json:"success"`
+	Data    any  `json:"data"`
 }
 
 type aiInterviewStopRequest struct {
 	ID string `json:"id"`
+}
+
+type aiResumeAnalysisRequest struct {
+	Job    string `json:"job"`
+	Resume string `json:"resume"`
 }
 
 func newInterviewConversationBackend(cfg InterviewServiceConfig, client *http.Client) (interviewConversationBackend, error) {
@@ -160,6 +167,33 @@ func (b *remoteInterviewBackend) Stop(ctx context.Context, interviewID string) e
 	}
 
 	return nil
+}
+
+func (b *remoteInterviewBackend) AnalyzeResume(
+	ctx context.Context,
+	request ResumeAnalysisRequest,
+) (database.ResumeAnalysis, error) {
+	payload := aiResumeAnalysisRequest{
+		Job:    request.Job,
+		Resume: request.Resume,
+	}
+
+	var response database.ResumeAnalysis
+	if err := b.doJSON(ctx, http.MethodPost, "/api/resume/analyze", payload, &response); err != nil {
+		return database.ResumeAnalysis{}, &InterviewUpstreamError{
+			Service: "ai",
+			Err:     err,
+		}
+	}
+
+	if len(response.Blocks) == 0 {
+		return database.ResumeAnalysis{}, &InterviewUpstreamError{
+			Service: "ai",
+			Err:     fmt.Errorf("empty resume analysis returned"),
+		}
+	}
+
+	return response, nil
 }
 
 func (b *remoteInterviewBackend) doJSON(ctx context.Context, method, endpointPath string, payload any, out any) error {

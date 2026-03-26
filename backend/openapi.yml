@@ -111,6 +111,28 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/PutProfileResponse" }
 
+  /api/user/resume-analysis:
+    get:
+      tags: [User]
+      summary: 获取最近一次简历分析
+      description: 读取当前登录用户最近一次已保存的彩色高亮版简历分析结果。
+      responses:
+        "200":
+          description: 获取简历分析成功
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ResumeAnalysisLookupResponse" }
+    post:
+      tags: [User]
+      summary: 生成简历分析
+      description: 基于当前登录用户已保存的岗位和简历文本，生成并保存最近一次彩色高亮版简历分析。
+      responses:
+        "200":
+          description: 简历分析生成成功
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ResumeAnalysisResponse" }
+
   /api/user/interviews:
     get:
       tags: [User]
@@ -386,6 +408,42 @@ components:
         data: {}
       required: [success, message, data]
 
+    ResumeAnalysisLookupPayload:
+      type: object
+      properties:
+        analysis:
+          $ref: "#/components/schemas/ResumeAnalysis"
+
+    ResumeAnalysisLookupResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          examples:
+            - true
+        message:
+          type: string
+          examples:
+            - "读取简历分析成功"
+        data:
+          $ref: "#/components/schemas/ResumeAnalysisLookupPayload"
+      required: [success, message, data]
+
+    ResumeAnalysisResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          examples:
+            - true
+        message:
+          type: string
+          examples:
+            - "简历分析生成成功"
+        data:
+          $ref: "#/components/schemas/ResumeAnalysis"
+      required: [success, message, data]
+
     InterviewsResponse:
       type: object
       properties:
@@ -402,6 +460,85 @@ components:
           items:
             $ref: "#/components/schemas/Interview"
       required: [success, message, data]
+
+    ResumeAnalysisLabel:
+      type: string
+      enum: ["strength", "probe", "risk", "neutral"]
+      description: 简历段落或短语的高亮等级
+
+    ResumeAnalysisHighlightPhrase:
+      type: object
+      properties:
+        text:
+          type: string
+          description: 需要被单独高亮的原文短语
+        label:
+          $ref: "#/components/schemas/ResumeAnalysisLabel"
+        comment:
+          type: string
+          description: 对该高亮短语的简短说明
+      required: [text, label]
+
+    ResumeAnalysisCallout:
+      type: object
+      properties:
+        title:
+          type: string
+          description: 批注标题
+        body:
+          type: string
+          description: 批注正文
+      required: [body]
+
+    ResumeAnalysisBlock:
+      type: object
+      properties:
+        id:
+          type: string
+          description: 简历分块唯一 ID
+        text:
+          type: string
+          description: 分块原始文本
+        label:
+          $ref: "#/components/schemas/ResumeAnalysisLabel"
+        reason:
+          type: string
+          description: 该分块为什么被这样标注
+        highlight_phrases:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResumeAnalysisHighlightPhrase"
+        callout:
+          $ref: "#/components/schemas/ResumeAnalysisCallout"
+      required: [id, text, label]
+
+    ResumeAnalysis:
+      type: object
+      properties:
+        version:
+          type: string
+          description: 结果结构版本
+          examples:
+            - "v1"
+        job:
+          type: string
+          enum: ["frontend", "backend"]
+          description: 当前简历对应岗位
+        generated_at:
+          type: string
+          format: date-time
+          description: 分析结果生成时间
+        summary:
+          type: string
+          description: 对整份简历的整体总结
+        overall_tone:
+          type: string
+          description: 简历整体观感
+        blocks:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResumeAnalysisBlock"
+      required: [version, job, generated_at, summary, blocks]
 
     # ---------------------------------------------
     # 面试元数据及操作相关结构 (Interview Schemas)

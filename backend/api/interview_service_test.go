@@ -9,6 +9,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"hire_sense/database"
 )
 
 type stubInterviewBackend struct {
@@ -30,6 +32,13 @@ func (s *stubInterviewBackend) Reply(_ context.Context, payload interviewReplyPa
 
 func (s *stubInterviewBackend) Stop(context.Context, string) error {
 	return nil
+}
+
+func (s *stubInterviewBackend) AnalyzeResume(
+	context.Context,
+	ResumeAnalysisRequest,
+) (database.ResumeAnalysis, error) {
+	return database.ResumeAnalysis{}, nil
 }
 
 func TestNormalizeURL(t *testing.T) {

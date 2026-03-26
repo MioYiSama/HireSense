@@ -61,6 +61,13 @@ declare module 'vue-router/auto-routes' {
       Record<never, never>,
       | never
     >,
+    '/resume-analysis': RouteRecordInfo<
+      '/resume-analysis',
+      '/resume-analysis',
+      Record<never, never>,
+      Record<never, never>,
+      | never
+    >,
     '/signin': RouteRecordInfo<
       '/signin',
       '/signin',
@@ -115,6 +122,12 @@ declare module 'vue-router/auto-routes' {
     'src/pages/profile.vue': {
       routes:
         | '/profile'
+      views:
+        | never
+    }
+    'src/pages/resume-analysis.vue': {
+      routes:
+        | '/resume-analysis'
       views:
         | never
     }

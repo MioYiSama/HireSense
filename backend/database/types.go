@@ -78,6 +78,53 @@ type Profile struct {
 	Personalization string  `json:"personalization,omitempty"`
 }
 
+type ResumeAnalysisLabel string
+
+const (
+	ResumeAnalysisLabelStrength ResumeAnalysisLabel = "strength"
+	ResumeAnalysisLabelProbe    ResumeAnalysisLabel = "probe"
+	ResumeAnalysisLabelRisk     ResumeAnalysisLabel = "risk"
+	ResumeAnalysisLabelNeutral  ResumeAnalysisLabel = "neutral"
+)
+
+func (l ResumeAnalysisLabel) IsValid() bool {
+	switch l {
+	case ResumeAnalysisLabelStrength, ResumeAnalysisLabelProbe, ResumeAnalysisLabelRisk, ResumeAnalysisLabelNeutral:
+		return true
+	default:
+		return false
+	}
+}
+
+type ResumeAnalysisHighlightPhrase struct {
+	Text    string              `json:"text"`
+	Label   ResumeAnalysisLabel `json:"label"`
+	Comment string              `json:"comment,omitempty"`
+}
+
+type ResumeAnalysisCallout struct {
+	Title string `json:"title,omitempty"`
+	Body  string `json:"body"`
+}
+
+type ResumeAnalysisBlock struct {
+	ID               string                          `json:"id"`
+	Text             string                          `json:"text"`
+	Label            ResumeAnalysisLabel             `json:"label"`
+	Reason           string                          `json:"reason,omitempty"`
+	HighlightPhrases []ResumeAnalysisHighlightPhrase `json:"highlight_phrases,omitempty"`
+	Callout          *ResumeAnalysisCallout          `json:"callout,omitempty"`
+}
+
+type ResumeAnalysis struct {
+	Version     string                `json:"version"`
+	Job         UserJob               `json:"job"`
+	GeneratedAt time.Time             `json:"generated_at"`
+	Summary     string                `json:"summary"`
+	OverallTone string                `json:"overall_tone,omitempty"`
+	Blocks      []ResumeAnalysisBlock `json:"blocks"`
+}
+
 type Session struct {
 	UserID  string
 	Name    string
