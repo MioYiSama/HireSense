@@ -28,6 +28,7 @@ type profileRequest struct {
 
 type interviewResponse struct {
 	ID        string `json:"id"`
+	Mode      string `json:"mode"`
 	Status    string `json:"status"`
 	CreatedAt int64  `json:"created_at"`
 	Report    any    `json:"report"`
@@ -136,6 +137,7 @@ func (h userHandler) listInterviews(c fiber.Ctx) error {
 	for _, interview := range interviews {
 		response = append(response, interviewResponse{
 			ID:        interview.ID,
+			Mode:      string(interview.Mode),
 			Status:    string(interview.Status),
 			CreatedAt: interview.CreatedAt.UnixMilli(),
 			Report:    rawReportToAny(interview.Report),

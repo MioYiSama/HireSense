@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strings"
 	"unicode/utf8"
+
+	"hire_sense/database"
 )
 
 type mockInterviewBackend struct{}
@@ -16,9 +18,19 @@ func newInterviewConversationBackend(InterviewServiceConfig, *http.Client) (inte
 	return mockInterviewBackend{}, nil
 }
 
-func (mockInterviewBackend) Start(context.Context, InterviewSession) (InterviewStartResult, error) {
+func (mockInterviewBackend) Start(_ context.Context, session InterviewSession) (InterviewStartResult, error) {
+	mode := session.Mode
+	speakerRole := "ai"
+	reply := "先做一个简短的自我介绍，并结合最近一段项目经历说明你承担的核心职责。"
+	if mode == string(database.InterviewModePanelTrio) {
+		speakerRole = "hr"
+		reply = "我是本轮群面的 HR。先做个简短自我介绍，再说说你最近一段经历里最值得拿出来讲的项目。"
+	}
+
 	return InterviewStartResult{
-		Reply: "先做一个简短的自我介绍，并结合最近一段项目经历说明你承担的核心职责。",
+		Reply:       reply,
+		Mode:        mode,
+		SpeakerRole: speakerRole,
 	}, nil
 }
 
@@ -31,8 +43,10 @@ func (mockInterviewBackend) Reply(_ context.Context, payload interviewReplyPaylo
 	ending := shouldEndMockInterview(text)
 	if ending {
 		return InterviewReplyResult{
-			Reply:  "好的，这轮面试先到这里。我会基于你刚才的回答整理整体反馈与改进建议。",
-			Ending: true,
+			Reply:       "好的，这轮面试先到这里。我会基于你刚才的回答整理整体反馈与改进建议。",
+			Ending:      true,
+			Mode:        string(database.InterviewModeSingle),
+			SpeakerRole: "ai",
 		}, nil
 	}
 
@@ -47,7 +61,9 @@ func (mockInterviewBackend) Reply(_ context.Context, payload interviewReplyPaylo
 			prefix,
 			summarizeMockReply(text, 72),
 		),
-		Ending: false,
+		Ending:      false,
+		Mode:        string(database.InterviewModeSingle),
+		SpeakerRole: "ai",
 	}, nil
 }
 

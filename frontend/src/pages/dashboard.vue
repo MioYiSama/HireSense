@@ -6,7 +6,7 @@ import {
   getUserInfo,
   getAccessToken,
   setInterviewId,
-  setInitialReply,
+  setInitialInterviewState,
   clearAll,
 } from "@/utils/token";
 import { getApiErrorMessage, signOut, startInterview, useInterviewsQuery } from "@/lib/api";
@@ -88,6 +88,7 @@ const startInterviewMutation = useMutation({
 
 const isLoading = computed(() => startInterviewMutation.isPending.value);
 const errorMessage = ref("");
+const selectedInterviewMode = ref<"single" | "panel_trio">("single");
 
 // 面试记录相关
 const interviews = computed(() => interviewsQuery.data.value ?? []);
@@ -425,13 +426,15 @@ const hasAdviceData = computed(() => {
 
 const adviceEmptyMessage = "至少需要 1 份已生成面试报告后才展示提升建议。";
 
-const historicalAbilityInsights = computed<AbilityInsight[]>(() => {
+const buildAbilityInsights = (
+  completedInterviews: typeof commonComputedData.value.completedInterviews,
+): AbilityInsight[] => {
   const buckets = new Map<
     string,
     { total: number; count: number; source: "general" | "specific" }
   >();
 
-  commonComputedData.value.completedInterviews.forEach((item) => {
+  completedInterviews.forEach((item) => {
     const report = item.report;
     if (!report) {
       return;
@@ -478,6 +481,10 @@ const historicalAbilityInsights = computed<AbilityInsight[]>(() => {
 
       return left.name.localeCompare(right.name, "zh-CN");
     });
+};
+
+const historicalAbilityInsights = computed<AbilityInsight[]>(() => {
+  return buildAbilityInsights(commonComputedData.value.completedInterviews);
 });
 
 const focusAbilities = computed(() => {
@@ -489,8 +496,24 @@ const focusAbilities = computed(() => {
   ).slice(0, 3);
 });
 
+const latestWeakPointInterviews = computed(() => {
+  return commonComputedData.value.completedInterviews.slice(-2).reverse();
+});
+
+const weakPointAbilityInsights = computed<AbilityInsight[]>(() => {
+  return buildAbilityInsights(latestWeakPointInterviews.value);
+});
+
+const weakPointFocusAbilities = computed(() => {
+  const lowerScoreAbilities = weakPointAbilityInsights.value.filter((item) => item.averageScore < 8.5);
+  return (lowerScoreAbilities.length > 0 ? lowerScoreAbilities : weakPointAbilityInsights.value).slice(
+    0,
+    3,
+  );
+});
+
 const extractedWeakPoints = computed(() => {
-  const shortcomings = commonComputedData.value.completedInterviews.flatMap((item) => {
+  const shortcomings = latestWeakPointInterviews.value.flatMap((item) => {
     return item.report?.shortcomings ?? [];
   });
 
@@ -515,11 +538,11 @@ const weakPoints = computed(() => {
     return extractedWeakPoints.value.slice(0, 3);
   }
 
-  if (focusAbilities.value.length === 0) {
+  if (weakPointFocusAbilities.value.length === 0) {
     return [];
   }
 
-  const lowScoreWeakPoints = focusAbilities.value
+  const lowScoreWeakPoints = weakPointFocusAbilities.value
     .filter((item) => item.averageScore < 8.5)
     .map((item) => {
       if (item.averageScore < 7) {
@@ -533,7 +556,7 @@ const weakPoints = computed(() => {
     return lowScoreWeakPoints.slice(0, 3);
   }
 
-  return ["近几次历史报告未发现明确的薄弱环节"];
+  return ["最近两次面试报告未发现明确的薄弱环节"];
 });
 
 // 生成针对性的改进建议
@@ -666,12 +689,18 @@ const startNewInterview = async () => {
       return;
     }
 
-    const data = await startInterviewMutation.mutateAsync();
+    const data = await startInterviewMutation.mutateAsync({
+      mode: selectedInterviewMode.value,
+    });
 
     if (data.id) {
       setInterviewId(data.id);
       if (data.reply) {
-        setInitialReply(data.reply);
+        setInitialInterviewState({
+          reply: data.reply,
+          mode: data.mode,
+          speakerRole: data.speaker_role,
+        });
       }
       void fetchInterviews();
       router.push("/interview");
@@ -741,6 +770,16 @@ const animateAbilityProgress = (targetProgress: AbilityProgressState) => {
   };
 
   abilityAnimationFrame = requestAnimationFrame(animate);
+};
+
+const formatInterviewModeLabel = (mode?: string) => {
+  return mode === "panel_trio" ? "群面模式" : "单面试官";
+};
+
+const getInterviewModeBadgeClass = (mode?: string) => {
+  return mode === "panel_trio"
+    ? "bg-fuchsia-500/10 text-fuchsia-300 border border-fuchsia-500/20"
+    : "bg-cyan-500/10 text-cyan-300 border border-cyan-500/20";
 };
 
 watch(
@@ -983,16 +1022,15 @@ onUnmounted(() => {
               ]"
             >
               <div class="flex items-start justify-between mb-2">
-                <!-- <span class="text-xs text-blue-400 bg-blue-500/10 px-2 py-1 rounded-lg">{{
-                  interview.report
-                    ? interview.report.specific
-                      ? "前端开发工程师"
-                      : "后端开发工程师"
-                    : "面试"
-                }}</span> -->
-                <span class="text-xs text-slate-500">{{
-                  formatInterviewTime(interview.created_at)
-                }}</span>
+                <div class="flex items-center gap-2">
+                  <span
+                    class="rounded-full px-2.5 py-1 text-[11px] font-medium"
+                    :class="getInterviewModeBadgeClass(interview.mode)"
+                  >
+                    {{ formatInterviewModeLabel(interview.mode) }}
+                  </span>
+                </div>
+                <span class="text-xs text-slate-500">{{ formatInterviewTime(interview.created_at) }}</span>
               </div>
               <h3
                 class="font-medium text-white text-sm mb-1 group-hover:text-blue-300 transition-colors"
@@ -1048,6 +1086,39 @@ onUnmounted(() => {
             class="mb-3 px-4 py-2 rounded-lg bg-red-500/20 border border-red-500/40 text-red-400 text-sm"
           >
             {{ errorMessage }}
+          </div>
+
+          <div class="mb-3 rounded-xl border border-white/5 bg-gray-800/40 p-3">
+            <div class="mb-2 flex items-center justify-between">
+              <span class="text-xs font-medium text-slate-300">面试模式</span>
+              <span class="text-[11px] text-slate-500">开始前选择</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                @click="selectedInterviewMode = 'single'"
+                :class="[
+                  'rounded-xl border px-3 py-2 text-sm transition-all duration-200',
+                  selectedInterviewMode === 'single'
+                    ? 'border-cyan-400/40 bg-cyan-500/10 text-cyan-300'
+                    : 'border-white/6 bg-white/3 text-slate-300 hover:border-cyan-500/20 hover:text-white',
+                ]"
+              >
+                单面试官
+              </button>
+              <button
+                type="button"
+                @click="selectedInterviewMode = 'panel_trio'"
+                :class="[
+                  'rounded-xl border px-3 py-2 text-sm transition-all duration-200',
+                  selectedInterviewMode === 'panel_trio'
+                    ? 'border-fuchsia-400/40 bg-fuchsia-500/10 text-fuchsia-300'
+                    : 'border-white/6 bg-white/3 text-slate-300 hover:border-fuchsia-500/20 hover:text-white',
+                ]"
+              >
+                群面模式
+              </button>
+            </div>
           </div>
 
           <button

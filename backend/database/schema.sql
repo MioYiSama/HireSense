@@ -22,6 +22,14 @@ EXCEPTION
 END
 $$;
 
+DO $$
+BEGIN
+    CREATE TYPE interview_mode AS ENUM ('single', 'panel_trio');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END
+$$;
+
 CREATE TABLE IF NOT EXISTS "user"
 (
     id              UUID      NOT NULL,
@@ -63,6 +71,7 @@ CREATE INDEX IF NOT EXISTS idx_auth_token_lookup
 CREATE TABLE IF NOT EXISTS interview
 (
     id         UUID             NOT NULL,
+    mode       INTERVIEW_MODE   NOT NULL DEFAULT 'single',
     status     INTERVIEW_STATUS NOT NULL DEFAULT 'started',
     created_at TIMESTAMPTZ      NOT NULL DEFAULT now(),
     report     JSONB            NULL     DEFAULT NULL,
@@ -74,3 +83,6 @@ CREATE TABLE IF NOT EXISTS interview
 
 CREATE INDEX IF NOT EXISTS idx_interview_user_id_created_at
     ON interview (user_id, created_at DESC);
+
+ALTER TABLE interview
+    ADD COLUMN IF NOT EXISTS mode INTERVIEW_MODE NOT NULL DEFAULT 'single';

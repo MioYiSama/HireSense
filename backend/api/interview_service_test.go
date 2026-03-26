@@ -157,7 +157,11 @@ func TestInterviewServiceStartReturnsBackendResult(t *testing.T) {
 
 	service := &InterviewService{
 		backend: &stubInterviewBackend{
-			startResult: InterviewStartResult{Reply: "first question"},
+			startResult: InterviewStartResult{
+				Reply:       "first question",
+				Mode:        "panel_trio",
+				SpeakerRole: "hr",
+			},
 		},
 	}
 
@@ -167,6 +171,12 @@ func TestInterviewServiceStartReturnsBackendResult(t *testing.T) {
 	}
 	if result.Reply != "first question" {
 		t.Fatalf("result.Reply = %q, want %q", result.Reply, "first question")
+	}
+	if result.Mode != "panel_trio" {
+		t.Fatalf("result.Mode = %q, want %q", result.Mode, "panel_trio")
+	}
+	if result.SpeakerRole != "hr" {
+		t.Fatalf("result.SpeakerRole = %q, want %q", result.SpeakerRole, "hr")
 	}
 }
 

@@ -2,6 +2,7 @@ import type {
   Interview,
   InterviewReplyRequest,
   InterviewReplyResponseData,
+  InterviewStartRequest,
   InterviewStartResponseData,
   InterviewStopRequest,
   Profile,
@@ -137,9 +138,9 @@ export const updateProfile = async (profile: Profile) => {
   });
 };
 
-export const startInterview = async () => {
+export const startInterview = async (request?: InterviewStartRequest) => {
   return withAuthenticatedRequest(async () => {
-    return unwrapResponse<InterviewStartResponseData>(await interviewApi.apiInterviewStartPost());
+    return unwrapResponse<InterviewStartResponseData>(await interviewApi.apiInterviewStartPost(request));
   });
 };
 

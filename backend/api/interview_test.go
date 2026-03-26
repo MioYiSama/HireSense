@@ -374,3 +374,100 @@ func TestDecodeInterviewReplyRequest(t *testing.T) {
 		})
 	}
 }
+
+func TestDecodeInterviewStartMode(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		body        []byte
+		contentType string
+		wantStatus  int
+		wantMode    string
+		wantMessage string
+	}{
+		{
+			name:       "empty body defaults to single",
+			wantStatus: fiber.StatusOK,
+			wantMode:   "single",
+		},
+		{
+			name:        "panel trio body",
+			body:        []byte(`{"mode":"panel_trio"}`),
+			contentType: "application/json",
+			wantStatus:  fiber.StatusOK,
+			wantMode:    "panel_trio",
+		},
+		{
+			name:        "blank mode defaults to single",
+			body:        []byte(`{"mode":"   "}`),
+			contentType: "application/json",
+			wantStatus:  fiber.StatusOK,
+			wantMode:    "single",
+		},
+		{
+			name:        "invalid mode rejected",
+			body:        []byte(`{"mode":"duo"}`),
+			contentType: "application/json",
+			wantStatus:  fiber.StatusBadRequest,
+			wantMessage: "invalid interview mode",
+		},
+		{
+			name:        "non json body rejected",
+			body:        []byte("mode=panel_trio"),
+			contentType: "text/plain",
+			wantStatus:  fiber.StatusUnsupportedMediaType,
+			wantMessage: "unsupported content type",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			app := fiber.New(fiber.Config{ErrorHandler: ErrorHandler})
+			app.Post("/", func(c fiber.Ctx) error {
+				mode, err := decodeInterviewStartMode(c)
+				if err != nil {
+					return err
+				}
+
+				return c.JSON(fiber.Map{"mode": string(mode)})
+			})
+
+			req := httptest.NewRequest(http.MethodPost, "http://example.com/", bytes.NewReader(tt.body))
+			if tt.contentType != "" {
+				req.Header.Set(fiber.HeaderContentType, tt.contentType)
+			}
+
+			resp, err := app.Test(req)
+			if err != nil {
+				t.Fatalf("app.Test() error = %v", err)
+			}
+
+			if resp.StatusCode != tt.wantStatus {
+				t.Fatalf("status = %d, want %d", resp.StatusCode, tt.wantStatus)
+			}
+
+			if tt.wantStatus == fiber.StatusOK {
+				var body map[string]any
+				if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+					t.Fatalf("Decode() error = %v", err)
+				}
+				if got := body["mode"]; got != tt.wantMode {
+					t.Fatalf("mode = %#v, want %q", got, tt.wantMode)
+				}
+				return
+			}
+
+			var body envelope
+			if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+				t.Fatalf("Decode() error = %v", err)
+			}
+			if body.Message != tt.wantMessage {
+				t.Fatalf("message = %q, want %q", body.Message, tt.wantMessage)
+			}
+		})
+	}
+}

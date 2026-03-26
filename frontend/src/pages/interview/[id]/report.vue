@@ -131,6 +131,34 @@ const reportJobLabel = computed(() => {
   return "技术岗位";
 });
 
+const interviewMode = computed(() => {
+  return reportData.value?.mode ?? interviewData.value?.mode ?? "single";
+});
+
+const formatInterviewModeLabel = (mode?: string) => {
+  return mode === "panel_trio" ? "群面模式" : "单面试官";
+};
+
+const getInterviewModeBadgeClass = (mode?: string) => {
+  return mode === "panel_trio"
+    ? "bg-fuchsia-500/20 text-fuchsia-300"
+    : "bg-cyan-500/20 text-cyan-300";
+};
+
+const formatInterviewerRole = (role?: string) => {
+  if (role === "hr") return "HR";
+  if (role === "tech_lead") return "技术主管";
+  if (role === "executive") return "大老板";
+  return "AI 面试官";
+};
+
+const getInterviewerRoleBadgeClass = (role?: string) => {
+  if (role === "hr") return "bg-emerald-500/10 text-emerald-300";
+  if (role === "tech_lead") return "bg-cyan-500/10 text-cyan-300";
+  if (role === "executive") return "bg-fuchsia-500/10 text-fuchsia-300";
+  return "bg-blue-500/10 text-blue-300";
+};
+
 const formatDifficultyLabel = (difficulty?: string) => {
   if (difficulty === "basic") return "基础";
   if (difficulty === "intermediate") return "中等";
@@ -329,6 +357,12 @@ const generateRadarPolygon = (
                         d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                       /></svg
                     >已完成
+                  </span>
+                  <span
+                    class="px-3 py-1 rounded-full text-sm font-medium"
+                    :class="getInterviewModeBadgeClass(interviewMode)"
+                  >
+                    {{ formatInterviewModeLabel(interviewMode) }}
                   </span>
                   <span v-if="interviewData.created_at" class="text-slate-400 text-sm">{{
                     formatDate(interviewData.created_at)
@@ -672,6 +706,12 @@ const generateRadarPolygon = (
                     <p class="text-xs text-slate-400 mb-1">面试官提问</p>
                     <p class="text-white">{{ review.interviewer }}</p>
                     <div class="mt-3 flex flex-wrap gap-2">
+                      <span
+                        class="rounded-full px-3 py-1 text-xs"
+                        :class="getInterviewerRoleBadgeClass(review.interviewer_role)"
+                      >
+                        {{ formatInterviewerRole(review.interviewer_role) }}
+                      </span>
                       <span
                         v-if="review.concept"
                         class="rounded-full bg-blue-500/10 px-3 py-1 text-xs text-blue-300"

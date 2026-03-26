@@ -131,6 +131,10 @@ paths:
       tags: [Interview]
       summary: 开始一场面试
       description: 基于用户当前档案数据生成并启动一个新的 AI 面试会话，并获取首个提问。
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InterviewStartRequest" }
       responses:
         "200":
           description: 面试正式启动并返回该场面试 ID 及首个问题
@@ -412,6 +416,8 @@ components:
           description: 场次唯一 ID
           examples:
             - "550e8400-e29b-41d4-a716-446655440000"
+        mode:
+          $ref: "#/components/schemas/InterviewMode"
         status:
           type: string
           description: 当前面试所处的流程状态
@@ -426,7 +432,27 @@ components:
         report:
           description: 面试一旦完成后附加的总结评估分析，若未结束可能为空
           $ref: "#/components/schemas/Report"
-      required: [id, created_at, status]
+      required: [id, mode, created_at, status]
+
+    InterviewMode:
+      type: string
+      description: 面试模式
+      enum: ["single", "panel_trio"]
+      examples:
+        - "panel_trio"
+
+    InterviewSpeakerRole:
+      type: string
+      description: 发言的 AI 面试官角色
+      enum: ["ai", "hr", "tech_lead", "executive"]
+      examples:
+        - "tech_lead"
+
+    InterviewStartRequest:
+      type: object
+      properties:
+        mode:
+          $ref: "#/components/schemas/InterviewMode"
 
     InterviewStartResponse:
       type: object
@@ -453,7 +479,11 @@ components:
               description: AI 面试官返回的首个问题
               examples:
                 - "先做一个简短的自我介绍，并重点说明你最近一段项目经历里最有代表性的技术挑战。"
-          required: [id, reply]
+            mode:
+              $ref: "#/components/schemas/InterviewMode"
+            speaker_role:
+              $ref: "#/components/schemas/InterviewSpeakerRole"
+          required: [id, reply, mode, speaker_role]
       required: [success, message, data]
 
     InterviewStopRequest:
@@ -516,7 +546,11 @@ components:
               description: 面试是否结束
               examples:
                 - false
-          required: [reply, ending]
+            mode:
+              $ref: "#/components/schemas/InterviewMode"
+            speaker_role:
+              $ref: "#/components/schemas/InterviewSpeakerRole"
+          required: [reply, ending, mode, speaker_role]
       required: [success, message, data]
 
     PutReportRequest:
@@ -565,6 +599,8 @@ components:
           enum: ["backend", "frontend"]
           examples:
             - "backend"
+        mode:
+          $ref: "#/components/schemas/InterviewMode"
         score:
           type: number
           description: 总评分（百分制）
@@ -640,6 +676,7 @@ components:
       required:
         [
           job,
+          mode,
           score,
           general,
           general_details,
@@ -714,6 +751,8 @@ components:
           description: 面试官问题
           examples:
             - "请解释一下哈希表在处理冲突时常见的策略，并比较它们的优缺点。"
+        interviewer_role:
+          $ref: "#/components/schemas/InterviewSpeakerRole"
         interviewee:
           type: string
           description: 求职者的实际回答
@@ -773,6 +812,7 @@ components:
       required:
         [
           interviewer,
+          interviewer_role,
           interviewee,
           score,
           advice,

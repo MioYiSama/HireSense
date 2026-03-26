@@ -44,6 +44,22 @@ const (
 	InterviewStopped InterviewStatus = "stopped"
 )
 
+type InterviewMode string
+
+const (
+	InterviewModeSingle    InterviewMode = "single"
+	InterviewModePanelTrio InterviewMode = "panel_trio"
+)
+
+func (m InterviewMode) IsValid() bool {
+	switch m {
+	case InterviewModeSingle, InterviewModePanelTrio:
+		return true
+	default:
+		return false
+	}
+}
+
 type User struct {
 	ID              string
 	Name            string
@@ -72,6 +88,7 @@ type Session struct {
 
 type Interview struct {
 	ID        string
+	Mode      InterviewMode
 	Status    InterviewStatus
 	CreatedAt time.Time
 	Report    json.RawMessage
@@ -98,4 +115,5 @@ type CreateTokenParams struct {
 type CreateInterviewParams struct {
 	ID     string
 	UserID string
+	Mode   InterviewMode
 }

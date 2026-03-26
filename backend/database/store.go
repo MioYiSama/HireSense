@@ -254,7 +254,7 @@ func (s *Store) UpdateProfile(ctx context.Context, userID string, profile Profil
 
 func (s *Store) ListInterviewsByUserID(ctx context.Context, userID string) ([]Interview, error) {
 	const query = `
-		SELECT id, status, created_at, report, user_id
+		SELECT id, mode, status, created_at, report, user_id
 		FROM interview
 		WHERE user_id = $1
 		ORDER BY created_at DESC
@@ -284,12 +284,19 @@ func (s *Store) ListInterviewsByUserID(ctx context.Context, userID string) ([]In
 
 func (s *Store) CreateInterview(ctx context.Context, params CreateInterviewParams) (Interview, error) {
 	const query = `
-		INSERT INTO interview (id, user_id, status)
-		VALUES ($1, $2, $3)
-		RETURNING id, status, created_at, report, user_id
+		INSERT INTO interview (id, user_id, mode, status)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id, mode, status, created_at, report, user_id
 	`
 
-	interview, err := scanInterview(s.db.QueryRowContext(ctx, query, params.ID, params.UserID, InterviewStarted))
+	interview, err := scanInterview(s.db.QueryRowContext(
+		ctx,
+		query,
+		params.ID,
+		params.UserID,
+		params.Mode,
+		InterviewStarted,
+	))
 	if err != nil {
 		return Interview{}, classifyError(err)
 	}
@@ -299,7 +306,7 @@ func (s *Store) CreateInterview(ctx context.Context, params CreateInterviewParam
 
 func (s *Store) GetInterviewByID(ctx context.Context, interviewID string) (Interview, error) {
 	const query = `
-		SELECT id, status, created_at, report, user_id
+		SELECT id, mode, status, created_at, report, user_id
 		FROM interview
 		WHERE id = $1
 	`
@@ -395,12 +402,14 @@ func scanUser(row scanner) (User, error) {
 func scanInterview(row scanner) (Interview, error) {
 	var (
 		interview Interview
+		mode      string
 		status    string
 		report    []byte
 	)
 
 	if err := row.Scan(
 		&interview.ID,
+		&mode,
 		&status,
 		&interview.CreatedAt,
 		&report,
@@ -409,6 +418,7 @@ func scanInterview(row scanner) (Interview, error) {
 		return Interview{}, err
 	}
 
+	interview.Mode = InterviewMode(mode)
 	interview.Status = InterviewStatus(status)
 	if len(report) > 0 {
 		interview.Report = json.RawMessage(report)

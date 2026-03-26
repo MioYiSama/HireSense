@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -18,6 +19,10 @@ type interviewHandler struct {
 	store            *database.Store
 	putReportSecret  string
 	interviewService *InterviewService
+}
+
+type startInterviewRequest struct {
+	Mode string `json:"mode"`
 }
 
 type stopInterviewRequest struct {
@@ -59,11 +64,16 @@ func (h interviewHandler) start(c fiber.Ctx) error {
 	}
 
 	interviewID := uuid.NewString()
+	mode, err := decodeInterviewStartMode(c)
+	if err != nil {
+		return err
+	}
 	startResult, err := h.interviewService.Start(c.Context(), InterviewSession{
 		ID:              interviewID,
 		Job:             string(profile.Job),
 		Resume:          profile.Resume,
 		Personalization: profile.Personalization,
+		Mode:            string(mode),
 	})
 	if err != nil {
 		return mapInterviewServiceError(err)
@@ -72,6 +82,7 @@ func (h interviewHandler) start(c fiber.Ctx) error {
 	interview, err := h.store.CreateInterview(c.Context(), database.CreateInterviewParams{
 		ID:     interviewID,
 		UserID: principal.UserID,
+		Mode:   mode,
 	})
 	if err != nil {
 		if stopErr := h.interviewService.Stop(c.Context(), interviewID); stopErr != nil {
@@ -90,8 +101,10 @@ func (h interviewHandler) start(c fiber.Ctx) error {
 	)
 
 	return respond(c, fiber.StatusOK, "AI 面试官已就绪", fiber.Map{
-		"id":    interview.ID,
-		"reply": startResult.Reply,
+		"id":           interview.ID,
+		"reply":        startResult.Reply,
+		"mode":         normalizeInterviewModeValue(startResult.Mode, interview.Mode),
+		"speaker_role": normalizeSpeakerRole(startResult.SpeakerRole, interview.Mode),
 	})
 }
 
@@ -208,8 +221,10 @@ func (h interviewHandler) reply(c fiber.Ctx) error {
 	)
 
 	return respond(c, fiber.StatusOK, "交互成功", fiber.Map{
-		"reply":  result.Reply,
-		"ending": result.Ending,
+		"reply":        result.Reply,
+		"ending":       result.Ending,
+		"mode":         normalizeInterviewModeValue(result.Mode, interview.Mode),
+		"speaker_role": normalizeSpeakerRole(result.SpeakerRole, interview.Mode),
 	})
 }
 
@@ -305,6 +320,36 @@ func decodeInterviewReplyRequest(c fiber.Ctx, interviewID string) (InterviewRepl
 	}
 }
 
+func decodeInterviewStartMode(c fiber.Ctx) (database.InterviewMode, error) {
+	body := bytes.TrimSpace(c.BodyRaw())
+	if len(body) == 0 {
+		return database.InterviewModeSingle, nil
+	}
+
+	mediaType, err := parseRequestMediaType(c.Get(fiber.HeaderContentType))
+	if err != nil {
+		return "", NewError(fiber.StatusBadRequest, "invalid content type")
+	}
+	if mediaType != "" && mediaType != "application/json" {
+		return "", NewError(fiber.StatusUnsupportedMediaType, "unsupported content type")
+	}
+
+	var request startInterviewRequest
+	if err := json.Unmarshal(body, &request); err != nil {
+		return "", NewError(fiber.StatusBadRequest, "invalid request body")
+	}
+
+	mode := database.InterviewMode(strings.TrimSpace(request.Mode))
+	if mode == "" {
+		return database.InterviewModeSingle, nil
+	}
+	if !mode.IsValid() {
+		return "", NewError(fiber.StatusBadRequest, "invalid interview mode")
+	}
+
+	return mode, nil
+}
+
 func parseRequestMediaType(contentType string) (string, error) {
 	trimmed := strings.TrimSpace(contentType)
 	if trimmed == "" {
@@ -354,4 +399,26 @@ func mapInterviewServiceError(err error) error {
 	}
 
 	return err
+}
+
+func normalizeInterviewModeValue(mode string, fallback database.InterviewMode) string {
+	normalized := database.InterviewMode(strings.TrimSpace(mode))
+	if normalized.IsValid() {
+		return string(normalized)
+	}
+	if fallback.IsValid() {
+		return string(fallback)
+	}
+	return string(database.InterviewModeSingle)
+}
+
+func normalizeSpeakerRole(speakerRole string, mode database.InterviewMode) string {
+	normalized := strings.TrimSpace(speakerRole)
+	if normalized != "" {
+		return normalized
+	}
+	if mode == database.InterviewModePanelTrio {
+		return "hr"
+	}
+	return "ai"
 }

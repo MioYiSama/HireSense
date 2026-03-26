@@ -51,10 +51,13 @@ type InterviewSession struct {
 	Job             string
 	Resume          string
 	Personalization string
+	Mode            string
 }
 
 type InterviewStartResult struct {
-	Reply string
+	Reply       string
+	Mode        string
+	SpeakerRole string
 }
 
 type InterviewReplyAudio struct {
@@ -70,8 +73,10 @@ type InterviewReplyRequestData struct {
 }
 
 type InterviewReplyResult struct {
-	Reply  string
-	Ending bool
+	Reply       string
+	Ending      bool
+	Mode        string
+	SpeakerRole string
 }
 
 type Transcript struct {

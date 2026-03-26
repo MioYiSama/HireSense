@@ -53,6 +53,10 @@ export interface Interview {
      */
     'id': string;
     /**
+     * 面试模式
+     */
+    'mode': InterviewModeEnum;
+    /**
      * 当前面试所处的流程状态
      */
     'status': InterviewStatusEnum;
@@ -72,6 +76,29 @@ export const InterviewStatusEnum = {
 } as const;
 
 export type InterviewStatusEnum = typeof InterviewStatusEnum[keyof typeof InterviewStatusEnum];
+
+export const InterviewModeEnum = {
+    Single: 'single',
+    PanelTrio: 'panel_trio'
+} as const;
+
+export type InterviewModeEnum = typeof InterviewModeEnum[keyof typeof InterviewModeEnum];
+
+export const InterviewSpeakerRoleEnum = {
+    Ai: 'ai',
+    Hr: 'hr',
+    TechLead: 'tech_lead',
+    Executive: 'executive'
+} as const;
+
+export type InterviewSpeakerRoleEnum = typeof InterviewSpeakerRoleEnum[keyof typeof InterviewSpeakerRoleEnum];
+
+export interface InterviewStartRequest {
+    /**
+     * 面试模式；默认为 single
+     */
+    'mode'?: InterviewModeEnum;
+}
 
 /**
  * 候选人的面试回答
@@ -96,6 +123,14 @@ export interface InterviewReplyResponseData {
      * 面试是否结束
      */
     'ending': boolean;
+    /**
+     * 当前面试模式
+     */
+    'mode': InterviewModeEnum;
+    /**
+     * 当前发言的面试官角色
+     */
+    'speaker_role': InterviewSpeakerRoleEnum;
 }
 export interface InterviewStartResponse {
     'success': boolean;
@@ -111,6 +146,14 @@ export interface InterviewStartResponseData {
      * AI 面试官返回的首个问题
      */
     'reply': string;
+    /**
+     * 当前面试模式
+     */
+    'mode': InterviewModeEnum;
+    /**
+     * 当前发言的面试官角色
+     */
+    'speaker_role': InterviewSpeakerRoleEnum;
 }
 export interface InterviewStopRequest {
     /**
@@ -195,6 +238,10 @@ export interface Report {
      */
     'job': ReportJobEnum;
     /**
+     * 本场面试的模式
+     */
+    'mode'?: InterviewModeEnum;
+    /**
      * 总评分（百分制）
      */
     'score': number;
@@ -251,6 +298,10 @@ export interface ReportReview {
      * 面试官问题
      */
     'interviewer': string;
+    /**
+     * 当前提问角色
+     */
+    'interviewer_role'?: InterviewSpeakerRoleEnum;
     /**
      * 求职者的实际回答
      */
@@ -686,10 +737,11 @@ export const InterviewApiAxiosParamCreator = function (configuration?: Configura
         /**
          * 基于用户当前档案数据生成并启动一个新的 AI 面试会话，并获取首个提问。
          * @summary 开始一场面试
+         * @param {InterviewStartRequest} [interviewStartRequest] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        apiInterviewStartPost: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+        apiInterviewStartPost: async (interviewStartRequest?: InterviewStartRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             const localVarPath = `/api/interview/start`;
             // use dummy base URL string because the URL constructor only accepts absolute URLs.
             const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
@@ -706,11 +758,13 @@ export const InterviewApiAxiosParamCreator = function (configuration?: Configura
             // http bearer authentication required
             await setBearerAuthToObject(localVarHeaderParameter, configuration)
 
+            localVarHeaderParameter['Content-Type'] = 'application/json';
             localVarHeaderParameter['Accept'] = 'application/json';
 
             setSearchParams(localVarUrlObj, localVarQueryParameter);
             let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
             localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(interviewStartRequest, localVarRequestOptions, configuration)
 
             return {
                 url: toPathString(localVarUrlObj),
@@ -793,11 +847,12 @@ export const InterviewApiFp = function(configuration?: Configuration) {
         /**
          * 基于用户当前档案数据生成并启动一个新的 AI 面试会话，并获取首个提问。
          * @summary 开始一场面试
+         * @param {InterviewStartRequest} [interviewStartRequest] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiInterviewStartPost(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<InterviewStartResponse>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.apiInterviewStartPost(options);
+        async apiInterviewStartPost(interviewStartRequest?: InterviewStartRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<InterviewStartResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiInterviewStartPost(interviewStartRequest, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['InterviewApi.apiInterviewStartPost']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -848,11 +903,12 @@ export const InterviewApiFactory = function (configuration?: Configuration, base
         /**
          * 基于用户当前档案数据生成并启动一个新的 AI 面试会话，并获取首个提问。
          * @summary 开始一场面试
+         * @param {InterviewStartRequest} [interviewStartRequest] 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        apiInterviewStartPost(options?: RawAxiosRequestConfig): AxiosPromise<InterviewStartResponse> {
-            return localVarFp.apiInterviewStartPost(options).then((request) => request(axios, basePath));
+        apiInterviewStartPost(interviewStartRequest?: InterviewStartRequest, options?: RawAxiosRequestConfig): AxiosPromise<InterviewStartResponse> {
+            return localVarFp.apiInterviewStartPost(interviewStartRequest, options).then((request) => request(axios, basePath));
         },
         /**
          * 候选人主动放弃或时间耗尽时调用，停止计费并中止本次会话进程。（通常在系统判断回答 ending=true 时无需显式调用）
@@ -897,11 +953,12 @@ export class InterviewApi extends BaseAPI {
     /**
      * 基于用户当前档案数据生成并启动一个新的 AI 面试会话，并获取首个提问。
      * @summary 开始一场面试
+     * @param {InterviewStartRequest} [interviewStartRequest] 
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    public apiInterviewStartPost(options?: RawAxiosRequestConfig) {
-        return InterviewApiFp(this.configuration).apiInterviewStartPost(options).then((request) => request(this.axios, this.basePath));
+    public apiInterviewStartPost(interviewStartRequest?: InterviewStartRequest, options?: RawAxiosRequestConfig) {
+        return InterviewApiFp(this.configuration).apiInterviewStartPost(interviewStartRequest, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
@@ -1220,6 +1277,4 @@ export class UserApi extends BaseAPI {
         return UserApiFp(this.configuration).apiUserProfilePut(profile, options).then((request) => request(this.axios, this.basePath));
     }
 }
-
-
 

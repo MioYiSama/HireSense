@@ -23,7 +23,7 @@ func TestRemoteInterviewBackendStartReturnsInitialReply(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"success":true,"data":"请先做一个简短的自我介绍。"}`))
+		_, _ = w.Write([]byte(`{"success":true,"data":{"reply":"请先做一个简短的自我介绍。","mode":"panel_trio","speaker_role":"hr"}}`))
 	}))
 	defer server.Close()
 
@@ -42,6 +42,12 @@ func TestRemoteInterviewBackendStartReturnsInitialReply(t *testing.T) {
 	if result.Reply != "请先做一个简短的自我介绍。" {
 		t.Fatalf("result.Reply = %q, want %q", result.Reply, "请先做一个简短的自我介绍。")
 	}
+	if result.Mode != "panel_trio" {
+		t.Fatalf("result.Mode = %q, want %q", result.Mode, "panel_trio")
+	}
+	if result.SpeakerRole != "hr" {
+		t.Fatalf("result.SpeakerRole = %q, want %q", result.SpeakerRole, "hr")
+	}
 }
 
 func TestRemoteInterviewBackendStartRejectsEmptyInitialReply(t *testing.T) {
@@ -49,7 +55,7 @@ func TestRemoteInterviewBackendStartRejectsEmptyInitialReply(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"success":true,"data":""}`))
+		_, _ = w.Write([]byte(`{"success":true,"data":{"reply":""}}`))
 	}))
 	defer server.Close()
 
@@ -81,7 +87,7 @@ func TestRemoteInterviewBackendReplyParsesEnding(t *testing.T) {
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"reply":"感谢你的作答，今天的面试先到这里。","ending":true}`))
+		_, _ = w.Write([]byte(`{"reply":"感谢你的作答，今天的面试先到这里。","ending":true,"mode":"panel_trio","speaker_role":"executive"}`))
 	}))
 	defer server.Close()
 
@@ -102,5 +108,11 @@ func TestRemoteInterviewBackendReplyParsesEnding(t *testing.T) {
 	}
 	if !result.Ending {
 		t.Fatal("result.Ending = false, want true")
+	}
+	if result.Mode != "panel_trio" {
+		t.Fatalf("result.Mode = %q, want %q", result.Mode, "panel_trio")
+	}
+	if result.SpeakerRole != "executive" {
+		t.Fatalf("result.SpeakerRole = %q, want %q", result.SpeakerRole, "executive")
 	}
 }

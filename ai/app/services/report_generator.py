@@ -206,6 +206,7 @@ class FinalReport:
             reviews.append(
                 ReviewItem(
                     interviewer=log.interviewer,
+                    interviewer_role=log.interviewer_role,
                     interviewee=log.interviewee,
                     score=log.final_score,
                     advice=log.async_advice,
@@ -225,7 +226,7 @@ class FinalReport:
         for index, log in enumerate(state.interview_logs, start=1):
             lines.extend(
                 [
-                    f"题目{index}: {log.interviewer}",
+                    f"题目{index}: [{log.interviewer_role}] {log.interviewer}",
                     f"考点: {log.concept}",
                     f"难度: {log.difficulty_label}",
                     f"候选人回答: {log.interviewee}",
@@ -354,6 +355,7 @@ class FinalReport:
 
         return ReportContent(
             job=state.job,
+            mode=state.mode,
             score=final_score,
             general=general_scores,
             general_details=general_details,

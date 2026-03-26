@@ -11,10 +11,12 @@ import { getCodeLanguageForJob, getCodeLanguageLabel, type CodeLanguage } from "
 import {
   getAccessToken,
   getInterviewId,
-  getInitialReply,
+  getInitialInterviewState,
   getUserInfo,
   removeInterviewId,
   removeInitialReply,
+  type InterviewMode,
+  type InterviewSpeakerRole,
 } from "@/utils/token";
 
 // 常量定义
@@ -31,6 +33,7 @@ const timerInterval = ref<number | null>(null);
 const errorMessage = ref("");
 const interviewId = ref(getInterviewId());
 const storedUserInfo = getUserInfo();
+const storedInitialInterviewState = getInitialInterviewState();
 
 // 录音状态
 const isRecording = ref(false);
@@ -51,6 +54,7 @@ interface Message {
   type: MessageType;
   content: string;
   timestamp: string;
+  speakerRole?: InterviewSpeakerRole;
   audioBlob?: Blob;
   duration?: number;
   codeLanguage?: CodeLanguage;
@@ -63,6 +67,7 @@ const chatContainer = ref<HTMLElement | null>(null);
 const isCodeEditorOpen = ref(false);
 const codeDraft = ref("");
 const codeLanguage = ref<CodeLanguage>(getCodeLanguageForJob(storedUserInfo?.job));
+const activeInterviewMode = ref<InterviewMode>(storedInitialInterviewState?.mode ?? "single");
 
 // 音频播放状态
 const audioElements = ref<{ [key: number]: HTMLAudioElement }>({});
@@ -85,13 +90,25 @@ const cleanupAudioResources = (messageId: number) => {
 
 const createMessageId = () => Date.now() + Math.floor(Math.random() * 1000);
 
-const pushTextMessage = (role: Message["role"], content: string) => {
+const normalizeSpeakerRole = (speakerRole?: string): InterviewSpeakerRole => {
+  if (speakerRole === "hr" || speakerRole === "tech_lead" || speakerRole === "executive") {
+    return speakerRole;
+  }
+  return "ai";
+};
+
+const pushTextMessage = (
+  role: Message["role"],
+  content: string,
+  speakerRole?: InterviewSpeakerRole,
+) => {
   messages.value.push({
     id: createMessageId(),
     role,
     type: "text",
     content,
     timestamp: new Date().toLocaleTimeString(),
+    speakerRole: role === "ai" ? normalizeSpeakerRole(speakerRole) : undefined,
   });
 };
 
@@ -107,7 +124,11 @@ const pushCodeMessage = (content: string, language: CodeLanguage) => {
 };
 
 const pushErrorReply = (content: string) => {
-  pushTextMessage("ai", content);
+  pushTextMessage(
+    "ai",
+    content,
+    activeInterviewMode.value === "panel_trio" ? latestSpeakerRole.value : "ai",
+  );
 };
 
 // 处理输入消息
@@ -209,12 +230,75 @@ const replyInterviewMutation = useMutation({
 
 const isLoading = computed(() => stopInterviewMutation.isPending.value);
 const isSubmitting = computed(() => replyInterviewMutation.isPending.value);
+const latestSpeakerRole = computed<InterviewSpeakerRole>(() => {
+  const latestMessage = [...messages.value]
+    .reverse()
+    .find((message) => message.role === "ai" && message.speakerRole);
+  return latestMessage?.speakerRole ?? (activeInterviewMode.value === "panel_trio" ? "hr" : "ai");
+});
+
+const panelInterviewers: Array<{
+  role: Extract<InterviewSpeakerRole, "hr" | "tech_lead" | "executive">;
+  label: string;
+  description: string;
+}> = [
+  {
+    role: "hr",
+    label: "HR",
+    description: "经历、沟通、动机",
+  },
+  {
+    role: "tech_lead",
+    label: "技术主管",
+    description: "技术深挖、实现取舍",
+  },
+  {
+    role: "executive",
+    label: "大老板",
+    description: "业务影响、Owner 意识",
+  },
+];
+
+const getSpeakerMeta = (speakerRole?: InterviewSpeakerRole) => {
+  const role = normalizeSpeakerRole(speakerRole);
+
+  if (role === "hr") {
+    return {
+      label: "HR 面试官",
+      chipClass: "bg-emerald-500/10 text-emerald-300 border border-emerald-500/20",
+      avatarClass: "bg-emerald-500/20 text-emerald-300",
+    };
+  }
+
+  if (role === "tech_lead") {
+    return {
+      label: "技术主管",
+      chipClass: "bg-cyan-500/10 text-cyan-300 border border-cyan-500/20",
+      avatarClass: "bg-cyan-500/20 text-cyan-300",
+    };
+  }
+
+  if (role === "executive") {
+    return {
+      label: "大老板",
+      chipClass: "bg-fuchsia-500/10 text-fuchsia-300 border border-fuchsia-500/20",
+      avatarClass: "bg-fuchsia-500/20 text-fuchsia-300",
+    };
+  }
+
+  return {
+    label: "AI 面试官",
+    chipClass: "bg-blue-500/10 text-blue-300 border border-blue-500/20",
+    avatarClass: "bg-blue-500/20 text-blue-300",
+  };
+};
 
 // API请求函数
 const sendInterviewReply = async (payload: InterviewReplyPayload) => {
   const data = await replyInterviewMutation.mutateAsync(payload);
 
-  pushTextMessage("ai", data.reply);
+  activeInterviewMode.value = data.mode;
+  pushTextMessage("ai", data.reply, normalizeSpeakerRole(data.speaker_role));
 
   // 检查是否面试结束
   if (data.ending) {
@@ -289,8 +373,9 @@ onMounted(() => {
 
   setTimeout(() => {
     isInitialLoading.value = false;
-    // 从localStorage获取AI面试官的初始回复
-    const initialReply = getInitialReply();
+    const initialState = storedInitialInterviewState;
+    activeInterviewMode.value = initialState?.mode ?? "single";
+    const initialReply = initialState?.reply ?? "";
     messages.value.push({
       id: 1,
       role: "ai",
@@ -299,6 +384,7 @@ onMounted(() => {
         initialReply ||
         "你好！我是你的AI面试官。欢迎参加今天的面试。请先做一个简短的自我介绍，然后我们将开始技术问题的讨论。",
       timestamp: new Date().toLocaleTimeString(),
+      speakerRole: normalizeSpeakerRole(initialState?.speakerRole),
     });
     // 清除已使用的初始回复
     removeInitialReply();
@@ -697,6 +783,35 @@ const formatCodeLanguage = (language: string | undefined) => {
       <div
         class="flex h-[calc(100vh-8rem)] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-gray-700/50 bg-gray-900/60 shadow-xl backdrop-blur-md"
       >
+        <div
+          v-if="activeInterviewMode === 'panel_trio'"
+          class="grid grid-cols-1 gap-3 border-b border-white/6 bg-white/2 p-4 md:grid-cols-3"
+        >
+          <div
+            v-for="member in panelInterviewers"
+            :key="member.role"
+            :class="[
+              'rounded-2xl border p-4 transition-all duration-200',
+              latestSpeakerRole === member.role
+                ? 'border-white/15 bg-white/6 shadow-lg'
+                : 'border-white/6 bg-white/3',
+            ]"
+          >
+            <div class="flex items-center justify-between gap-3">
+              <span class="text-sm font-semibold text-white">{{ member.label }}</span>
+              <span
+                class="rounded-full px-2.5 py-1 text-[11px] font-medium"
+                :class="getSpeakerMeta(member.role).chipClass"
+              >
+                {{ latestSpeakerRole === member.role ? "当前发言" : "在场" }}
+              </span>
+            </div>
+            <p class="mt-2 text-xs leading-relaxed text-slate-400">
+              {{ member.description }}
+            </p>
+          </div>
+        </div>
+
         <!-- 对话内容展示区 -->
         <div ref="chatContainer" class="flex-1 space-y-6 overflow-y-auto p-6">
           <!-- 初始加载状态 -->
@@ -719,7 +834,9 @@ const formatCodeLanguage = (language: string | undefined) => {
                   />
                 </svg>
               </div>
-              <p class="text-gray-400">AI面试官正在准备中...</p>
+              <p class="text-gray-400">
+                {{ activeInterviewMode === "panel_trio" ? "群面官正在就位..." : "AI面试官正在准备中..." }}
+              </p>
             </div>
           </div>
 
@@ -735,10 +852,11 @@ const formatCodeLanguage = (language: string | undefined) => {
               <div v-if="message.role === 'ai'" class="flex max-w-[80%] flex-col items-start gap-1">
                 <div class="flex items-start gap-3">
                   <div
-                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-500/20"
+                    class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                    :class="getSpeakerMeta(message.speakerRole).avatarClass"
                   >
                     <svg
-                      class="h-5 w-5 text-blue-400"
+                      class="h-5 w-5"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -754,8 +872,13 @@ const formatCodeLanguage = (language: string | undefined) => {
                   <div
                     class="rounded-2xl rounded-tl-none bg-gray-800/50 p-4 shadow-lg shadow-gray-900/50"
                   >
-                    <div class="mb-2 flex items-center">
-                      <span class="text-sm font-medium text-blue-400">AI面试官</span>
+                    <div class="mb-2 flex items-center gap-2">
+                      <span
+                        class="rounded-full px-2.5 py-1 text-xs font-medium"
+                        :class="getSpeakerMeta(message.speakerRole).chipClass"
+                      >
+                        {{ getSpeakerMeta(message.speakerRole).label }}
+                      </span>
                     </div>
                     <div v-if="message.type === 'audio'" class="flex items-center gap-3">
                       <button

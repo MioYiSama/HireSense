@@ -10,6 +10,7 @@ from app.models.schemas import (
     ReplyRequest,
     ReplyResponse,
     ReportPushRequest,  # 这里的 ReportPushRequest 实际上就是最终生成的报告外壳
+    StartPayload,
     StartRequest,
     StartResponse,
     StopRequest,
@@ -58,7 +59,14 @@ async def start_interview(req: StartRequest, workflow=Depends(get_agent_workflow
         res = await workflow.initialize_session(req)
 
         # 严格遵守 API 契约，仅返回 success 和 data
-        return StartResponse(success=True, data=res["reply_speech"])
+        return StartResponse(
+            success=True,
+            data=StartPayload(
+                reply=res["reply_speech"],
+                mode=res.get("mode", "single"),
+                speaker_role=res.get("speaker_role", "ai"),
+            ),
+        )
 
     except Exception as e:
         print(f"[Start API Error]: {e}")
@@ -103,7 +111,12 @@ async def reply_interview(req: ReplyRequest, workflow=Depends(get_agent_workflow
         turn_result = await workflow.process_turn(state, user_text)
 
         # 4. 组装返回契约
-        return ReplyResponse(reply=turn_result.reply_speech, ending=turn_result.ending)
+        return ReplyResponse(
+            reply=turn_result.reply_speech,
+            ending=turn_result.ending,
+            mode=getattr(turn_result, "mode", "single"),
+            speaker_role=getattr(turn_result, "speaker_role", "ai"),
+        )
     except Exception as e:
         print(f"[Reply API Error]: {e}")
         traceback.print_exc()

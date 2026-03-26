@@ -6,6 +6,7 @@ from app.core.history_manager import HistoryManager
 from app.db import chroma_client, neo4j_client
 from app.services import intent_router, llm_generator, evaluator
 from app.services.llm_generator import Clarify, TacticalDecision
+from app.services.panel_flow import PanelInterviewCoordinator
 from app.services.resume_analyzer import ResumeAnalyzer
 from app.core.state_manager import session_store
 
@@ -14,6 +15,8 @@ from app.core.state_manager import session_store
 class TurnReply:
     reply_speech: str
     ending: bool = False
+    mode: str = "single"
+    speaker_role: str = "ai"
 
 
 class AgentFlow:
@@ -45,6 +48,15 @@ class AgentFlow:
 
         # 强引用后台任务，防止被垃圾回收 (非 FastAPI 环境下的纯 asyncio 保底做法)
         self._background_tasks = set()
+        self.panel_coordinator = PanelInterviewCoordinator(
+            intent_router_=intent_router_,
+            evaluator_=evaluator_,
+            chroma_client_=chroma_client_,
+            neo4j_client_=neo4j_client_,
+            llm_gen=llm_gen,
+            history_manager=history_manager,
+            finalize_question_log=self._finalize_question_log,
+        )
 
     def _track_background_task(self, task: asyncio.Task) -> None:
         self._background_tasks.add(task)
@@ -342,8 +354,10 @@ class AgentFlow:
 
         round_log = InterviewRoundLog(
             q_id=q_id,
+            question_type=state.current_question_type or "technical",
             concept=state.current_concept or "",
             difficulty_label=state.current_question_difficulty or "unknown",
+            interviewer_role=state.current_interviewer_role or "ai",
             interviewer=question_brief,
             interviewee=cumulative_answer,
             sts_coverage=float(score_res.get("coverage_raw", 0.0)),
@@ -389,6 +403,15 @@ class AgentFlow:
         return round_index
 
     async def process_turn(self, state: AgentState, user_text: str) -> TurnReply:
+        if state.mode == "panel_trio":
+            panel_reply = await self.panel_coordinator.process_turn(state, user_text)
+            return TurnReply(
+                reply_speech=panel_reply.reply_speech,
+                ending=panel_reply.ending,
+                mode=panel_reply.mode,
+                speaker_role=panel_reply.speaker_role,
+            )
+
         # 1. 记忆更新与切片
         self.history_manager.add_messages(state=state, content=user_text, role="interviewee",
                                           concept=state.current_concept)
@@ -605,6 +628,9 @@ class AgentFlow:
             state.visited_concept.append(res.selected_node)
             state.probe_num = 0
             state.current_question_difficulty = inferred_difficulty
+            state.current_question_type = "technical"
+            state.current_interviewer_role = "ai"
+            state.current_question_standard_answer = ""
             state.current_concept_cumulative_answer = ""  # 清空上题的累积回答
 
         if res.q_id_and_brief:
@@ -617,6 +643,29 @@ class AgentFlow:
     async def initialize_session(self, req: StartRequest) -> dict:
         personalization = (req.personalization or "").strip()
         resume_text = req.resume or ""
+
+        if req.mode == "panel_trio":
+            new_state, opening_reply = await self.panel_coordinator.build_initial_state(
+                session_id=req.id,
+                job=req.job,
+                personalization=personalization,
+            )
+            session_store.save_state(req.id, new_state)
+            warmup_task = asyncio.create_task(
+                self._hydrate_session_context(
+                    state=new_state,
+                    resume_text=resume_text,
+                    job_domain=req.job,
+                )
+            )
+            self._track_background_task(warmup_task)
+
+            return {
+                "id": req.id,
+                "reply_speech": opening_reply.reply_speech,
+                "mode": opening_reply.mode,
+                "speaker_role": opening_reply.speaker_role,
+            }
 
         # 首题快速路径：优先从基础题题库随机抽题；若题库缺失则回退到既有破冰逻辑。
         basic_question = await self.neo4j_client.get_random_basic_question()
@@ -645,17 +694,21 @@ class AgentFlow:
         new_state = AgentState(
             session_id=req.id,
             job=req.job,
+            mode="single",
             personalization=personalization,
             resume_star="",
             resume_concept_list=[],
             current_concept=selected_concept,
+            current_interviewer_role="ai",
             visited_concept=[selected_concept],
             q_id_list=[],
             new_concept_list=[],
             chat_history=[],
             interview_logs=[],
             candidate_fact_sheet=[],
+            current_question_type="technical",
             current_question_difficulty="basic",
+            current_question_standard_answer="",
             current_concept_cumulative_answer="",
             recent_messages=""
         )
@@ -682,5 +735,7 @@ class AgentFlow:
 
         return {
             "id": req.id,
-            "reply_speech": opening_speech
+            "reply_speech": opening_speech,
+            "mode": "single",
+            "speaker_role": "ai",
         }

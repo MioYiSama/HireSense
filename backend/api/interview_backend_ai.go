@@ -20,6 +20,7 @@ type aiInterviewStartRequest struct {
 	Job             string `json:"job"`
 	Resume          string `json:"resume,omitempty"`
 	Personalization string `json:"personalization,omitempty"`
+	Mode            string `json:"mode,omitempty"`
 }
 
 type aiInterviewReplyRequest struct {
@@ -38,13 +39,21 @@ type aiInterviewReplyTranscriptInput struct {
 }
 
 type aiInterviewReplyResponse struct {
-	Reply  string `json:"reply"`
-	Ending bool   `json:"ending"`
+	Reply       string `json:"reply"`
+	Ending      bool   `json:"ending"`
+	Mode        string `json:"mode,omitempty"`
+	SpeakerRole string `json:"speaker_role,omitempty"`
+}
+
+type aiInterviewStartPayload struct {
+	Reply       string `json:"reply"`
+	Mode        string `json:"mode,omitempty"`
+	SpeakerRole string `json:"speaker_role,omitempty"`
 }
 
 type aiInterviewStartResponse struct {
 	Success bool   `json:"success"`
-	Data    string `json:"data"`
+	Data    any    `json:"data"`
 }
 
 type aiInterviewStopRequest struct {
@@ -69,6 +78,7 @@ func (b *remoteInterviewBackend) Start(ctx context.Context, session InterviewSes
 		Job:             session.Job,
 		Resume:          session.Resume,
 		Personalization: session.Personalization,
+		Mode:            session.Mode,
 	}
 
 	var response aiInterviewStartResponse
@@ -79,7 +89,15 @@ func (b *remoteInterviewBackend) Start(ctx context.Context, session InterviewSes
 		}
 	}
 
-	if response.Data == "" {
+	payload, err := parseAIInterviewStartPayload(response.Data)
+	if err != nil {
+		return InterviewStartResult{}, &InterviewUpstreamError{
+			Service: "ai",
+			Err:     err,
+		}
+	}
+
+	if payload.Reply == "" {
 		return InterviewStartResult{}, &InterviewUpstreamError{
 			Service: "ai",
 			Err:     fmt.Errorf("empty initial reply returned"),
@@ -87,7 +105,9 @@ func (b *remoteInterviewBackend) Start(ctx context.Context, session InterviewSes
 	}
 
 	return InterviewStartResult{
-		Reply: response.Data,
+		Reply:       payload.Reply,
+		Mode:        payload.Mode,
+		SpeakerRole: payload.SpeakerRole,
 	}, nil
 }
 
@@ -123,8 +143,10 @@ func (b *remoteInterviewBackend) Reply(ctx context.Context, payload interviewRep
 	}
 
 	return InterviewReplyResult{
-		Reply:  response.Reply,
-		Ending: response.Ending,
+		Reply:       response.Reply,
+		Ending:      response.Ending,
+		Mode:        response.Mode,
+		SpeakerRole: response.SpeakerRole,
 	}, nil
 }
 
@@ -181,4 +203,25 @@ func (b *remoteInterviewBackend) doJSON(ctx context.Context, method, endpointPat
 	}
 
 	return nil
+}
+
+func parseAIInterviewStartPayload(data any) (aiInterviewStartPayload, error) {
+	switch value := data.(type) {
+	case string:
+		return aiInterviewStartPayload{Reply: value}, nil
+	case map[string]any:
+		payload := aiInterviewStartPayload{}
+		if reply, ok := value["reply"].(string); ok {
+			payload.Reply = reply
+		}
+		if mode, ok := value["mode"].(string); ok {
+			payload.Mode = mode
+		}
+		if speakerRole, ok := value["speaker_role"].(string); ok {
+			payload.SpeakerRole = speakerRole
+		}
+		return payload, nil
+	default:
+		return aiInterviewStartPayload{}, fmt.Errorf("unexpected start payload type %T", data)
+	}
 }
