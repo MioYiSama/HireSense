@@ -20,7 +20,12 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import type { ECharts, EChartsOption, SetOptionOpts } from "echarts/core";
+import { graphic, init, use, type ECharts, type EChartsOption, type SetOptionOpts } from "echarts/core";
+import { LineChart } from "echarts/charts";
+import { GridComponent, TooltipComponent } from "echarts/components";
+import { CanvasRenderer } from "echarts/renderers";
+
+use([LineChart, GridComponent, TooltipComponent, CanvasRenderer]);
 
 const debounce = <T extends (...args: any[]) => void>(
   func: T,
@@ -60,7 +65,6 @@ const chartRef = ref<HTMLDivElement | null>(null);
 let chartInstance: ECharts | null = null;
 let resizeObserver: ResizeObserver | null = null;
 let isUnmounted = false;
-let echartsModulePromise: Promise<typeof import("echarts/core")> | null = null;
 
 const formatDateLabel = (date: Date) => {
   return `${date.getMonth() + 1}/${date.getDate()}`;
@@ -114,31 +118,7 @@ const yAxisRange = computed(() => {
   };
 });
 
-const loadECharts = async () => {
-  if (!echartsModulePromise) {
-    echartsModulePromise = (async () => {
-      const [echartsModule, chartsModule, componentsModule, renderersModule] = await Promise.all([
-        import("echarts/core"),
-        import("echarts/charts"),
-        import("echarts/components"),
-        import("echarts/renderers"),
-      ]);
-
-      echartsModule.use([
-        chartsModule.LineChart,
-        componentsModule.GridComponent,
-        componentsModule.TooltipComponent,
-        renderersModule.CanvasRenderer,
-      ]);
-
-      return echartsModule;
-    })();
-  }
-
-  return echartsModulePromise;
-};
-
-const createChartOption = (echartsModule: typeof import("echarts/core")): EChartsOption => {
+const createChartOption = (): EChartsOption => {
   return {
     animationDuration: 500,
     animationDurationUpdate: 300,
@@ -216,13 +196,13 @@ const createChartOption = (echartsModule: typeof import("echarts/core")): EChart
         symbolSize: 8,
         lineStyle: {
           width: 3,
-          color: new echartsModule.graphic.LinearGradient(0, 0, 1, 0, [
+          color: new graphic.LinearGradient(0, 0, 1, 0, [
             { offset: 0, color: "#06b6d4" },
             { offset: 1, color: "#a855f7" },
           ]),
         },
         areaStyle: {
-          color: new echartsModule.graphic.LinearGradient(0, 0, 0, 1, [
+          color: new graphic.LinearGradient(0, 0, 0, 1, [
             { offset: 0, color: "rgba(6, 182, 212, 0.28)" },
             { offset: 1, color: "rgba(6, 182, 212, 0)" },
           ]),
@@ -243,19 +223,17 @@ const createChartOption = (echartsModule: typeof import("echarts/core")): EChart
   };
 };
 
-const renderChart = async () => {
+const renderChart = () => {
   if (!chartRef.value) {
     return;
   }
-
-  const echartsModule = await loadECharts();
 
   if (!chartRef.value || isUnmounted) {
     return;
   }
 
   if (!chartInstance) {
-    chartInstance = echartsModule.init(chartRef.value);
+    chartInstance = init(chartRef.value);
   }
 
   const updateOptions: SetOptionOpts = {
@@ -263,7 +241,7 @@ const renderChart = async () => {
     lazyUpdate: true,
   };
 
-  chartInstance.setOption(createChartOption(echartsModule), updateOptions);
+  chartInstance.setOption(createChartOption(), updateOptions);
   chartInstance.resize();
 };
 
@@ -294,7 +272,7 @@ watch(
 onMounted(async () => {
   isUnmounted = false;
   await nextTick();
-  await renderChart();
+  renderChart();
 
   if (chartRef.value && typeof ResizeObserver !== "undefined") {
     resizeObserver = new ResizeObserver(() => {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, computed, watch } from "vue";
+import { computed, defineAsyncComponent, onMounted, onUnmounted, ref, watch } from "vue";
 import { useMutation, useQueryClient } from "@tanstack/vue-query";
 import { useRouter } from "vue-router";
 import {
@@ -11,7 +11,8 @@ import {
 } from "@/utils/token";
 import { getApiErrorMessage, signOut, startInterview, useInterviewsQuery } from "@/lib/api";
 import ConfirmDialog from "@/components/ConfirmDialog.vue";
-import GrowthCurve from "@/components/GrowthCurve.vue";
+
+const GrowthCurve = defineAsyncComponent(() => import("@/components/GrowthCurve.vue"));
 
 const router = useRouter();
 const queryClient = useQueryClient();

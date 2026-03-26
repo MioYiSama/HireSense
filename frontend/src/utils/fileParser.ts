@@ -1,10 +1,22 @@
-import mammoth from "mammoth";
-
 export interface ParseResult {
   success: boolean;
   text: string;
   error?: string;
 }
+
+type MammothModule = typeof import("mammoth");
+
+let mammothPromise: Promise<MammothModule> | null = null;
+
+const loadMammoth = async () => {
+  if (!mammothPromise) {
+    mammothPromise = import("mammoth").then((module) => {
+      return ("default" in module ? module.default : module) as MammothModule;
+    });
+  }
+
+  return mammothPromise;
+};
 
 export async function parseFile(file: File): Promise<ParseResult> {
   const fileType = file.type;
@@ -50,6 +62,7 @@ export async function parseFile(file: File): Promise<ParseResult> {
 
 async function parseWord(file: File): Promise<ParseResult> {
   try {
+    const mammoth = await loadMammoth();
     const arrayBuffer = await file.arrayBuffer();
     const result = await mammoth.extractRawText({ arrayBuffer });
 

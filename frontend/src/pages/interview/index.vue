@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { useMutation, useQueryClient } from "@tanstack/vue-query";
-import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { computed, defineAsyncComponent, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 
-import CodeEditorDialog from "@/components/CodeEditorDialog.vue";
+import ConfidenceMeter from "@/components/ConfidenceMeter.vue";
 import ConfirmDialog from "@/components/ConfirmDialog.vue";
 import InterviewInput from "@/components/InterviewInput.vue";
 import { getApiErrorMessage, queryKeys, replyInterview, stopInterview } from "@/lib/api";
 import { getCodeLanguageForJob, getCodeLanguageLabel, type CodeLanguage } from "@/lib/codeEditor";
+import { useConfidenceMeter } from "@/lib/useConfidenceMeter";
 import {
   getAccessToken,
   getInterviewId,
@@ -18,6 +19,8 @@ import {
   type InterviewMode,
   type InterviewSpeakerRole,
 } from "@/utils/token";
+
+const CodeEditorDialog = defineAsyncComponent(() => import("@/components/CodeEditorDialog.vue"));
 
 // 常量定义
 const INITIAL_LOADING_DELAY = 1500;
@@ -40,10 +43,14 @@ const isRecording = ref(false);
 const recordingTime = ref(0);
 const recordingInterval = ref<number | null>(null);
 const mediaRecorder = ref<MediaRecorder | null>(null);
+const activeRecordingStream = ref<MediaStream | null>(null);
 const audioChunks = ref<Blob[]>([]);
 const isCancelingRecording = ref(false);
 const answerCountdown = ref(ANSWER_COUNTDOWN_TIME);
 const countdownInterval = ref<number | null>(null);
+const confidenceMeter = useConfidenceMeter();
+const confidenceMeterSnapshot = confidenceMeter.snapshot;
+const isConfidenceMeterSupported = confidenceMeter.supported;
 
 // 定义消息类型
 type MessageType = "text" | "audio" | "code";
@@ -293,6 +300,37 @@ const getSpeakerMeta = (speakerRole?: InterviewSpeakerRole) => {
   };
 };
 
+const stopRecordingTimers = () => {
+  if (recordingInterval.value) {
+    clearInterval(recordingInterval.value);
+    recordingInterval.value = null;
+  }
+
+  if (countdownInterval.value) {
+    clearInterval(countdownInterval.value);
+    countdownInterval.value = null;
+  }
+};
+
+const resetRecordingCountdown = () => {
+  recordingTime.value = 0;
+  answerCountdown.value = ANSWER_COUNTDOWN_TIME;
+};
+
+const releaseRecordingStream = () => {
+  if (!activeRecordingStream.value) {
+    return;
+  }
+
+  activeRecordingStream.value.getTracks().forEach((track) => track.stop());
+  activeRecordingStream.value = null;
+};
+
+const finalizeRecordingSession = () => {
+  releaseRecordingStream();
+  mediaRecorder.value = null;
+};
+
 // API请求函数
 const sendInterviewReply = async (payload: InterviewReplyPayload) => {
   const data = await replyInterviewMutation.mutateAsync(payload);
@@ -309,14 +347,13 @@ const sendInterviewReply = async (payload: InterviewReplyPayload) => {
     if (timerInterval.value) {
       clearInterval(timerInterval.value);
     }
-    if (recordingInterval.value) {
-      clearInterval(recordingInterval.value);
-    }
-    if (countdownInterval.value) {
-      clearInterval(countdownInterval.value);
-    }
+    stopRecordingTimers();
     if (mediaRecorder.value && isRecording.value) {
+      isCancelingRecording.value = true;
+      audioChunks.value = [];
+      confidenceMeter.cancelAndHide();
       mediaRecorder.value.stop();
+      isRecording.value = false;
     }
   }
 };
@@ -413,15 +450,16 @@ onUnmounted(() => {
     cleanupAudioResources(messageId);
   });
 
-  // 清除录音计时器
-  if (recordingInterval.value) {
-    clearInterval(recordingInterval.value);
-  }
+  stopRecordingTimers();
 
-  // 停止录音
   if (mediaRecorder.value && isRecording.value) {
+    isCancelingRecording.value = true;
+    audioChunks.value = [];
     mediaRecorder.value.stop();
   }
+
+  confidenceMeter.reset();
+  releaseRecordingStream();
 });
 
 const endInterview = () => {
@@ -532,8 +570,11 @@ class WavEncoder {
 const startRecording = async () => {
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    activeRecordingStream.value = stream;
     mediaRecorder.value = new MediaRecorder(stream, { mimeType: "audio/webm" });
     audioChunks.value = [];
+    isCancelingRecording.value = false;
+    await confidenceMeter.start(stream);
 
     mediaRecorder.value.ondataavailable = (event) => {
       if (event.data.size > 0 && !isCancelingRecording.value) {
@@ -542,54 +583,54 @@ const startRecording = async () => {
     };
 
     mediaRecorder.value.onstop = async () => {
-      // 检查是否有录音数据
-      if (audioChunks.value.length === 0) {
-        console.log("录音被中断，没有数据");
-        // 重置取消标志
-        isCancelingRecording.value = false;
-        return;
-      }
+      const finalDuration = recordingTime.value;
 
-      const audioBlob = new Blob(audioChunks.value, { type: "audio/webm" });
-      console.log("录音完成，音频数据:", audioBlob);
-      console.log("音频大小:", audioBlob.size, "bytes");
-
-      // 将WebM转换为WAV格式
       try {
-        const audioContext = new AudioContext();
-        const arrayBuffer = await audioBlob.arrayBuffer();
-        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+        // 检查是否有录音数据
+        if (audioChunks.value.length === 0) {
+          console.log("录音被中断，没有数据");
+          return;
+        }
 
-        const encoder = new WavEncoder(audioBuffer.sampleRate);
-        const wavBlob = await encoder.encode(audioBuffer);
+        const audioBlob = new Blob(audioChunks.value, { type: "audio/webm" });
+        console.log("录音完成，音频数据:", audioBlob);
+        console.log("音频大小:", audioBlob.size, "bytes");
 
-        console.log("WAV文件生成成功:", wavBlob);
-        console.log("WAV文件大小:", wavBlob.size, "bytes");
+        // 将WebM转换为WAV格式
+        try {
+          const audioContext = new AudioContext();
+          const arrayBuffer = await audioBlob.arrayBuffer();
+          const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
 
-        // 发送录音消息到聊天界面
-        await sendAudioMessage(wavBlob, recordingTime.value);
+          const encoder = new WavEncoder(audioBuffer.sampleRate);
+          const wavBlob = await encoder.encode(audioBuffer);
 
-        // 可以在这里将WAV文件发送到服务器或进行其他处理
-        const wavUrl = URL.createObjectURL(wavBlob);
-        console.log("WAV文件URL:", wavUrl);
+          console.log("WAV文件生成成功:", wavBlob);
+          console.log("WAV文件大小:", wavBlob.size, "bytes");
 
-        // 清理URL对象
-        setTimeout(() => URL.revokeObjectURL(wavUrl), AUDIO_URL_RELEASE_DELAY);
-      } catch (error) {
-        console.error("WAV转换失败:", error);
+          // 发送录音消息到聊天界面
+          await sendAudioMessage(wavBlob, finalDuration);
+
+          // 可以在这里将WAV文件发送到服务器或进行其他处理
+          const wavUrl = URL.createObjectURL(wavBlob);
+          console.log("WAV文件URL:", wavUrl);
+
+          // 清理URL对象
+          setTimeout(() => URL.revokeObjectURL(wavUrl), AUDIO_URL_RELEASE_DELAY);
+        } catch (error) {
+          console.error("WAV转换失败:", error);
+        }
+      } finally {
+        audioChunks.value = [];
+        resetRecordingCountdown();
+        isCancelingRecording.value = false;
+        finalizeRecordingSession();
       }
-
-      // 清空录音数据
-      audioChunks.value = [];
-      recordingTime.value = 0;
-      // 重置取消标志
-      isCancelingRecording.value = false;
     };
 
     mediaRecorder.value.start();
     isRecording.value = true;
-    recordingTime.value = 0;
-    answerCountdown.value = 60;
+    resetRecordingCountdown();
 
     // 开始录音计时
     recordingInterval.value = window.setInterval(() => {
@@ -609,6 +650,8 @@ const startRecording = async () => {
     console.log("开始录音");
   } catch (error) {
     console.error("录音失败:", error);
+    confidenceMeter.reset();
+    finalizeRecordingSession();
     alert("无法访问麦克风，请确保已授予权限");
   }
 };
@@ -616,21 +659,10 @@ const startRecording = async () => {
 // 停止录音
 const stopRecording = () => {
   if (mediaRecorder.value && isRecording.value) {
+    confidenceMeter.freezeAndHide();
     mediaRecorder.value.stop();
     isRecording.value = false;
-
-    // 停止计时
-    if (recordingInterval.value) {
-      clearInterval(recordingInterval.value);
-      recordingInterval.value = null;
-    }
-
-    // 停止倒计时
-    if (countdownInterval.value) {
-      clearInterval(countdownInterval.value);
-      countdownInterval.value = null;
-    }
-
+    stopRecordingTimers();
     console.log("停止录音，录音时长:", recordingTime.value, "秒");
   }
 };
@@ -645,24 +677,13 @@ const cancelRecording = () => {
     audioChunks.value = [];
 
     // 停止录音
+    confidenceMeter.cancelAndHide();
     mediaRecorder.value.stop();
     isRecording.value = false;
-
-    // 停止计时
-    if (recordingInterval.value) {
-      clearInterval(recordingInterval.value);
-      recordingInterval.value = null;
-    }
-
-    // 停止倒计时
-    if (countdownInterval.value) {
-      clearInterval(countdownInterval.value);
-      countdownInterval.value = null;
-    }
+    stopRecordingTimers();
 
     // 重置录音时间
-    recordingTime.value = 0;
-    answerCountdown.value = 60;
+    resetRecordingCountdown();
 
     console.log("中断录音");
   }
@@ -707,6 +728,13 @@ const formatCodeLanguage = (language: string | undefined) => {
   <div
     class="relative min-h-screen overflow-hidden bg-linear-to-br from-gray-900 via-gray-800 to-gray-900"
   >
+    <ConfidenceMeter
+      v-if="isConfidenceMeterSupported"
+      :snapshot="confidenceMeterSnapshot"
+      :recording-time="recordingTime"
+      :answer-countdown="answerCountdown"
+    />
+
     <!-- 背景 -->
     <div class="absolute top-0 left-1/4 h-96 w-96 rounded-full bg-blue-500/10 blur-3xl"></div>
     <div class="absolute right-1/4 bottom-0 h-96 w-96 rounded-full bg-purple-500/10 blur-3xl"></div>

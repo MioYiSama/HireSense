@@ -15,7 +15,6 @@ import {
   useResumeAnalysisQuery,
 } from "@/lib/api";
 import { formatResumeAnalysisTime } from "@/lib/resumeAnalysis";
-import { parseFile } from "@/utils/fileParser";
 import { clearAll, getUserInfo } from "@/utils/token";
 
 const router = useRouter();
@@ -45,6 +44,7 @@ const personalization = ref<{ interviewerStyle: InterviewerStyle }>({
   interviewerStyle: "default",
 });
 let messageTimeout: number | null = null;
+let fileParserPromise: Promise<typeof import("@/utils/fileParser")> | null = null;
 
 const customStyle = ref("");
 const saveMessage = ref("");
@@ -93,6 +93,14 @@ const showMessage = (message: string, isSuccess: boolean = false) => {
     saveMessage.value = "";
     messageTimeout = null;
   }, 3000);
+};
+
+const loadFileParser = async () => {
+  if (!fileParserPromise) {
+    fileParserPromise = import("@/utils/fileParser");
+  }
+
+  return fileParserPromise;
 };
 
 const isInterviewerStyle = (value: string): value is InterviewerStyle => {
@@ -244,6 +252,7 @@ const handleFileUpload = async (event: Event) => {
       console.log("上传的文件:", file);
 
       try {
+        const { parseFile } = await loadFileParser();
         const result = await parseFile(file);
 
         if (result.success) {
