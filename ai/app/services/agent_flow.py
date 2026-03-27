@@ -124,6 +124,7 @@ class AgentFlow:
             round_log = InterviewRoundLog(
                 interviewer = question_brief,
                 interviewee = user_text,
+                standard_answer = std_ans or "",
                 sts_coverage = c_score,
                 nli_logic =  l_status,
                 final_score =  m_score,
@@ -200,7 +201,6 @@ class AgentFlow:
                 self.history_manager.add_messages(state=state, content=reply_speech, role="interviewer",
                                                   concept=state.current_concept)
                 return reply_speech
-
 
 
 

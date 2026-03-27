@@ -360,6 +360,7 @@ class AgentFlow:
             interviewer_role=state.current_interviewer_role or "ai",
             interviewer=question_brief,
             interviewee=cumulative_answer,
+            standard_answer=std_answer or "",
             sts_coverage=float(score_res.get("coverage_raw", 0.0)),
             nli_logic=str(score_res.get("logic_status", "Neutral")),
             nli_probs=dict(score_res.get("nli_probs", {})),

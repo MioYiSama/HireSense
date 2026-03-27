@@ -298,6 +298,10 @@ export interface ReportReview {
      */
     'interviewee': string;
     /**
+     * 当前题目的标准答案
+     */
+    'standard_answer'?: string;
+    /**
      * 该轮得分
      */
     'score': number;
@@ -1500,6 +1504,5 @@ export class UserApi extends BaseAPI {
         return UserApiFp(this.configuration).apiUserResumeAnalysisPost(options).then((request) => request(this.axios, this.basePath));
     }
 }
-
 
 

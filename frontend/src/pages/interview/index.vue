@@ -5,9 +5,11 @@ import { useRouter } from "vue-router";
 
 import ConfidenceMeter from "@/components/ConfidenceMeter.vue";
 import ConfirmDialog from "@/components/ConfirmDialog.vue";
+import InterviewerStage from "@/components/InterviewerStage.vue";
 import InterviewInput from "@/components/InterviewInput.vue";
 import { getApiErrorMessage, queryKeys, replyInterview, stopInterview } from "@/lib/api";
 import { getCodeLanguageForJob, getCodeLanguageLabel, type CodeLanguage } from "@/lib/codeEditor";
+import type { AvatarAnimationMode } from "@/lib/interviewerAvatar";
 import { useConfidenceMeter } from "@/lib/useConfidenceMeter";
 import {
   getAccessToken,
@@ -70,11 +72,13 @@ interface Message {
 // 对话相关状态
 const messages = ref<Message[]>([]);
 const isInterviewEnded = ref(false);
+const stageAnimationMode = ref<AvatarAnimationMode>("idle");
 const chatContainer = ref<HTMLElement | null>(null);
 const isCodeEditorOpen = ref(false);
 const codeDraft = ref("");
 const codeLanguage = ref<CodeLanguage>(getCodeLanguageForJob(storedUserInfo?.job));
 const activeInterviewMode = ref<InterviewMode>(storedInitialInterviewState?.mode ?? "single");
+let stageSpeakingTimeout: number | null = null;
 
 // 音频播放状态
 const audioElements = ref<{ [key: number]: HTMLAudioElement }>({});
@@ -136,6 +140,7 @@ const pushErrorReply = (content: string) => {
     content,
     activeInterviewMode.value === "panel_trio" ? latestSpeakerRole.value : "ai",
   );
+  triggerStageSpeaking();
 };
 
 // 处理输入消息
@@ -237,6 +242,48 @@ const replyInterviewMutation = useMutation({
 
 const isLoading = computed(() => stopInterviewMutation.isPending.value);
 const isSubmitting = computed(() => replyInterviewMutation.isPending.value);
+
+const clearStageSpeakingTimeout = () => {
+  if (stageSpeakingTimeout) {
+    clearTimeout(stageSpeakingTimeout);
+    stageSpeakingTimeout = null;
+  }
+};
+
+const syncStageAnimationMode = () => {
+  if (isInterviewEnded.value) {
+    stageAnimationMode.value = "ended";
+    return;
+  }
+
+  if (isRecording.value) {
+    stageAnimationMode.value = "listening";
+    return;
+  }
+
+  if (isSubmitting.value || isInitialLoading.value) {
+    stageAnimationMode.value = "thinking";
+    return;
+  }
+
+  stageAnimationMode.value = "idle";
+};
+
+const triggerStageSpeaking = () => {
+  clearStageSpeakingTimeout();
+
+  if (isInterviewEnded.value) {
+    stageAnimationMode.value = "ended";
+    return;
+  }
+
+  stageAnimationMode.value = "speaking";
+  stageSpeakingTimeout = window.setTimeout(() => {
+    stageSpeakingTimeout = null;
+    syncStageAnimationMode();
+  }, 1800);
+};
+
 const latestSpeakerRole = computed<InterviewSpeakerRole>(() => {
   const latestMessage = [...messages.value]
     .reverse()
@@ -300,6 +347,48 @@ const getSpeakerMeta = (speakerRole?: InterviewSpeakerRole) => {
   };
 };
 
+const currentStageRole = computed<InterviewSpeakerRole>(() => {
+  return latestSpeakerRole.value;
+});
+
+const stageStatusLabel = computed(() => {
+  const currentSpeaker = getSpeakerMeta(currentStageRole.value).label;
+
+  if (isInterviewEnded.value) {
+    return "面试已结束，系统正在收束本轮问答并整理结果。";
+  }
+
+  if (isRecording.value) {
+    return `${currentSpeaker} 正在聆听你的回答，继续完整讲清楚思路。`;
+  }
+
+  if (isSubmitting.value || isInitialLoading.value) {
+    return `${currentSpeaker} 正在组织下一轮追问。`;
+  }
+
+  if (activeInterviewMode.value === "panel_trio") {
+    return `${currentSpeaker} 当前在场，左侧舞台会随发言人切换。`;
+  }
+
+  return "准备进入下一轮提问。";
+});
+
+watch(
+  [isRecording, isSubmitting, isInterviewEnded, isInitialLoading],
+  () => {
+    if (isInterviewEnded.value || isRecording.value || isSubmitting.value || isInitialLoading.value) {
+      clearStageSpeakingTimeout();
+      syncStageAnimationMode();
+      return;
+    }
+
+    if (stageAnimationMode.value !== "speaking") {
+      syncStageAnimationMode();
+    }
+  },
+  { immediate: true },
+);
+
 const stopRecordingTimers = () => {
   if (recordingInterval.value) {
     clearInterval(recordingInterval.value);
@@ -337,6 +426,7 @@ const sendInterviewReply = async (payload: InterviewReplyPayload) => {
 
   activeInterviewMode.value = data.mode;
   pushTextMessage("ai", data.reply, normalizeSpeakerRole(data.speaker_role));
+  triggerStageSpeaking();
 
   // 检查是否面试结束
   if (data.ending) {
@@ -423,6 +513,7 @@ onMounted(() => {
       timestamp: new Date().toLocaleTimeString(),
       speakerRole: normalizeSpeakerRole(initialState?.speakerRole),
     });
+    triggerStageSpeaking();
     // 清除已使用的初始回复
     removeInitialReply();
     scrollToBottom();
@@ -443,6 +534,8 @@ onUnmounted(() => {
   if (timerInterval.value) {
     clearInterval(timerInterval.value);
   }
+
+  clearStageSpeakingTimeout();
 
   // 清理所有音频资源
   Object.keys(audioElements.value).forEach((key) => {
@@ -807,77 +900,88 @@ const formatCodeLanguage = (language: string | undefined) => {
     </div>
 
     <!-- 主内容区 -->
-    <div class="flex flex-1 justify-center p-4 md:p-8">
-      <div
-        class="flex h-[calc(100vh-8rem)] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-gray-700/50 bg-gray-900/60 shadow-xl backdrop-blur-md"
-      >
+    <div class="flex flex-1 justify-center p-4 md:p-6 xl:p-8">
+      <div class="flex h-[calc(100vh-8rem)] w-full max-w-7xl flex-col gap-4 lg:flex-row">
+        <aside class="h-[32vh] min-h-[19rem] w-full shrink-0 md:min-h-[21rem] lg:h-full lg:min-h-[23rem] lg:w-[19.5rem] lg:max-w-[19.5rem] xl:w-[21rem] xl:max-w-[21rem]">
+          <InterviewerStage
+            class="h-full"
+            :role="currentStageRole"
+            :mode="stageAnimationMode"
+            :status-label="stageStatusLabel"
+            :panel-mode="activeInterviewMode === 'panel_trio'"
+          />
+        </aside>
+
         <div
-          v-if="activeInterviewMode === 'panel_trio'"
-          class="grid grid-cols-1 gap-3 border-b border-white/6 bg-white/2 p-4 md:grid-cols-3"
+          class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-gray-700/50 bg-gray-900/60 shadow-xl backdrop-blur-md"
         >
           <div
-            v-for="member in panelInterviewers"
-            :key="member.role"
-            :class="[
-              'rounded-2xl border p-4 transition-all duration-200',
-              latestSpeakerRole === member.role
-                ? 'border-white/15 bg-white/6 shadow-lg'
-                : 'border-white/6 bg-white/3',
-            ]"
+            v-if="activeInterviewMode === 'panel_trio'"
+            class="grid grid-cols-1 gap-3 border-b border-white/6 bg-white/2 p-4 md:grid-cols-3"
           >
-            <div class="flex items-center justify-between gap-3">
-              <span class="text-sm font-semibold text-white">{{ member.label }}</span>
-              <span
-                class="rounded-full px-2.5 py-1 text-[11px] font-medium"
-                :class="getSpeakerMeta(member.role).chipClass"
-              >
-                {{ latestSpeakerRole === member.role ? "当前发言" : "在场" }}
-              </span>
-            </div>
-            <p class="mt-2 text-xs leading-relaxed text-slate-400">
-              {{ member.description }}
-            </p>
-          </div>
-        </div>
-
-        <!-- 对话内容展示区 -->
-        <div ref="chatContainer" class="flex-1 space-y-6 overflow-y-auto p-6">
-          <!-- 初始加载状态 -->
-          <div v-if="isInitialLoading" class="flex h-full items-center justify-center">
-            <div class="text-center">
-              <div
-                class="mx-auto mb-4 flex h-16 w-16 animate-pulse items-center justify-center rounded-full bg-blue-500/20"
-              >
-                <svg
-                  class="h-8 w-8 animate-spin text-blue-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
+            <div
+              v-for="member in panelInterviewers"
+              :key="member.role"
+              :class="[
+                'rounded-2xl border p-4 transition-all duration-200',
+                latestSpeakerRole === member.role
+                  ? 'border-white/15 bg-white/6 shadow-lg'
+                  : 'border-white/6 bg-white/3',
+              ]"
+            >
+              <div class="flex items-center justify-between gap-3">
+                <span class="text-sm font-semibold text-white">{{ member.label }}</span>
+                <span
+                  class="rounded-full px-2.5 py-1 text-[11px] font-medium"
+                  :class="getSpeakerMeta(member.role).chipClass"
                 >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                  />
-                </svg>
+                  {{ latestSpeakerRole === member.role ? "当前发言" : "在场" }}
+                </span>
               </div>
-              <p class="text-gray-400">
-                {{ activeInterviewMode === "panel_trio" ? "群面官正在就位..." : "AI面试官正在准备中..." }}
+              <p class="mt-2 text-xs leading-relaxed text-slate-400">
+                {{ member.description }}
               </p>
             </div>
           </div>
-
-          <!-- 消息列表 -->
-          <template v-else>
-            <div
-              v-for="message in messages"
-              :key="message.id"
-              class="animate-message-in flex"
-              :class="message.role === 'ai' ? 'justify-start' : 'justify-end'"
-            >
-              <!-- AI面试官消息 -->
-              <div v-if="message.role === 'ai'" class="flex max-w-[80%] flex-col items-start gap-1">
+ 
+          <!-- 对话内容展示区 -->
+          <div ref="chatContainer" class="flex-1 space-y-6 overflow-y-auto p-6">
+            <!-- 初始加载状态 -->
+            <div v-if="isInitialLoading" class="flex h-full items-center justify-center">
+              <div class="text-center">
+                <div
+                  class="mx-auto mb-4 flex h-16 w-16 animate-pulse items-center justify-center rounded-full bg-blue-500/20"
+                >
+                  <svg
+                    class="h-8 w-8 animate-spin text-blue-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                    />
+                  </svg>
+                </div>
+                <p class="text-gray-400">
+                  {{ activeInterviewMode === "panel_trio" ? "群面官正在就位..." : "AI面试官正在准备中..." }}
+                </p>
+              </div>
+            </div>
+ 
+            <!-- 消息列表 -->
+            <template v-else>
+              <div
+                v-for="message in messages"
+                :key="message.id"
+                class="animate-message-in flex"
+                :class="message.role === 'ai' ? 'justify-start' : 'justify-end'"
+              >
+                <!-- AI面试官消息 -->
+                <div v-if="message.role === 'ai'" class="flex max-w-[80%] flex-col items-start gap-1">
                 <div class="flex items-start gap-3">
                   <div
                     class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
@@ -1157,6 +1261,7 @@ const formatCodeLanguage = (language: string | undefined) => {
           />
         </div>
       </div>
+    </div>
     </div>
 
     <CodeEditorDialog

@@ -895,6 +895,11 @@ components:
           description: 求职者的实际回答
           examples:
             - "可以使用链地址法或者开放寻址法。链地址法是每个桶存一个链表，冲突元素放在链表中；开放寻址法则是通过探测寻找下一个空位，比如线性探测。"
+        standard_answer:
+          type: string
+          description: 当前题目的标准答案
+          examples:
+            - "回答应覆盖链地址法与开放寻址法的基本原理、典型探测策略，以及时间复杂度、聚簇和删除处理等取舍。"
         score:
           type: number
           description: 该轮得分

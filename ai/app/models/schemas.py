@@ -114,6 +114,7 @@ class ReviewItem(BaseModel):
         default="ai", description="发起该题的面试官角色"
     )
     interviewee: str = Field(description="用户回答")
+    standard_answer: str = Field(default="", description="当前题目的标准答案")
     score: float = Field(description="大模型评估与本地聚合后的最终评分")
     advice: str
     concept: Optional[str] = Field(default=None, description="当前题目的考点")
@@ -167,6 +168,7 @@ class InterviewRoundLog(BaseModel):
     interviewer_role: Literal["ai", "hr", "tech_lead", "executive"] = "ai"
     interviewer: str  # 考官提问
     interviewee: str  # 用户的回答
+    standard_answer: str = ""  # 当前题目的标准答案
     sts_coverage: float  # CrossEncoder 算出的覆盖率
     nli_logic: str  # NLI 算出的逻辑状态 (Entailment/Contradiction/Neutral)
     nli_probs: Dict[str, float] = Field(default_factory=dict)  # NLI 全量概率

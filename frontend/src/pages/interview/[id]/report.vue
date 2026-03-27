@@ -486,7 +486,9 @@ const generateRadarPolygon = (
               >
                 <div class="flex items-center justify-between gap-4">
                   <h4 class="text-sm font-medium text-white">{{ skill.name }}</h4>
-                  <span class="text-sm font-semibold text-cyan-300">{{ skill.score.toFixed(1) }}</span>
+                  <span class="text-sm font-semibold text-cyan-300">{{
+                    skill.score.toFixed(1)
+                  }}</span>
                 </div>
                 <p v-if="skill.summary" class="mt-2 text-sm leading-relaxed text-slate-400">
                   {{ skill.summary }}
@@ -718,37 +720,90 @@ const generateRadarPolygon = (
                       >
                         {{ review.concept }}
                       </span>
-                      <span
-                        class="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300"
-                      >
+                      <span class="rounded-full bg-white/5 px-3 py-1 text-xs text-slate-300">
                         {{ formatDifficultyLabel(review.difficulty_label) }}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                <div class="flex items-start gap-4 mb-4 ml-12">
-                  <div
-                    class="w-10 h-10 rounded-full bg-linear-to-br from-blue-400 to-blue-600 flex items-center justify-center shrink-0"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      class="h-5 w-5 text-white"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                      />
-                    </svg>
+                <div
+                  class="mb-4 ml-12 grid grid-cols-1 gap-4"
+                  :class="review.standard_answer ? 'lg:grid-cols-2' : 'lg:grid-cols-1'"
+                >
+                  <div class="rounded-2xl border border-blue-500/15 bg-blue-500/6 p-4">
+                    <div class="flex items-start gap-4">
+                      <div
+                        class="w-10 h-10 rounded-full bg-linear-to-br from-blue-400 to-blue-600 flex items-center justify-center shrink-0"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          class="h-5 w-5 text-white"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                          />
+                        </svg>
+                      </div>
+                      <div class="flex-1">
+                        <div class="flex items-center justify-between gap-3">
+                          <p class="text-xs text-slate-400">你的回答</p>
+                          <span
+                            class="rounded-full border border-blue-400/15 bg-blue-400/10 px-2.5 py-1 text-[11px] text-blue-200"
+                          >
+                            实际作答
+                          </span>
+                        </div>
+                        <p class="mt-2 whitespace-pre-line text-sm leading-relaxed text-slate-300">
+                          {{ review.interviewee }}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <div class="flex-1">
-                    <p class="text-xs text-slate-400 mb-1">你的回答</p>
-                    <p class="text-slate-300">{{ review.interviewee }}</p>
+
+                  <div
+                    v-if="review.standard_answer"
+                    class="rounded-2xl border border-emerald-500/15 bg-emerald-500/6 p-4"
+                  >
+                    <div class="flex items-start gap-4">
+                      <div
+                        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-emerald-400 to-cyan-500"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          class="h-5 w-5 text-white"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M5 13l4 4L19 7"
+                          />
+                        </svg>
+                      </div>
+                      <div class="flex-1">
+                        <div class="flex items-center justify-between gap-3">
+                          <p class="text-xs text-slate-400">标准答案</p>
+                          <span
+                            class="rounded-full border border-emerald-400/15 bg-emerald-400/10 px-2.5 py-1 text-[11px] text-emerald-200"
+                          >
+                            评分参考
+                          </span>
+                        </div>
+                        <p class="mt-2 whitespace-pre-line text-sm leading-relaxed text-slate-200">
+                          {{ review.standard_answer }}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
 

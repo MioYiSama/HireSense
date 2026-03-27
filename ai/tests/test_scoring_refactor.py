@@ -286,6 +286,7 @@ class AgentFlowScoringRefactorTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(state.current_concept, "MySQL")
         self.assertEqual(state.q_id_list[-1], ["mysql-2", "介绍一下 MySQL 索引"])
         self.assertEqual(state.interview_logs[0].score_rationale, "回答答到主线，但边界条件没展开。")
+        self.assertEqual(state.interview_logs[0].standard_answer, "先说原理，再说取舍，再说边界。")
 
     async def test_repeated_poor_answers_can_end_interview(self):
         state = build_state()
@@ -603,6 +604,65 @@ class EvaluatorRefactorTest(unittest.TestCase):
 
 
 class ReportAggregationTest(unittest.IsolatedAsyncioTestCase):
+    async def test_report_reviews_expand_probe_turns_from_chat_history(self):
+        state = AgentState(
+            session_id="report-probe-state",
+            job="backend",
+            personalization="",
+            resume_star="负责缓存和接口治理。",
+            resume_concept_list=["Redis"],
+            q_id_list=[],
+            new_concept_list=[],
+            chat_history=[],
+            current_concept="Redis",
+            visited_concept=["Redis"],
+            visited_question=[],
+            interview_logs=[
+                InterviewRoundLog(
+                    q_id="redis-1",
+                    concept="Redis",
+                    interviewer="介绍一下 Redis 持久化机制。",
+                    interviewee="先说了 RDB 和 AOF，补充里又讲了混合持久化。",
+                    standard_answer="回答应包含 RDB、AOF、混合持久化，以及恢复速度和数据安全性的取舍。",
+                    sts_coverage=72.0,
+                    nli_logic="Entailment",
+                    nli_probs={"Entailment": 0.8, "Neutral": 0.15, "Contradiction": 0.05},
+                    score_breakdown=ScoreBreakdown(
+                        coverage_score=72.0,
+                        consistency_score=84.0,
+                        completeness_score=65.0,
+                    ),
+                    strength_points=["答到了 RDB 和 AOF"],
+                    missing_points=["恢复速度取舍"],
+                    reason_tags=["核心方向基本对齐", "关键点覆盖不足"],
+                    score_rationale="主线答到了，但恢复速度取舍没有展开。",
+                    probe_count=2,
+                    final_score=68.0,
+                    async_advice="建议把恢复速度、数据安全和混合持久化的场景一起讲完整。",
+                )
+            ],
+            probe_num=0,
+            MAX_probe_num=3,
+            current_question_difficulty="intermediate",
+            current_concept_cumulative_answer="",
+            recent_messages="",
+            candidate_fact_sheet=[],
+        )
+        HistoryManager.add_messages(state, "介绍一下 Redis 持久化机制。", "interviewer", "Redis")
+        HistoryManager.add_messages(state, "Redis 有 RDB 和 AOF 两种。", "interviewee", "Redis")
+        HistoryManager.add_messages(state, "继续补一下混合持久化和恢复速度的取舍。", "interviewer", "Redis")
+        HistoryManager.add_messages(state, "混合持久化可以平衡恢复速度和数据安全。", "interviewee", "Redis")
+
+        report = await FinalReport(llm=FakeNarrativeLLM()).build_report(state)
+
+        self.assertEqual(len(report.reviews), 2)
+        self.assertEqual(report.reviews[0].interviewer, "介绍一下 Redis 持久化机制。")
+        self.assertEqual(report.reviews[1].interviewer, "继续补一下混合持久化和恢复速度的取舍。")
+        self.assertEqual(
+            report.reviews[1].standard_answer,
+            "回答应包含 RDB、AOF、混合持久化，以及恢复速度和数据安全性的取舍。",
+        )
+
     async def test_report_uses_llm_dimension_scores_and_explanations(self):
         state = AgentState(
             session_id="report-state",
@@ -622,6 +682,7 @@ class ReportAggregationTest(unittest.IsolatedAsyncioTestCase):
                     concept="MySQL",
                     interviewer="MySQL 索引失效有哪些场景？",
                     interviewee="说到了联合索引和最左前缀，但没有系统展开。",
+                    standard_answer="回答应覆盖最左前缀、范围查询、函数计算、隐式类型转换和回表代价等关键场景。",
                     sts_coverage=52.0,
                     nli_logic="Neutral",
                     nli_probs={"Entailment": 0.2, "Neutral": 0.7, "Contradiction": 0.1},
@@ -643,6 +704,7 @@ class ReportAggregationTest(unittest.IsolatedAsyncioTestCase):
                     concept="Redis 分布式锁",
                     interviewer="如何设计 Redis 分布式锁？",
                     interviewee="能讲出加锁解锁，但边界条件讲得不完整。",
+                    standard_answer="回答应包含唯一值加锁、Lua 解锁、超时续期、主从切换风险和更稳妥的高可用方案。",
                     sts_coverage=65.0,
                     nli_logic="Entailment",
                     nli_probs={"Entailment": 0.75, "Neutral": 0.2, "Contradiction": 0.05},
@@ -664,6 +726,7 @@ class ReportAggregationTest(unittest.IsolatedAsyncioTestCase):
                     concept="API 设计",
                     interviewer="接口幂等一般怎么设计？",
                     interviewee="知道 token 和去重表方案，但没有讲清失败补偿。",
+                    standard_answer="回答应说明幂等键设计、服务端去重、重试窗口、状态机或补偿链路，以及异常回滚策略。",
                     sts_coverage=58.0,
                     nli_logic="Entailment",
                     nli_probs={"Entailment": 0.7, "Neutral": 0.2, "Contradiction": 0.1},
@@ -698,6 +761,7 @@ class ReportAggregationTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(report.general_details["沟通表达"].summary, "表达基本清晰，但细节展开不足。")
         self.assertEqual(report.specific_details["数据库与缓存"].missing_points, ["没有展开回表代价"])
         self.assertEqual(report.reviews[0].concept, "MySQL")
+        self.assertTrue(report.reviews[0].standard_answer.startswith("回答应覆盖最左前缀"))
         self.assertEqual(report.reviews[1].strength_points, ["提到了加锁和解锁"])
         self.assertEqual(report.reviews[2].score_breakdown.completeness_score, 54.0)
         self.assertEqual(report.resources, ["MySQL索引详解  https://example.com/mysql"])

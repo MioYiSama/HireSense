@@ -9,6 +9,7 @@ from app.models.schemas import (
     ReportContent,
     ReportPushRequest,
     ReviewItem,
+    ScoreBreakdown,
 )
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
@@ -64,6 +65,7 @@ class FinalReport:
         "工程化与性能优化",
         "交互体验与安全",
     ]
+    REVIEW_INTERVIEWER_ROLES = {"ai", "hr", "tech_lead", "executive", "interviewer"}
 
     def __init__(self, llm: ChatOpenAI):
         self.llm = llm
@@ -201,13 +203,14 @@ class FinalReport:
         return result
 
     def _build_reviews(self, state: AgentState) -> List[ReviewItem]:
-        reviews = []
-        for log in state.interview_logs:
-            reviews.append(
+        answer_pairs = self._build_review_pairs_from_history(state)
+        if not answer_pairs:
+            return [
                 ReviewItem(
                     interviewer=log.interviewer,
                     interviewer_role=log.interviewer_role,
                     interviewee=log.interviewee,
+                    standard_answer=log.standard_answer,
                     score=log.final_score,
                     advice=log.async_advice,
                     concept=log.concept or None,
@@ -218,8 +221,116 @@ class FinalReport:
                     missing_points=log.missing_points,
                     score_rationale=log.score_rationale,
                 )
+                for log in state.interview_logs
+            ]
+
+        reviews: List[ReviewItem] = []
+        pair_index = 0
+
+        for log in state.interview_logs:
+            matched_pairs = []
+            expected_pairs = max(1, int(log.probe_count or 1))
+
+            while pair_index < len(answer_pairs) and len(matched_pairs) < expected_pairs:
+                pair = answer_pairs[pair_index]
+                pair_concept = str(pair.get("concept") or "").strip()
+                concept_match = not log.concept or not pair_concept or pair_concept == log.concept
+                if not concept_match:
+                    if matched_pairs:
+                        break
+                    break
+                matched_pairs.append(pair)
+                pair_index += 1
+
+            if not matched_pairs:
+                matched_pairs = [
+                    {
+                        "interviewer": log.interviewer,
+                        "interviewer_role": log.interviewer_role,
+                        "interviewee": log.interviewee,
+                        "concept": log.concept,
+                    }
+                ]
+
+            for pair in matched_pairs:
+                reviews.append(
+                    ReviewItem(
+                        interviewer=str(pair.get("interviewer") or log.interviewer).strip(),
+                        interviewer_role=str(
+                            pair.get("interviewer_role") or log.interviewer_role or "ai"
+                        ),
+                        interviewee=str(pair.get("interviewee") or log.interviewee).strip(),
+                        standard_answer=log.standard_answer,
+                        score=log.final_score,
+                        advice=log.async_advice,
+                        concept=log.concept or pair.get("concept") or None,
+                        difficulty_label=log.difficulty_label,
+                        score_breakdown=log.score_breakdown,
+                        reason_tags=log.reason_tags,
+                        strength_points=log.strength_points,
+                        missing_points=log.missing_points,
+                        score_rationale=log.score_rationale,
+                    )
+                )
+
+        while pair_index < len(answer_pairs):
+            pair = answer_pairs[pair_index]
+            pair_index += 1
+            reviews.append(
+                ReviewItem(
+                    interviewer=str(pair.get("interviewer") or "").strip(),
+                    interviewer_role=str(pair.get("interviewer_role") or "ai"),
+                    interviewee=str(pair.get("interviewee") or "").strip(),
+                    standard_answer="",
+                    score=0.0,
+                    advice="本题在面试结束前未完成完整复盘，先按原始问答展示。",
+                    concept=pair.get("concept") or None,
+                    difficulty_label="unknown",
+                    score_breakdown=ScoreBreakdown(),
+                    reason_tags=["未完成复盘"],
+                    strength_points=[],
+                    missing_points=[],
+                    score_rationale="这轮问答在面试结束前未进入完整评分归档。",
+                )
             )
+
         return reviews
+
+    def _build_review_pairs_from_history(self, state: AgentState) -> List[Dict[str, str]]:
+        pairs: List[Dict[str, str]] = []
+        pending_prompt: Dict[str, str] | None = None
+
+        for message in state.chat_history:
+            role = str(message.role or "").strip()
+            content = str(message.content or "").strip()
+            concept = str(message.concept or "").strip()
+
+            if not content:
+                continue
+
+            if role == "interviewee":
+                if pending_prompt:
+                    pairs.append(
+                        {
+                            "interviewer": pending_prompt["interviewer"],
+                            "interviewer_role": pending_prompt["interviewer_role"],
+                            "interviewee": content,
+                            "concept": pending_prompt.get("concept") or concept,
+                        }
+                    )
+                    pending_prompt = None
+                continue
+
+            if role not in self.REVIEW_INTERVIEWER_ROLES:
+                continue
+
+            pending_prompt = {
+                "interviewer": content,
+                "interviewer_role": "ai" if role == "interviewer" else role,
+                "concept": concept,
+            }
+
+        return pairs
 
     def _build_history_transcript(self, state: AgentState) -> str:
         lines: List[str] = []
