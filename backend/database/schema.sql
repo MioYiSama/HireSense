@@ -41,12 +41,16 @@ CREATE TABLE IF NOT EXISTS "user"
     job             USER_JOB  NOT NULL DEFAULT 'frontend',
     resume          TEXT      NULL     DEFAULT NULL,
     personalization TEXT      NULL     DEFAULT NULL,
+    favorite_questions JSONB  NULL     DEFAULT NULL,
     resume_analysis JSONB     NULL     DEFAULT NULL,
     resume_analysis_generated_at TIMESTAMPTZ NULL DEFAULT NULL,
 
     PRIMARY KEY (id),
     UNIQUE (account)
 );
+
+ALTER TABLE "user"
+    ADD COLUMN IF NOT EXISTS favorite_questions JSONB NULL DEFAULT NULL;
 
 ALTER TABLE "user"
     ADD COLUMN IF NOT EXISTS resume_analysis JSONB NULL DEFAULT NULL;

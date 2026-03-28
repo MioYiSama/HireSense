@@ -168,6 +168,124 @@ export interface InterviewsResponse {
     'message': string;
     'data': Array<Interview>;
 }
+
+export interface AddFavoriteQuestionRequest {
+    /**
+     * 收藏来源所属的面试 ID
+     */
+    'interview_id': string;
+    /**
+     * 对应报告 reviews 数组中的索引
+     */
+    'review_index': number;
+}
+export interface DeleteFavoriteQuestionResponse {
+    'success': boolean;
+    'message': string;
+    'data': any;
+}
+export interface DeleteFavoriteQuestionSourceResponse {
+    'success': boolean;
+    'message': string;
+    'data': any;
+}
+export interface FavoriteQuestion {
+    /**
+     * 收藏题分组唯一 ID
+     */
+    'id': string;
+    /**
+     * 去重后的题目文本
+     */
+    'question': string;
+    /**
+     * 首次收藏该题的时间
+     */
+    'created_at': string;
+    /**
+     * 最近一次新增来源的时间
+     */
+    'updated_at': string;
+    /**
+     * 该题当前保留的来源数量
+     */
+    'source_count': number;
+    'sources': Array<FavoriteQuestionSource>;
+}
+export interface FavoriteQuestionResponse {
+    'success': boolean;
+    'message': string;
+    'data': FavoriteQuestion;
+}
+export interface FavoriteQuestionsResponse {
+    'success': boolean;
+    'message': string;
+    'data': Array<FavoriteQuestion>;
+}
+export interface FavoriteQuestionSource {
+    /**
+     * 该收藏来源所属的面试 ID
+     */
+    'interview_id': string;
+    /**
+     * 对应报告 reviews 中的索引
+     */
+    'review_index': number;
+    /**
+     * 来源面试的创建时间戳（毫秒）
+     */
+    'interview_created_at': number;
+    /**
+     * 该来源被加入收藏的时间
+     */
+    'favorited_at': string;
+    /**
+     * 面试官问题
+     */
+    'interviewer': string;
+    'interviewer_role': InterviewSpeakerRole;
+    /**
+     * 求职者当时的实际回答
+     */
+    'interviewee': string;
+    /**
+     * 当前题目的标准答案
+     */
+    'standard_answer'?: string;
+    /**
+     * 该轮得分
+     */
+    'score': number;
+    /**
+     * AI 点评与纠误建议
+     */
+    'advice': string;
+    /**
+     * 当前题目的考点
+     */
+    'concept'?: string;
+    /**
+     * 当前题目的难度标签
+     */
+    'difficulty_label': string;
+    'score_breakdown'?: ScoreBreakdown;
+    /**
+     * 支撑该分数的机器标签
+     */
+    'reason_tags': Array<string>;
+    /**
+     * 本题回答中已经答到的点
+     */
+    'strength_points': Array<string>;
+    /**
+     * 本题回答中缺失的点
+     */
+    'missing_points': Array<string>;
+    /**
+     * 对题级分数的结构化解释
+     */
+    'score_rationale'?: string;
+}
 /**
  * 用户详细职业档案和 AI 调优设定
  */
@@ -1078,6 +1196,139 @@ export class InterviewApi extends BaseAPI {
 export const UserApiAxiosParamCreator = function (configuration?: Configuration) {
     return {
         /**
+         * 基于面试报告中的某条复盘记录，将对应面试官问题加入收藏题列表。
+         * @summary 收藏一道题
+         * @param {AddFavoriteQuestionRequest} [addFavoriteQuestionRequest] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiUserFavoriteQuestionsPost: async (addFavoriteQuestionRequest?: AddFavoriteQuestionRequest, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/user/favorite-questions`;
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'POST', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+            localVarHeaderParameter['Content-Type'] = 'application/json';
+            localVarHeaderParameter['Accept'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+            localVarRequestOptions.data = serializeDataIfNeeded(addFavoriteQuestionRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 读取当前登录用户收藏的面试官问题，按最近一次收藏时间倒序返回。
+         * @summary 获取收藏题列表
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiUserFavoriteQuestionsGet: async (options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            const localVarPath = `/api/user/favorite-questions`;
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+            localVarHeaderParameter['Accept'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 删除某道收藏题及其所有关联来源。
+         * @summary 删除整题收藏
+         * @param {string} favoriteID 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiUserFavoriteQuestionsFavoriteIDDelete: async (favoriteID: string, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            assertParamExists('apiUserFavoriteQuestionsFavoriteIDDelete', 'favoriteID', favoriteID)
+            const localVarPath = `/api/user/favorite-questions/${encodeURIComponent(String(favoriteID))}`;
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'DELETE', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+            localVarHeaderParameter['Accept'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 从收藏题中移除指定报告来源；若该题已无任何来源，则整题收藏会被自动删除。
+         * @summary 移除收藏来源
+         * @param {string} interviewID 
+         * @param {number} reviewIndex 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiUserFavoriteQuestionsSourceInterviewIDReviewIndexDelete: async (interviewID: string, reviewIndex: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            assertParamExists('apiUserFavoriteQuestionsSourceInterviewIDReviewIndexDelete', 'interviewID', interviewID)
+            assertParamExists('apiUserFavoriteQuestionsSourceInterviewIDReviewIndexDelete', 'reviewIndex', reviewIndex)
+            const localVarPath = `/api/user/favorite-questions/source/${encodeURIComponent(String(interviewID))}/${encodeURIComponent(String(reviewIndex))}`;
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'DELETE', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            await setBearerAuthToObject(localVarHeaderParameter, configuration)
+
+            localVarHeaderParameter['Accept'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
          * 列出过去参与的所有 AI 面试场次、报告状态及简要概览。
          * @summary 获取所有历史面试记录
          * @param {*} [options] Override http request option.
@@ -1297,6 +1548,58 @@ export const UserApiFp = function(configuration?: Configuration) {
     const localVarAxiosParamCreator = UserApiAxiosParamCreator(configuration)
     return {
         /**
+         * 基于面试报告中的某条复盘记录，将对应面试官问题加入收藏题列表。
+         * @summary 收藏一道题
+         * @param {AddFavoriteQuestionRequest} [addFavoriteQuestionRequest] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiUserFavoriteQuestionsPost(addFavoriteQuestionRequest?: AddFavoriteQuestionRequest, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<FavoriteQuestionResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiUserFavoriteQuestionsPost(addFavoriteQuestionRequest, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['UserApi.apiUserFavoriteQuestionsPost']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 读取当前登录用户收藏的面试官问题，按最近一次收藏时间倒序返回。
+         * @summary 获取收藏题列表
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiUserFavoriteQuestionsGet(options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<FavoriteQuestionsResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiUserFavoriteQuestionsGet(options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['UserApi.apiUserFavoriteQuestionsGet']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 删除某道收藏题及其所有关联来源。
+         * @summary 删除整题收藏
+         * @param {string} favoriteID 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiUserFavoriteQuestionsFavoriteIDDelete(favoriteID: string, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<DeleteFavoriteQuestionResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiUserFavoriteQuestionsFavoriteIDDelete(favoriteID, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['UserApi.apiUserFavoriteQuestionsFavoriteIDDelete']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 从收藏题中移除指定报告来源；若该题已无任何来源，则整题收藏会被自动删除。
+         * @summary 移除收藏来源
+         * @param {string} interviewID 
+         * @param {number} reviewIndex 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiUserFavoriteQuestionsSourceInterviewIDReviewIndexDelete(interviewID: string, reviewIndex: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<DeleteFavoriteQuestionSourceResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiUserFavoriteQuestionsSourceInterviewIDReviewIndexDelete(interviewID, reviewIndex, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['UserApi.apiUserFavoriteQuestionsSourceInterviewIDReviewIndexDelete']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
          * 列出过去参与的所有 AI 面试场次、报告状态及简要概览。
          * @summary 获取所有历史面试记录
          * @param {*} [options] Override http request option.
@@ -1380,6 +1683,46 @@ export const UserApiFactory = function (configuration?: Configuration, basePath?
     const localVarFp = UserApiFp(configuration)
     return {
         /**
+         * 基于面试报告中的某条复盘记录，将对应面试官问题加入收藏题列表。
+         * @summary 收藏一道题
+         * @param {AddFavoriteQuestionRequest} [addFavoriteQuestionRequest] 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiUserFavoriteQuestionsPost(addFavoriteQuestionRequest?: AddFavoriteQuestionRequest, options?: RawAxiosRequestConfig): AxiosPromise<FavoriteQuestionResponse> {
+            return localVarFp.apiUserFavoriteQuestionsPost(addFavoriteQuestionRequest, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 读取当前登录用户收藏的面试官问题，按最近一次收藏时间倒序返回。
+         * @summary 获取收藏题列表
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiUserFavoriteQuestionsGet(options?: RawAxiosRequestConfig): AxiosPromise<FavoriteQuestionsResponse> {
+            return localVarFp.apiUserFavoriteQuestionsGet(options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 删除某道收藏题及其所有关联来源。
+         * @summary 删除整题收藏
+         * @param {string} favoriteID 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiUserFavoriteQuestionsFavoriteIDDelete(favoriteID: string, options?: RawAxiosRequestConfig): AxiosPromise<DeleteFavoriteQuestionResponse> {
+            return localVarFp.apiUserFavoriteQuestionsFavoriteIDDelete(favoriteID, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 从收藏题中移除指定报告来源；若该题已无任何来源，则整题收藏会被自动删除。
+         * @summary 移除收藏来源
+         * @param {string} interviewID 
+         * @param {number} reviewIndex 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiUserFavoriteQuestionsSourceInterviewIDReviewIndexDelete(interviewID: string, reviewIndex: number, options?: RawAxiosRequestConfig): AxiosPromise<DeleteFavoriteQuestionSourceResponse> {
+            return localVarFp.apiUserFavoriteQuestionsSourceInterviewIDReviewIndexDelete(interviewID, reviewIndex, options).then((request) => request(axios, basePath));
+        },
+        /**
          * 列出过去参与的所有 AI 面试场次、报告状态及简要概览。
          * @summary 获取所有历史面试记录
          * @param {*} [options] Override http request option.
@@ -1443,6 +1786,50 @@ export const UserApiFactory = function (configuration?: Configuration, basePath?
  */
 export class UserApi extends BaseAPI {
     /**
+     * 基于面试报告中的某条复盘记录，将对应面试官问题加入收藏题列表。
+     * @summary 收藏一道题
+     * @param {AddFavoriteQuestionRequest} [addFavoriteQuestionRequest] 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public apiUserFavoriteQuestionsPost(addFavoriteQuestionRequest?: AddFavoriteQuestionRequest, options?: RawAxiosRequestConfig) {
+        return UserApiFp(this.configuration).apiUserFavoriteQuestionsPost(addFavoriteQuestionRequest, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 读取当前登录用户收藏的面试官问题，按最近一次收藏时间倒序返回。
+     * @summary 获取收藏题列表
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public apiUserFavoriteQuestionsGet(options?: RawAxiosRequestConfig) {
+        return UserApiFp(this.configuration).apiUserFavoriteQuestionsGet(options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 删除某道收藏题及其所有关联来源。
+     * @summary 删除整题收藏
+     * @param {string} favoriteID 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public apiUserFavoriteQuestionsFavoriteIDDelete(favoriteID: string, options?: RawAxiosRequestConfig) {
+        return UserApiFp(this.configuration).apiUserFavoriteQuestionsFavoriteIDDelete(favoriteID, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 从收藏题中移除指定报告来源；若该题已无任何来源，则整题收藏会被自动删除。
+     * @summary 移除收藏来源
+     * @param {string} interviewID 
+     * @param {number} reviewIndex 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public apiUserFavoriteQuestionsSourceInterviewIDReviewIndexDelete(interviewID: string, reviewIndex: number, options?: RawAxiosRequestConfig) {
+        return UserApiFp(this.configuration).apiUserFavoriteQuestionsSourceInterviewIDReviewIndexDelete(interviewID, reviewIndex, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
      * 列出过去参与的所有 AI 面试场次、报告状态及简要概览。
      * @summary 获取所有历史面试记录
      * @param {*} [options] Override http request option.
@@ -1504,5 +1891,3 @@ export class UserApi extends BaseAPI {
         return UserApiFp(this.configuration).apiUserResumeAnalysisPost(options).then((request) => request(this.axios, this.basePath));
     }
 }
-
-

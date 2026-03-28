@@ -3,7 +3,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite dev",
+    "dev": "vite dev --port 3000 --host",
     "preview": "vite preview",
     "lint": "oxlint --type-aware && tsc --noEmit",
     "format": "oxfmt"

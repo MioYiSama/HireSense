@@ -214,6 +214,12 @@ func TestMapInterviewServiceError(t *testing.T) {
 			wantMessage: "面试服务暂时不可用",
 		},
 		{
+			name:        "tts upstream failure",
+			input:       &InterviewUpstreamError{Service: "tts", Err: errors.New("down")},
+			wantStatus:  fiber.StatusBadGateway,
+			wantMessage: "语音合成服务暂时不可用",
+		},
+		{
 			name:        "unknown error passes through",
 			input:       errors.New("boom"),
 			wantSameErr: true,

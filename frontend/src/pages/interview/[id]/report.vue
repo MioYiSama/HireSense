@@ -11,16 +11,26 @@
 </style>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { useMutation, useQueryClient } from "@tanstack/vue-query";
+import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { getApiErrorMessage, useInterviewsQuery } from "@/lib/api";
+import {
+  addFavoriteQuestion,
+  getApiErrorMessage,
+  queryKeys,
+  removeFavoriteQuestionSource,
+  useFavoriteQuestionsQuery,
+  useInterviewsQuery,
+} from "@/lib/api";
 import { getAccessToken } from "@/utils/token";
 
 const route = useRoute();
 const router = useRouter();
+const queryClient = useQueryClient();
 
 const interviewId = route.params["id"] as string;
 const interviewsQuery = useInterviewsQuery();
+const favoriteQuestionsQuery = useFavoriteQuestionsQuery();
 
 const isLoading = computed(() => {
   return interviewsQuery.isPending.value || interviewsQuery.isFetching.value;
@@ -73,6 +83,85 @@ const loadReport = async () => {
 
 const goBack = () => {
   router.push("/dashboard");
+};
+
+const favoriteStatusMessage = ref("");
+const favoriteStatusSuccess = ref(false);
+const favoriteMutationReviewIndex = ref<number | null>(null);
+let favoriteStatusTimeout: number | null = null;
+
+const showFavoriteMessage = (message: string, success: boolean) => {
+  if (favoriteStatusTimeout) {
+    clearTimeout(favoriteStatusTimeout);
+  }
+  favoriteStatusMessage.value = message;
+  favoriteStatusSuccess.value = success;
+  favoriteStatusTimeout = window.setTimeout(() => {
+    favoriteStatusMessage.value = "";
+    favoriteStatusTimeout = null;
+  }, 3000);
+};
+
+const favoriteSourceLookup = computed(() => {
+  const lookup = new Set<string>();
+  (favoriteQuestionsQuery.data.value ?? []).forEach((favorite) => {
+    favorite.sources.forEach((source) => {
+      lookup.add(`${source.interview_id}:${source.review_index}`);
+    });
+  });
+  return lookup;
+});
+
+const isReviewFavorited = (reviewIndex: number) => {
+  return favoriteSourceLookup.value.has(`${interviewId}:${reviewIndex}`);
+};
+
+const toggleFavoriteMutation = useMutation({
+  mutationFn: async (reviewIndex: number) => {
+    if (isReviewFavorited(reviewIndex)) {
+      return removeFavoriteQuestionSource({
+        interviewID: interviewId,
+        reviewIndex,
+      });
+    }
+
+    return addFavoriteQuestion({
+      interview_id: interviewId,
+      review_index: reviewIndex,
+    });
+  },
+  onMutate: (reviewIndex) => {
+    favoriteMutationReviewIndex.value = reviewIndex;
+    return {
+      wasFavorited: isReviewFavorited(reviewIndex),
+    };
+  },
+  onSuccess: async (_, _reviewIndex, context) => {
+    await queryClient.invalidateQueries({ queryKey: queryKeys.favoriteQuestions() });
+    showFavoriteMessage(
+      context?.wasFavorited ? "已从收藏题中移除" : "已加入收藏题",
+      true,
+    );
+  },
+  onError: (error) => {
+    showFavoriteMessage(getApiErrorMessage(error, "收藏题操作失败"), false);
+  },
+  onSettled: () => {
+    favoriteMutationReviewIndex.value = null;
+  },
+});
+
+const toggleFavorite = (reviewIndex: number) => {
+  if (favoriteMutationReviewIndex.value === reviewIndex) {
+    return;
+  }
+  toggleFavoriteMutation.mutate(reviewIndex);
+};
+
+const isFavoriteMutationPending = (reviewIndex: number) => {
+  return (
+    toggleFavoriteMutation.isPending.value && favoriteMutationReviewIndex.value === reviewIndex
+  );
 };
 
 type DimensionView = {
@@ -290,6 +379,18 @@ const generateRadarPolygon = (
 
       <!-- 报告内容 -->
       <main v-else-if="reportData" class="max-w-7xl mx-auto pt-6 pb-12 px-6 relative space-y-6">
+        <div
+          v-if="favoriteStatusMessage"
+          :class="[
+            'rounded-2xl border px-4 py-3 text-sm backdrop-blur-md',
+            favoriteStatusSuccess
+              ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'
+              : 'border-rose-500/30 bg-rose-500/10 text-rose-200',
+          ]"
+        >
+          {{ favoriteStatusMessage }}
+        </div>
+
         <!-- 报告头部 -->
         <section class="mb-8 animate-slide-up">
           <div
@@ -705,8 +806,42 @@ const generateRadarPolygon = (
                     </svg>
                   </div>
                   <div class="flex-1">
-                    <p class="text-xs text-slate-400 mb-1">面试官提问</p>
-                    <p class="text-white">{{ review.interviewer }}</p>
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                      <div class="min-w-0">
+                        <p class="text-xs text-slate-400 mb-1">面试官提问</p>
+                        <p class="text-white">{{ review.interviewer }}</p>
+                      </div>
+                      <button
+                        type="button"
+                        @click.stop="toggleFavorite(index)"
+                        :disabled="isFavoriteMutationPending(index)"
+                        :class="[
+                          'inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition-all disabled:cursor-not-allowed disabled:opacity-60',
+                          isReviewFavorited(index)
+                            ? 'border-amber-400/30 bg-amber-400/12 text-amber-200 hover:bg-amber-400/18'
+                            : 'border-white/10 bg-white/5 text-slate-300 hover:border-amber-400/20 hover:text-amber-200',
+                        ]"
+                      >
+                        <svg
+                          class="h-4 w-4"
+                          :class="isReviewFavorited(index) ? 'text-amber-300' : 'text-slate-400'"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                          aria-hidden="true"
+                        >
+                          <path
+                            d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
+                          />
+                        </svg>
+                        {{
+                          isFavoriteMutationPending(index)
+                            ? "处理中..."
+                            : isReviewFavorited(index)
+                              ? "已收藏"
+                              : "收藏题"
+                        }}
+                      </button>
+                    </div>
                     <div class="mt-3 flex flex-wrap gap-2">
                       <span
                         class="rounded-full px-3 py-1 text-xs"

@@ -1,14 +1,21 @@
 import asyncio
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
-from app.models.schemas import AgentState, IntentResult, InterviewRoundLog, StartRequest, ParsedResume
+
 from app.core.history_manager import HistoryManager
+from app.core.state_manager import session_store
 from app.db import chroma_client, neo4j_client
-from app.services import intent_router, llm_generator, evaluator
+from app.models.schemas import (
+    AgentState,
+    IntentResult,
+    InterviewRoundLog,
+    ParsedResume,
+    StartRequest,
+)
+from app.services import evaluator, intent_router, llm_generator
 from app.services.llm_generator import Clarify, TacticalDecision
 from app.services.panel_flow import PanelInterviewCoordinator
 from app.services.resume_analyzer import ResumeAnalyzer
-from app.core.state_manager import session_store
 
 
 @dataclass
@@ -26,17 +33,22 @@ class AgentFlow:
     LOW_AVG_SCORE_THRESHOLD = 50.0
     HIGH_SCORE_THRESHOLD = 85.0
     HIGH_AVG_SCORE_THRESHOLD = 80.0
+    BASIC_QUESTION_ROOT_BY_JOB = {
+        "frontend": "04-JavaScript基础",
+        "backend": "basis",
+    }
 
-    def __init__(self,
-                 intent_router_: intent_router.IntentGateway,
-                 evaluator_: evaluator.Evaluator,
-                 chroma_client_: chroma_client.ChromaClient,
-                 neo4j_client_: neo4j_client.Neo4jClient,
-                 llm_gen: llm_generator.LLMGenerator,
-                 history_manager: HistoryManager,
-                 strategy: evaluator.PruningStrategy,
-                 resume_analyzer: ResumeAnalyzer,
-                 ):
+    def __init__(
+        self,
+        intent_router_: intent_router.IntentGateway,
+        evaluator_: evaluator.Evaluator,
+        chroma_client_: chroma_client.ChromaClient,
+        neo4j_client_: neo4j_client.Neo4jClient,
+        llm_gen: llm_generator.LLMGenerator,
+        history_manager: HistoryManager,
+        strategy: evaluator.PruningStrategy,
+        resume_analyzer: ResumeAnalyzer,
+    ):
         self.intent_router = intent_router_
         self.evaluator = evaluator_
         self.chroma_client = chroma_client_
@@ -61,6 +73,10 @@ class AgentFlow:
     def _track_background_task(self, task: asyncio.Task) -> None:
         self._background_tasks.add(task)
         task.add_done_callback(self._background_tasks.discard)
+
+    @classmethod
+    def _get_basic_question_root_name(cls, job: Optional[str]) -> str:
+        return cls.BASIC_QUESTION_ROOT_BY_JOB.get((job or "").strip(), "basis")
 
     @staticmethod
     def _iter_menu_items(question_menu) -> List[dict]:
@@ -98,7 +114,11 @@ class AgentFlow:
             for bucket_name, items in question_menu.items():
                 for item in self._iter_menu_items(items):
                     concept_name = str(item.get("concept") or "").strip()
-                    if target_concept and concept_name and target_concept != concept_name:
+                    if (
+                        target_concept
+                        and concept_name
+                        and target_concept != concept_name
+                    ):
                         continue
 
                     question_info = item.get("question_info") or []
@@ -171,7 +191,11 @@ class AgentFlow:
             for log in state.interview_logs
         ]
 
-        if include_current_answer and state.current_concept_cumulative_answer.strip() and score_res:
+        if (
+            include_current_answer
+            and state.current_concept_cumulative_answer.strip()
+            and score_res
+        ):
             rounds.append(
                 {
                     "score": float(score_res.get("mastery_score", 0.0)),
@@ -226,7 +250,9 @@ class AgentFlow:
             include_current_answer=include_current_answer,
             score_res=score_res,
         )
-        return self._qualifies_for_poor_end(rounds) or self._qualifies_for_strong_end(rounds)
+        return self._qualifies_for_poor_end(rounds) or self._qualifies_for_strong_end(
+            rounds
+        )
 
     def _build_forced_transition_reply(
         self,
@@ -240,11 +266,17 @@ class AgentFlow:
         return f"这个点先到这，我换个角度继续考察。{question}"
 
     def _build_forced_probe_reply(self, score_res: Dict[str, object]) -> str:
-        missing_points = [str(item).strip() for item in score_res.get("missing_points", []) if str(item).strip()]
+        missing_points = [
+            str(item).strip()
+            for item in score_res.get("missing_points", [])
+            if str(item).strip()
+        ]
         if missing_points:
             return f"先别急着结束，我再追问一个关键点：你补充一下{missing_points[0]}这部分。"
         if float(score_res.get("mastery_score", 0.0)) >= 70:
-            return "先别急着结束，我再追问一个细节：把刚才的实现取舍和边界条件展开一下。"
+            return (
+                "先别急着结束，我再追问一个细节：把刚才的实现取舍和边界条件展开一下。"
+            )
         return "先别急着结束，我再换个角度追问一下，把核心原理、实现细节和边界条件补充完整。"
 
     def _stabilize_early_end(
@@ -255,11 +287,15 @@ class AgentFlow:
         score_res: Optional[Dict[str, object]],
         include_current_answer: bool,
     ) -> TacticalDecision:
-        if res.action != "END" or self._allow_end(state, include_current_answer, score_res):
+        if res.action != "END" or self._allow_end(
+            state, include_current_answer, score_res
+        ):
             return res
 
         try:
-            next_concept, next_q_id, next_brief = self._pick_initial_question(question_menu)
+            next_concept, next_q_id, next_brief = self._pick_initial_question(
+                question_menu
+            )
             return TacticalDecision(
                 reasoning=f"{res.reasoning} | 系统兜底：当前有效题数不足，禁止结束，改为继续采样。",
                 action="TRANSITION",
@@ -315,13 +351,21 @@ class AgentFlow:
         except Exception as e:
             print(f"[Start Warmup Error] Session {state.session_id}: {e}")
 
-    async def _async_generate_and_save_advice(self, state: AgentState, round_index: int, question: str,
-                                              user_answer: str, std_answer: str, score: float,
-                                              score_breakdown: Dict[str, float],
-                                              strength_points: List[str],
-                                              missing_points: List[str], logic_status: str,
-                                              reason_tags: List[str],
-                                              score_rationale: str):
+    async def _async_generate_and_save_advice(
+        self,
+        state: AgentState,
+        round_index: int,
+        question: str,
+        user_answer: str,
+        std_answer: str,
+        score: float,
+        score_breakdown: Dict[str, float],
+        strength_points: List[str],
+        missing_points: List[str],
+        logic_status: str,
+        reason_tags: List[str],
+        score_rationale: str,
+    ):
         try:
             advice = await self.llm_gen.gen_single_advice(
                 question=question,
@@ -391,7 +435,9 @@ class AgentFlow:
                 score_breakdown={
                     "coverage_score": float(score_res.get("coverage_score", 0.0)),
                     "consistency_score": float(score_res.get("consistency_score", 0.0)),
-                    "completeness_score": float(score_res.get("completeness_score", 0.0)),
+                    "completeness_score": float(
+                        score_res.get("completeness_score", 0.0)
+                    ),
                 },
                 strength_points=list(score_res.get("strength_points", [])),
                 missing_points=list(score_res.get("missing_points", [])),
@@ -414,12 +460,17 @@ class AgentFlow:
             )
 
         # 1. 记忆更新与切片
-        self.history_manager.add_messages(state=state, content=user_text, role="interviewee",
-                                          concept=state.current_concept)
+        self.history_manager.add_messages(
+            state=state,
+            content=user_text,
+            role="interviewee",
+            concept=state.current_concept,
+        )
         self.history_manager.add_track_memory(state=state)
         # 2. 意图获取与当前基础信息读取
-        intent_res: IntentResult = await self.intent_router.analyze(current_topic=state.current_concept,
-                                                                    user_text=user_text)
+        intent_res: IntentResult = await self.intent_router.analyze(
+            current_topic=state.current_concept, user_text=user_text
+        )
         q_id, question_brief = self.history_manager.q_id_get(state=state)
         std_ans = await self.chroma_client.async_get_standard_answer(q_id=q_id)
 
@@ -428,17 +479,28 @@ class AgentFlow:
         # ---------------------------------------------------------
         if intent_res.intent == "THINKING":  # 修正大小写保持一致
             reply_speech = "没关系，你可以慢慢理一下思路。"
-            self.history_manager.add_messages(state=state, content=reply_speech, role="interviewer",
-                                              concept=state.current_concept)
+            self.history_manager.add_messages(
+                state=state,
+                content=reply_speech,
+                role="interviewer",
+                concept=state.current_concept,
+            )
             return TurnReply(reply_speech=reply_speech)
 
         if intent_res.intent == "CLARIFY":
             res: Clarify = await self.llm_gen.clarify_question(
-                user_text=user_text, current_topic=state.current_concept,
-                question_brief=question_brief, std_answer=std_ans, history=state.recent_messages
+                user_text=user_text,
+                current_topic=state.current_concept,
+                question_brief=question_brief,
+                std_answer=std_ans,
+                history=state.recent_messages,
             )
-            self.history_manager.add_messages(state=state, content=res.reply_speech, role="interviewer",
-                                              concept=state.current_concept)
+            self.history_manager.add_messages(
+                state=state,
+                content=res.reply_speech,
+                role="interviewer",
+                concept=state.current_concept,
+            )
             return TurnReply(reply_speech=res.reply_speech)
 
         # ---------------------------------------------------------
@@ -446,10 +508,16 @@ class AgentFlow:
         # ---------------------------------------------------------
         final_concepts = []
         if intent_res.extracted_novel_concepts:
-            align_concepts = await self.chroma_client.async_batch_align_concepts(raw_skills=intent_res.extracted_novel_concepts)
+            align_concepts = await self.chroma_client.async_batch_align_concepts(
+                raw_skills=intent_res.extracted_novel_concepts
+            )
             if align_concepts:
                 # 返回合法概念的列表，如未命中返回 ["No result"]
-                final_concepts = await self.neo4j_client.verify_and_route_novel_concepts(concept_list=align_concepts)
+                final_concepts = (
+                    await self.neo4j_client.verify_and_route_novel_concepts(
+                        concept_list=align_concepts
+                    )
+                )
 
         # ---------------------------------------------------------
         # 分支 B: 纯话题跃迁 (SHIFT) -
@@ -458,12 +526,15 @@ class AgentFlow:
             # 如果新提取的概念全军覆没，使用破冰题兜底
             if not final_concepts or final_concepts[0] == "No result":
                 fallback_concept = await self.neo4j_client.get_icebreaker_concept(
-                    resume_concepts=state.resume_concept_list, visited_concepts=state.visited_concept
+                    resume_concepts=state.resume_concept_list,
+                    visited_concepts=state.visited_concept,
                 )
                 final_concepts = fallback_concept
 
             # 获取菜单 (此时是强制切换，菜单里只有用户想聊的内容或兜底内容)
-            question_menu = await self.neo4j_client.get_batch_questions_brief(concept_list=final_concepts)
+            question_menu = await self.neo4j_client.get_batch_questions_brief(
+                concept_list=final_concepts
+            )
 
             res: TacticalDecision = await self.llm_gen.decide_tactics_and_generate(
                 current_topic=state.current_concept,
@@ -478,7 +549,9 @@ class AgentFlow:
                 candidate_fact_sheet=state.candidate_fact_sheet,
                 resume_star=state.resume_star,
                 max_turn=state.MAX_probe_num,
-                allow_end=self._allow_end(state, include_current_answer=False, score_res=None),
+                allow_end=self._allow_end(
+                    state, include_current_answer=False, score_res=None
+                ),
             )
             res = self._stabilize_early_end(
                 state=state,
@@ -490,15 +563,23 @@ class AgentFlow:
 
             if res.action == "END":
                 state.is_finished = True
-                self.history_manager.add_messages(state=state, content=res.reply_speech, role="interviewer",
-                                                  concept=state.current_concept)
+                self.history_manager.add_messages(
+                    state=state,
+                    content=res.reply_speech,
+                    role="interviewer",
+                    concept=state.current_concept,
+                )
                 return TurnReply(reply_speech=res.reply_speech, ending=True)
 
             if res.action == "TRANSITION":
                 self._execute_transition(state, res, question_menu)
             else:
-                self.history_manager.add_messages(state=state, content=res.reply_speech, role="interviewer",
-                                                  concept=state.current_concept)
+                self.history_manager.add_messages(
+                    state=state,
+                    content=res.reply_speech,
+                    role="interviewer",
+                    concept=state.current_concept,
+                )
             return TurnReply(reply_speech=res.reply_speech)
 
         # ---------------------------------------------------------
@@ -508,7 +589,9 @@ class AgentFlow:
             # 1. 如果用户边答题边提到了新概念 ，加入扩展菜单
             menu_extend = {}
             if final_concepts and final_concepts[0] != "No result":
-                menu_extend = await self.neo4j_client.get_batch_questions_brief(concept_list=final_concepts)
+                menu_extend = await self.neo4j_client.get_batch_questions_brief(
+                    concept_list=final_concepts
+                )
 
             # 2. 累计打分机制
             state.current_concept_cumulative_answer += f" {user_text}"  # 统一变量名
@@ -528,7 +611,9 @@ class AgentFlow:
 
             # 防御性检查：确保 score_res 是字典
             if not isinstance(score_res, dict):
-                print(f"[Warning] evaluate_mastery returned non-dict: {type(score_res)}, {score_res}")
+                print(
+                    f"[Warning] evaluate_mastery returned non-dict: {type(score_res)}, {score_res}"
+                )
                 score_res = {
                     "mastery_score": 0.0,
                     "logic_status": "Neutral",
@@ -542,18 +627,30 @@ class AgentFlow:
                     "score_rationale": "评分服务返回异常，按保守规则处理。",
                 }
 
-            m_score, l_status, c_score = score_res["mastery_score"], score_res["logic_status"], score_res["coverage_raw"]
+            m_score, l_status, c_score = (
+                score_res["mastery_score"],
+                score_res["logic_status"],
+                score_res["coverage_raw"],
+            )
 
             # 3. 图谱菜单剪枝 (结合真实分数)
-            limit_fwd, limit_sib, limit_bwd = self.strategy.calculate_quota(m_score, l_status)
+            limit_fwd, limit_sib, limit_bwd = self.strategy.calculate_quota(
+                m_score, l_status
+            )
             menu = await self.neo4j_client.get_action_space_candidates(
-                current_concept=state.current_concept, visited=state.visited_concept,
-                resume_concepts=state.resume_concept_list, limit_fwd=limit_fwd, limit_bwd=limit_bwd, limit_sib=limit_sib
+                current_concept=state.current_concept,
+                visited=state.visited_concept,
+                resume_concepts=state.resume_concept_list,
+                limit_fwd=limit_fwd,
+                limit_bwd=limit_bwd,
+                limit_sib=limit_sib,
             )
 
             # 防御性检查：确保 menu 是字典
             if not isinstance(menu, dict):
-                print(f"[Warning] get_action_space_candidates returned non-dict: {type(menu)}, {menu}")
+                print(
+                    f"[Warning] get_action_space_candidates returned non-dict: {type(menu)}, {menu}"
+                )
                 menu = {}
 
             # 【高阶设计】：完美融合底层硬性路由选项与用户意图产生的新选项
@@ -574,7 +671,9 @@ class AgentFlow:
                 candidate_fact_sheet=state.candidate_fact_sheet,
                 resume_star=state.resume_star,
                 max_turn=state.MAX_probe_num,
-                allow_end=self._allow_end(state, include_current_answer=True, score_res=score_res),
+                allow_end=self._allow_end(
+                    state, include_current_answer=True, score_res=score_res
+                ),
             )
             res = self._stabilize_early_end(
                 state=state,
@@ -594,8 +693,12 @@ class AgentFlow:
                     score_res=score_res,
                 )
                 state.is_finished = True
-                self.history_manager.add_messages(state=state, content=res.reply_speech, role="interviewer",
-                                                  concept=state.current_concept)
+                self.history_manager.add_messages(
+                    state=state,
+                    content=res.reply_speech,
+                    role="interviewer",
+                    concept=state.current_concept,
+                )
                 return TurnReply(reply_speech=res.reply_speech, ending=True)
 
             if res.action == "TRANSITION":
@@ -609,15 +712,21 @@ class AgentFlow:
                 self._execute_transition(state, res, menu)
             elif res.action == "PROBE":
                 state.probe_num += 1
-                self.history_manager.add_messages(state=state, content=res.reply_speech, role="interviewer",
-                                                  concept=state.current_concept)
+                self.history_manager.add_messages(
+                    state=state,
+                    content=res.reply_speech,
+                    role="interviewer",
+                    concept=state.current_concept,
+                )
 
             return TurnReply(reply_speech=res.reply_speech)
 
     # ==========================================
     # 辅助私有方法
     # ==========================================
-    def _execute_transition(self, state: AgentState, res: TacticalDecision, question_menu=None):
+    def _execute_transition(
+        self, state: AgentState, res: TacticalDecision, question_menu=None
+    ):
         """统一封装状态跳转逻辑，保持主流程整洁"""
         if res.selected_node:
             inferred_difficulty = self._infer_question_difficulty(
@@ -636,10 +745,16 @@ class AgentFlow:
 
         if res.q_id_and_brief:
             # 你在模型里返回了元组 [q_id, brief]，这里更新题目游标
-            self.history_manager.q_id_add(state, res.q_id_and_brief[0], res.q_id_and_brief[1])
+            self.history_manager.q_id_add(
+                state, res.q_id_and_brief[0], res.q_id_and_brief[1]
+            )
 
-        self.history_manager.add_messages(state=state, content=res.reply_speech, role="interviewer",
-                                          concept=state.current_concept)
+        self.history_manager.add_messages(
+            state=state,
+            content=res.reply_speech,
+            role="interviewer",
+            concept=state.current_concept,
+        )
 
     async def initialize_session(self, req: StartRequest) -> dict:
         personalization = (req.personalization or "").strip()
@@ -669,7 +784,9 @@ class AgentFlow:
             }
 
         # 首题快速路径：优先从基础题题库随机抽题；若题库缺失则回退到既有破冰逻辑。
-        basic_question = await self.neo4j_client.get_random_basic_question()
+        basic_question = await self.neo4j_client.get_random_basic_question(
+            root_name=self._get_basic_question_root_name(req.job)
+        )
         if basic_question and all(
             str(basic_question.get(key) or "").strip()
             for key in ("concept", "q_id", "brief")
@@ -682,8 +799,12 @@ class AgentFlow:
                 resume_concepts=[],
                 visited_concepts=[],
             )
-            question_menu = await self.neo4j_client.get_batch_questions_brief(concept_list=final_concepts)
-            selected_concept, q_id, question_brief = self._pick_initial_question(question_menu)
+            question_menu = await self.neo4j_client.get_batch_questions_brief(
+                concept_list=final_concepts
+            )
+            selected_concept, q_id, question_brief = self._pick_initial_question(
+                question_menu
+            )
 
         opening_speech = self._build_fast_opening_speech(
             personalization=personalization,
@@ -711,18 +832,20 @@ class AgentFlow:
             current_question_difficulty="basic",
             current_question_standard_answer="",
             current_concept_cumulative_answer="",
-            recent_messages=""
+            recent_messages="",
         )
 
         # 添加历史与题目
-        self.history_manager.add_messages(state=new_state,
-                                          content=opening_speech,
-                                          role="interviewer",
-                                          concept=selected_concept)
+        self.history_manager.add_messages(
+            state=new_state,
+            content=opening_speech,
+            role="interviewer",
+            concept=selected_concept,
+        )
 
-        self.history_manager.q_id_add(state=new_state,
-                                      q_id=q_id,
-                                      question_brief=question_brief)
+        self.history_manager.q_id_add(
+            state=new_state, q_id=q_id, question_brief=question_brief
+        )
 
         session_store.save_state(req.id, new_state)
         warmup_task = asyncio.create_task(

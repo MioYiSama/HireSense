@@ -52,6 +52,10 @@ func registerUserRoutes(router fiber.Router, deps Dependencies) {
 	router.Get("/resume-analysis", handler.getResumeAnalysis)
 	router.Post("/resume-analysis", handler.generateResumeAnalysis)
 	router.Get("/interviews", handler.listInterviews)
+	router.Get("/favorite-questions", handler.listFavoriteQuestions)
+	router.Post("/favorite-questions", handler.addFavoriteQuestion)
+	router.Delete("/favorite-questions/source/:interviewID/:reviewIndex", handler.removeFavoriteQuestionSource)
+	router.Delete("/favorite-questions/:favoriteID", handler.removeFavoriteQuestion)
 }
 
 func (h userHandler) updatePassword(c fiber.Ctx) error {

@@ -26,6 +26,10 @@ class PanelInterviewCoordinator:
     PANEL_MIN_LOGS_BEFORE_END = 5
     PANEL_PROBE_THRESHOLD = 60.0
     PANEL_MAX_PROBE_NUM = 1
+    BASIC_QUESTION_ROOT_BY_JOB = {
+        "frontend": "04-JavaScript基础",
+        "backend": "basis",
+    }
 
     def __init__(
         self,
@@ -35,7 +39,9 @@ class PanelInterviewCoordinator:
         neo4j_client_: neo4j_client.Neo4jClient,
         llm_gen: llm_generator.LLMGenerator,
         history_manager: HistoryManager,
-        finalize_question_log: Callable[[AgentState, str, str, str, Dict[str, object]], Optional[int]],
+        finalize_question_log: Callable[
+            [AgentState, str, str, str, Dict[str, object]], Optional[int]
+        ],
     ):
         self.intent_router = intent_router_
         self.evaluator = evaluator_
@@ -61,6 +67,10 @@ class PanelInterviewCoordinator:
             "executive": "大老板",
         }
         return labels.get(role, role)
+
+    @classmethod
+    def _get_basic_question_root_name(cls, job: Optional[str]) -> str:
+        return cls.BASIC_QUESTION_ROOT_BY_JOB.get((job or "").strip(), "basis")
 
     @staticmethod
     def _format_opening_question(question_brief: str) -> str:
@@ -103,7 +113,9 @@ class PanelInterviewCoordinator:
                 return f"这个回答主线还差一点，你继续补充一下{missing_points[0]}。"
             return "我再追问一个细节，把实现方案、边界条件和风险点展开。"
         if missing_points:
-            return f"我更关心你当时怎么做判断，你把{missing_points[0]}和取舍依据讲清楚。"
+            return (
+                f"我更关心你当时怎么做判断，你把{missing_points[0]}和取舍依据讲清楚。"
+            )
         return "我再往深一层问一下，把目标、风险和你最终的取舍依据讲清楚。"
 
     def _build_thinking_reply(self, role: str) -> str:
@@ -144,7 +156,9 @@ class PanelInterviewCoordinator:
     def _pick_static_question(self, state: AgentState, role: str) -> PanelQuestion:
         candidates = get_panel_question_candidates(job=state.job, role=role)
         if not candidates:
-            raise ValueError(f"No panel question candidates for role={role} job={state.job}")
+            raise ValueError(
+                f"No panel question candidates for role={role} job={state.job}"
+            )
         for question in candidates:
             if question.question_id not in state.visited_question:
                 return question
@@ -152,7 +166,9 @@ class PanelInterviewCoordinator:
         return candidates[index]
 
     async def _pick_technical_question(self, state: AgentState) -> PanelQuestion:
-        basic_question = await self.neo4j_client.get_random_basic_question()
+        basic_question = await self.neo4j_client.get_random_basic_question(
+            root_name=self._get_basic_question_root_name(state.job)
+        )
         if basic_question and all(
             str(basic_question.get(key) or "").strip()
             for key in ("concept", "q_id", "brief")
@@ -240,7 +256,10 @@ class PanelInterviewCoordinator:
             ]
             state.panel_turn_index += 1
             attempts += 1
-            if role == "executive" and len(state.interview_logs) < self.PANEL_EXECUTIVE_MIN_LOGS:
+            if (
+                role == "executive"
+                and len(state.interview_logs) < self.PANEL_EXECUTIVE_MIN_LOGS
+            ):
                 continue
             return role
         return "tech_lead"
@@ -262,7 +281,10 @@ class PanelInterviewCoordinator:
 
     async def _advance(self, state: AgentState) -> PanelTurnReply:
         current_role = state.current_interviewer_role
-        if current_role == "executive" and len(state.interview_logs) >= self.PANEL_MIN_LOGS_BEFORE_END:
+        if (
+            current_role == "executive"
+            and len(state.interview_logs) >= self.PANEL_MIN_LOGS_BEFORE_END
+        ):
             state.is_finished = True
             closing = self._build_end_reply()
             self.history_manager.add_messages(

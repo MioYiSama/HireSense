@@ -84,6 +84,7 @@ func main() {
 		TokenManager:     tokenManager,
 		PutReportSecret:  cfg.PutReportSecret,
 		InterviewService: interviewService,
+		InterviewTTS:     api.NewInterviewTTSService(),
 	})
 
 	slog.Info("backend listening", "address", cfg.AppAddress)

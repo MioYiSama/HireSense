@@ -13,6 +13,7 @@ type Dependencies struct {
 	TokenManager     *authpkg.TokenManager
 	PutReportSecret  string
 	InterviewService *InterviewService
+	InterviewTTS     interviewTTSSynthesizer
 }
 
 func RegisterRoutes(app *fiber.App, deps Dependencies) {
@@ -31,6 +32,7 @@ func RegisterRoutes(app *fiber.App, deps Dependencies) {
 		store:            deps.Store,
 		putReportSecret:  deps.PutReportSecret,
 		interviewService: deps.InterviewService,
+		interviewTTS:     deps.InterviewTTS,
 	}
 	apiGroup.Put("/interview/report", interviewHandler.putReport)
 

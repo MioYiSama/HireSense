@@ -11,6 +11,7 @@ import { getApiErrorMessage, queryKeys, replyInterview, stopInterview } from "@/
 import { getCodeLanguageForJob, getCodeLanguageLabel, type CodeLanguage } from "@/lib/codeEditor";
 import type { AvatarAnimationMode } from "@/lib/interviewerAvatar";
 import { useConfidenceMeter } from "@/lib/useConfidenceMeter";
+import { useInterviewTts } from "@/lib/useInterviewTts";
 import {
   getAccessToken,
   getInterviewId,
@@ -78,6 +79,8 @@ const isCodeEditorOpen = ref(false);
 const codeDraft = ref("");
 const codeLanguage = ref<CodeLanguage>(getCodeLanguageForJob(storedUserInfo?.job));
 const activeInterviewMode = ref<InterviewMode>(storedInitialInterviewState?.mode ?? "single");
+const { ttsEnabled, ttsSupported, speakMessage, setEnabled: setTtsEnabled, stop: stopTts } =
+  useInterviewTts();
 let stageSpeakingTimeout: number | null = null;
 
 // 音频播放状态
@@ -113,13 +116,25 @@ const pushTextMessage = (
   content: string,
   speakerRole?: InterviewSpeakerRole,
 ) => {
-  messages.value.push({
+  const message: Message = {
     id: createMessageId(),
     role,
     type: "text",
     content,
     timestamp: new Date().toLocaleTimeString(),
     speakerRole: role === "ai" ? normalizeSpeakerRole(speakerRole) : undefined,
+  };
+  messages.value.push(message);
+  return message;
+};
+
+const appendAiTextMessage = (content: string, speakerRole?: InterviewSpeakerRole) => {
+  const message = pushTextMessage("ai", content, speakerRole);
+  triggerStageSpeaking();
+  speakMessage({
+    id: message.id,
+    text: message.content,
+    speakerRole: message.speakerRole,
   });
 };
 
@@ -135,12 +150,10 @@ const pushCodeMessage = (content: string, language: CodeLanguage) => {
 };
 
 const pushErrorReply = (content: string) => {
-  pushTextMessage(
-    "ai",
+  appendAiTextMessage(
     content,
     activeInterviewMode.value === "panel_trio" ? latestSpeakerRole.value : "ai",
   );
-  triggerStageSpeaking();
 };
 
 // 处理输入消息
@@ -166,6 +179,8 @@ const handleCloseCodeEditor = () => {
 
 // 播放音频消息
 const toggleAudioPlayback = (messageId: number) => {
+  stopTts();
+
   const message = messages.value.find((msg) => msg.id === messageId);
   if (!message || message.type !== "audio" || !message.audioBlob) return;
 
@@ -211,12 +226,20 @@ const scrollToBottom = () => {
 
 // 返回面试中心
 const goBackToDashboard = () => {
+  stopTts();
   // 删除存储的面试ID
   removeInterviewId();
   // 跳转到dashboard页面
   router.push("/dashboard");
 };
 const isInitialLoading = ref(true);
+const ttsStatusLabel = computed(() => {
+  if (!ttsSupported.value) {
+    return "TTS 不可用";
+  }
+
+  return ttsEnabled.value ? "朗读开" : "朗读关";
+});
 
 type InterviewReplyPayload = { text: string } | Blob;
 
@@ -425,8 +448,7 @@ const sendInterviewReply = async (payload: InterviewReplyPayload) => {
   const data = await replyInterviewMutation.mutateAsync(payload);
 
   activeInterviewMode.value = data.mode;
-  pushTextMessage("ai", data.reply, normalizeSpeakerRole(data.speaker_role));
-  triggerStageSpeaking();
+  appendAiTextMessage(data.reply, normalizeSpeakerRole(data.speaker_role));
 
   // 检查是否面试结束
   if (data.ending) {
@@ -452,6 +474,7 @@ const sendTextMessage = async (message: string) => {
   const inputContent = message.trim();
   if (!inputContent || isSubmitting.value || isInterviewEnded.value) return;
 
+  stopTts();
   pushTextMessage("user", inputContent);
   console.log("用户输入:", inputContent);
 
@@ -469,6 +492,7 @@ const handleCodeSubmit = async () => {
     return;
   }
 
+  stopTts();
   const language = codeLanguage.value;
   pushCodeMessage(content, language);
   isCodeEditorOpen.value = false;
@@ -503,17 +527,11 @@ onMounted(() => {
     const initialState = storedInitialInterviewState;
     activeInterviewMode.value = initialState?.mode ?? "single";
     const initialReply = initialState?.reply ?? "";
-    messages.value.push({
-      id: 1,
-      role: "ai",
-      type: "text",
-      content:
-        initialReply ||
+    appendAiTextMessage(
+      initialReply ||
         "你好！我是你的AI面试官。欢迎参加今天的面试。请先做一个简短的自我介绍，然后我们将开始技术问题的讨论。",
-      timestamp: new Date().toLocaleTimeString(),
-      speakerRole: normalizeSpeakerRole(initialState?.speakerRole),
-    });
-    triggerStageSpeaking();
+      normalizeSpeakerRole(initialState?.speakerRole),
+    );
     // 清除已使用的初始回复
     removeInitialReply();
     scrollToBottom();
@@ -535,6 +553,7 @@ onUnmounted(() => {
     clearInterval(timerInterval.value);
   }
 
+  stopTts();
   clearStageSpeakingTimeout();
 
   // 清理所有音频资源
@@ -560,6 +579,14 @@ const endInterview = () => {
   showConfirmDialog.value = true;
 };
 
+const toggleTts = () => {
+  if (!ttsSupported.value) {
+    return;
+  }
+
+  setTtsEnabled(!ttsEnabled.value);
+};
+
 const confirmEndInterview = async () => {
   // 显示加载状态
   errorMessage.value = "";
@@ -580,6 +607,7 @@ const confirmEndInterview = async () => {
 
     await stopInterviewMutation.mutateAsync({ id: interviewId.value });
 
+    stopTts();
     if (timerInterval.value) {
       clearInterval(timerInterval.value);
     }
@@ -662,6 +690,7 @@ class WavEncoder {
 // 开始录音
 const startRecording = async () => {
   try {
+    stopTts();
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     activeRecordingStream.value = stream;
     mediaRecorder.value = new MediaRecorder(stream, { mimeType: "audio/webm" });
@@ -859,6 +888,44 @@ const formatCodeLanguage = (language: string | undefined) => {
             {{ formatTime(interviewTime) }}
           </span>
         </div>
+
+        <button
+          @click="toggleTts"
+          :disabled="!ttsSupported"
+          :aria-pressed="ttsSupported ? ttsEnabled : undefined"
+          class="group flex items-center gap-2 rounded-xl border px-4 py-1.5 font-medium shadow-lg transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60"
+          :class="
+            !ttsSupported
+              ? 'border-gray-700/60 bg-gray-800/50 text-gray-500'
+              : ttsEnabled
+                ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300 hover:border-emerald-400 hover:bg-emerald-500/20'
+                : 'border-gray-700/60 bg-gray-800/70 text-gray-300 hover:border-gray-600 hover:bg-gray-800/90'
+          "
+        >
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M11 5L6 9H3v6h3l5 4V5z"
+            />
+            <path
+              v-if="ttsSupported && ttsEnabled"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M15.54 8.46a5 5 0 010 7.07M18.36 5.64a9 9 0 010 12.72"
+            />
+            <path
+              v-else
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M19 5L5 19"
+            />
+          </svg>
+          <span>{{ ttsStatusLabel }}</span>
+        </button>
 
         <!-- 结束面试按钮 -->
         <button

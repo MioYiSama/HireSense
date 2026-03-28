@@ -145,6 +145,76 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/InterviewsResponse" }
 
+  /api/user/favorite-questions:
+    get:
+      tags: [User]
+      summary: 获取收藏题列表
+      description: 读取当前登录用户收藏的面试官问题，按最近一次收藏时间倒序返回。
+      responses:
+        "200":
+          description: 成功返回收藏题列表
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FavoriteQuestionsResponse" }
+    post:
+      tags: [User]
+      summary: 收藏一道题
+      description: 基于面试报告中的某条复盘记录，将对应面试官问题加入收藏题列表。
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AddFavoriteQuestionRequest" }
+      responses:
+        "200":
+          description: 收藏成功并返回所属收藏题分组
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FavoriteQuestionResponse" }
+
+  /api/user/favorite-questions/source/{interviewID}/{reviewIndex}:
+    delete:
+      tags: [User]
+      summary: 移除收藏来源
+      description: 从收藏题中移除指定报告来源；若该题已无任何来源，则整题收藏会被自动删除。
+      parameters:
+        - name: interviewID
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: reviewIndex
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 0
+      responses:
+        "200":
+          description: 收藏来源移除成功
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DeleteFavoriteQuestionSourceResponse" }
+
+  /api/user/favorite-questions/{favoriteID}:
+    delete:
+      tags: [User]
+      summary: 删除整题收藏
+      description: 删除某道收藏题及其所有关联来源。
+      parameters:
+        - name: favoriteID
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: 收藏题移除成功
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DeleteFavoriteQuestionResponse" }
+
   # ==========================================
   # Interview
   # ==========================================
@@ -210,6 +280,25 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/InterviewReplyResponse" }
+
+  /api/interview/tts:
+    post:
+      tags: [Interview]
+      summary: 生成面试官语音
+      description: 将前端已经收到的面试官文本合成为 mp3 语音，用于在面试页自动播放。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InterviewTTSRequest" }
+      responses:
+        "200":
+          description: 成功生成面试官语音
+          content:
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
 
   /api/interview/report:
     put:
@@ -461,6 +550,185 @@ components:
             $ref: "#/components/schemas/Interview"
       required: [success, message, data]
 
+    AddFavoriteQuestionRequest:
+      type: object
+      properties:
+        interview_id:
+          type: string
+          format: uuid
+          description: 收藏来源所属的面试 ID
+        review_index:
+          type: integer
+          minimum: 0
+          description: 对应报告 reviews 数组中的索引
+      required: [interview_id, review_index]
+
+    FavoriteQuestionsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          examples:
+            - true
+        message:
+          type: string
+          examples:
+            - "读取收藏题成功"
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/FavoriteQuestion"
+      required: [success, message, data]
+
+    FavoriteQuestionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          examples:
+            - true
+        message:
+          type: string
+          examples:
+            - "收藏题保存成功"
+        data:
+          $ref: "#/components/schemas/FavoriteQuestion"
+      required: [success, message, data]
+
+    DeleteFavoriteQuestionSourceResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          examples:
+            - true
+        message:
+          type: string
+          examples:
+            - "收藏来源移除成功"
+        data: {}
+      required: [success, message, data]
+
+    DeleteFavoriteQuestionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          examples:
+            - true
+        message:
+          type: string
+          examples:
+            - "收藏题移除成功"
+        data: {}
+      required: [success, message, data]
+
+    FavoriteQuestion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: 收藏题分组唯一 ID
+        question:
+          type: string
+          description: 去重后的题目文本
+        created_at:
+          type: string
+          format: date-time
+          description: 首次收藏该题的时间
+        updated_at:
+          type: string
+          format: date-time
+          description: 最近一次新增来源的时间
+        source_count:
+          type: integer
+          minimum: 1
+          description: 该题当前保留的来源数量
+        sources:
+          type: array
+          items:
+            $ref: "#/components/schemas/FavoriteQuestionSource"
+      required: [id, question, created_at, updated_at, source_count, sources]
+
+    FavoriteQuestionSource:
+      type: object
+      properties:
+        interview_id:
+          type: string
+          format: uuid
+          description: 该收藏来源所属的面试 ID
+        review_index:
+          type: integer
+          minimum: 0
+          description: 对应报告 reviews 中的索引
+        interview_created_at:
+          type: number
+          description: 来源面试的创建时间戳（毫秒）
+        favorited_at:
+          type: string
+          format: date-time
+          description: 该来源被加入收藏的时间
+        interviewer:
+          type: string
+          description: 面试官问题
+        interviewer_role:
+          $ref: "#/components/schemas/InterviewSpeakerRole"
+        interviewee:
+          type: string
+          description: 求职者当时的实际回答
+        standard_answer:
+          type: string
+          description: 当前题目的标准答案
+        score:
+          type: number
+          description: 该轮得分
+        advice:
+          type: string
+          description: AI 点评与纠误建议
+        concept:
+          type: string
+          description: 当前题目的考点
+        difficulty_label:
+          type: string
+          description: 当前题目的难度标签
+        score_breakdown:
+          $ref: "#/components/schemas/ScoreBreakdown"
+        reason_tags:
+          type: array
+          items:
+            type: string
+          description: 支撑该分数的机器标签
+        strength_points:
+          type: array
+          items:
+            type: string
+          description: 本题回答中已经答到的点
+        missing_points:
+          type: array
+          items:
+            type: string
+          description: 本题回答中缺失的点
+        score_rationale:
+          type: string
+          description: 对题级分数的结构化解释
+      required:
+        [
+          interview_id,
+          review_index,
+          interview_created_at,
+          favorited_at,
+          interviewer,
+          interviewer_role,
+          interviewee,
+          score,
+          advice,
+          difficulty_label,
+          reason_tags,
+          strength_points,
+          missing_points,
+        ]
+
     ResumeAnalysisLabel:
       type: string
       enum: ["strength", "probe", "risk", "neutral"]
@@ -657,6 +925,17 @@ components:
           description: 针对上一轮面试官提问的用户答案
           examples:
             - "关于 React 的优化，我平时会经常使用 React.memo 和 useMemo 来防止组件的非必要渲染..."
+      required: [text]
+
+    InterviewTTSRequest:
+      type: object
+      description: 需要合成为面试官语音的文本内容
+      properties:
+        text:
+          type: string
+          description: 前端已收到并准备播放的面试官文本
+          examples:
+            - "你好，请先做一个简短的自我介绍。"
       required: [text]
 
     InterviewReplyResponse:

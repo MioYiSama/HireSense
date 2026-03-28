@@ -19,6 +19,7 @@ type interviewHandler struct {
 	store            *database.Store
 	putReportSecret  string
 	interviewService *InterviewService
+	interviewTTS     interviewTTSSynthesizer
 }
 
 type startInterviewRequest struct {
@@ -43,10 +44,15 @@ type putReportRequest struct {
 	Report json.RawMessage `json:"report"`
 }
 
+type synthesizeInterviewTTSRequest struct {
+	Text string `json:"text"`
+}
+
 func registerInterviewRoutes(router fiber.Router, handler interviewHandler) {
 	router.Post("/start", handler.start)
 	router.Post("/stop", handler.stop)
 	router.Post("/reply", handler.reply)
+	router.Post("/tts", handler.tts)
 }
 
 func (h interviewHandler) start(c fiber.Ctx) error {
@@ -258,6 +264,38 @@ func (h interviewHandler) putReport(c fiber.Ctx) error {
 	return respondEmpty(c, "报告归档并生成成功")
 }
 
+func (h interviewHandler) tts(c fiber.Ctx) error {
+	if _, ok := authpkg.CurrentPrincipal(c); !ok {
+		return NewError(fiber.StatusUnauthorized, "authentication required")
+	}
+	if h.interviewTTS == nil {
+		return NewError(fiber.StatusServiceUnavailable, "语音合成服务暂时不可用")
+	}
+
+	var request synthesizeInterviewTTSRequest
+	if err := c.Bind().Body(&request); err != nil {
+		return NewError(fiber.StatusBadRequest, "invalid request body")
+	}
+	if strings.TrimSpace(request.Text) == "" {
+		return NewError(fiber.StatusBadRequest, "text is required")
+	}
+
+	audio, err := h.interviewTTS.Synthesize(c.Context(), request.Text)
+	if err != nil {
+		return mapInterviewServiceError(err)
+	}
+
+	slog.InfoContext(c.Context(), "interview tts synthesized",
+		"text_chars", len(strings.TrimSpace(request.Text)),
+		"audio_bytes", len(audio),
+	)
+
+	c.Set(fiber.HeaderContentType, "audio/mpeg")
+	c.Set(fiber.HeaderCacheControl, "no-store")
+	c.Set(fiber.HeaderContentDisposition, `inline; filename="interview-tts.mp3"`)
+	return c.Status(fiber.StatusOK).Send(audio)
+}
+
 func ensureInterviewAccess(principal authpkg.Principal, interview database.Interview) error {
 	if principal.Role == database.RoleAdmin {
 		return nil
@@ -386,6 +424,8 @@ func mapInterviewServiceError(err error) error {
 		return NewError(fiber.StatusBadRequest, "audio payload is required")
 	case errors.Is(err, ErrInterviewTranscriptEmpty):
 		return NewError(fiber.StatusBadRequest, "audio did not contain recognizable speech")
+	case errors.Is(err, ErrInterviewTTSTextRequired):
+		return NewError(fiber.StatusBadRequest, "text is required")
 	}
 
 	var upstreamErr *InterviewUpstreamError
@@ -395,6 +435,8 @@ func mapInterviewServiceError(err error) error {
 			return NewError(fiber.StatusBadGateway, "语音转写服务暂时不可用")
 		case "ai":
 			return NewError(fiber.StatusBadGateway, "面试服务暂时不可用")
+		case "tts":
+			return NewError(fiber.StatusBadGateway, "语音合成服务暂时不可用")
 		}
 	}
 

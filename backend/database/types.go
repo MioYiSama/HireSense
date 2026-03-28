@@ -78,6 +78,41 @@ type Profile struct {
 	Personalization string  `json:"personalization,omitempty"`
 }
 
+type ScoreBreakdown struct {
+	CoverageScore     float64 `json:"coverage_score"`
+	ConsistencyScore  float64 `json:"consistency_score"`
+	CompletenessScore float64 `json:"completeness_score"`
+}
+
+type FavoriteQuestionSource struct {
+	InterviewID        string          `json:"interview_id"`
+	ReviewIndex        int             `json:"review_index"`
+	InterviewCreatedAt int64           `json:"interview_created_at"`
+	FavoritedAt        time.Time       `json:"favorited_at"`
+	Interviewer        string          `json:"interviewer"`
+	InterviewerRole    string          `json:"interviewer_role"`
+	Interviewee        string          `json:"interviewee"`
+	StandardAnswer     string          `json:"standard_answer,omitempty"`
+	Score              float64         `json:"score"`
+	Advice             string          `json:"advice"`
+	Concept            string          `json:"concept,omitempty"`
+	DifficultyLabel    string          `json:"difficulty_label"`
+	ScoreBreakdown     *ScoreBreakdown `json:"score_breakdown,omitempty"`
+	ReasonTags         []string        `json:"reason_tags"`
+	StrengthPoints     []string        `json:"strength_points"`
+	MissingPoints      []string        `json:"missing_points"`
+	ScoreRationale     string          `json:"score_rationale,omitempty"`
+}
+
+type FavoriteQuestion struct {
+	ID          string                   `json:"id"`
+	Question    string                   `json:"question"`
+	QuestionKey string                   `json:"question_key"`
+	CreatedAt   time.Time                `json:"created_at"`
+	UpdatedAt   time.Time                `json:"updated_at"`
+	Sources     []FavoriteQuestionSource `json:"sources"`
+}
+
 type ResumeAnalysisLabel string
 
 const (

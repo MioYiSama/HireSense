@@ -13,7 +13,9 @@ class BlockingResumeAnalyzer:
         self.release = asyncio.Event()
         self.completed = False
 
-    async def analyze_and_align(self, resume_text: str, job_domain: str) -> ParsedResume:
+    async def analyze_and_align(
+        self, resume_text: str, job_domain: str
+    ) -> ParsedResume:
         self.started.set()
         await self.release.wait()
         self.completed = True
@@ -25,7 +27,9 @@ class BlockingResumeAnalyzer:
 
 
 class ImmediateResumeAnalyzer:
-    async def analyze_and_align(self, resume_text: str, job_domain: str) -> ParsedResume:
+    async def analyze_and_align(
+        self, resume_text: str, job_domain: str
+    ) -> ParsedResume:
         return ParsedResume(
             core_skills=["Redis"],
             projects_star_summary="主导过高并发缓存与消息队列治理。",
@@ -42,11 +46,13 @@ class FakeNeo4jClient:
     def __init__(self, basic_question=None):
         self.basic_question = basic_question
         self.random_basic_question_called = False
+        self.random_basic_question_root_name = None
         self.icebreaker_called = False
         self.batch_called = False
 
-    async def get_random_basic_question(self):
+    async def get_random_basic_question(self, root_name: str = "basis"):
         self.random_basic_question_called = True
+        self.random_basic_question_root_name = root_name
         return self.basic_question
 
     async def get_icebreaker_concept(self, resume_concepts, visited_concepts):
@@ -110,6 +116,7 @@ class AgentFlowFastStartTest(unittest.IsolatedAsyncioTestCase):
             )
             self.assertFalse(resume_analyzer.completed)
             self.assertTrue(neo4j_client.random_basic_question_called)
+            self.assertEqual(neo4j_client.random_basic_question_root_name, "basis")
             self.assertFalse(neo4j_client.icebreaker_called)
             self.assertFalse(neo4j_client.batch_called)
 
@@ -131,7 +138,9 @@ class AgentFlowFastStartTest(unittest.IsolatedAsyncioTestCase):
         finally:
             session_store.delete_state(session_id)
 
-    async def test_initialize_session_falls_back_when_basic_question_pool_is_empty(self):
+    async def test_initialize_session_falls_back_when_basic_question_pool_is_empty(
+        self,
+    ):
         session_id = "fast-start-fallback-session"
         session_store.delete_state(session_id)
 
@@ -162,6 +171,7 @@ class AgentFlowFastStartTest(unittest.IsolatedAsyncioTestCase):
                 "我们按你偏好的节奏来，先从Redis开始。介绍一下 Redis 的持久化机制？",
             )
             self.assertTrue(neo4j_client.random_basic_question_called)
+            self.assertEqual(neo4j_client.random_basic_question_root_name, "basis")
             self.assertTrue(neo4j_client.icebreaker_called)
             self.assertTrue(neo4j_client.batch_called)
 
@@ -170,6 +180,45 @@ class AgentFlowFastStartTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(
                 state.q_id_list,
                 [["redis-1", "介绍一下 Redis 的持久化机制"]],
+            )
+        finally:
+            session_store.delete_state(session_id)
+
+    async def test_initialize_session_uses_frontend_root_name_for_basic_question(self):
+        session_id = "fast-start-frontend-session"
+        session_store.delete_state(session_id)
+
+        neo4j_client = FakeNeo4jClient(
+            basic_question={
+                "concept": "闭包",
+                "q_id": "js-1",
+                "brief": "说一下 JavaScript 闭包",
+            }
+        )
+        flow = AgentFlow(
+            intent_router_=object(),
+            evaluator_=object(),
+            chroma_client_=FakeChromaClient(),
+            neo4j_client_=neo4j_client,
+            llm_gen=GuardLLMGenerator(),
+            history_manager=HistoryManager(),
+            strategy=object(),
+            resume_analyzer=ImmediateResumeAnalyzer(),
+        )
+
+        try:
+            await flow.initialize_session(
+                StartRequest(
+                    id=session_id,
+                    job="frontend",
+                    personalization="偏简洁直接",
+                    resume="熟悉 JavaScript、React 与工程化。",
+                )
+            )
+
+            self.assertTrue(neo4j_client.random_basic_question_called)
+            self.assertEqual(
+                neo4j_client.random_basic_question_root_name, "04-JavaScript基础"
             )
         finally:
             session_store.delete_state(session_id)

@@ -9,7 +9,13 @@ import {
   setInitialInterviewState,
   clearAll,
 } from "@/utils/token";
-import { getApiErrorMessage, signOut, startInterview, useInterviewsQuery } from "@/lib/api";
+import {
+  getApiErrorMessage,
+  signOut,
+  startInterview,
+  useFavoriteQuestionsQuery,
+  useInterviewsQuery,
+} from "@/lib/api";
 import ConfirmDialog from "@/components/ConfirmDialog.vue";
 
 const GrowthCurve = defineAsyncComponent(() => import("@/components/GrowthCurve.vue"));
@@ -79,7 +85,12 @@ const goToProfile = () => {
   router.push("/profile");
 };
 
+const goToFavorites = () => {
+  router.push("/favorites");
+};
+
 const interviewsQuery = useInterviewsQuery();
+const favoriteQuestionsQuery = useFavoriteQuestionsQuery();
 const logoutMutation = useMutation({
   mutationFn: signOut,
 });
@@ -93,6 +104,7 @@ const selectedInterviewMode = ref<"single" | "panel_trio">("single");
 
 // 面试记录相关
 const interviews = computed(() => interviewsQuery.data.value ?? []);
+const favoriteQuestionCount = computed(() => favoriteQuestionsQuery.data.value?.length ?? 0);
 const isLoadingInterviews = computed(() => interviewsQuery.isPending.value);
 const interviewsError = computed(() => {
   if (!getAccessToken()) {
@@ -123,12 +135,160 @@ type AbilityInsight = {
   source: "general" | "specific";
 };
 
+type MedalTier = "bronze" | "silver" | "gold" | "platinum";
+type MedalIconKey =
+  | "spark"
+  | "report"
+  | "favorite"
+  | "trophy"
+  | "shield"
+  | "group"
+  | "trend"
+  | "hex";
+
+type AchievementMedal = {
+  id: string;
+  name: string;
+  tier: MedalTier;
+  icon: MedalIconKey;
+  description: string;
+  unlockLabel: string;
+  unlocked: boolean;
+  current: number;
+  target: number;
+  progress: number;
+  progressLabel: string;
+  reason: string;
+};
+
 const createEmptyAbilityProgress = (): AbilityProgressState => ({
   communication: 0,
   adaptability: 0,
   logicalThinking: 0,
   professionalSkills: 0,
 });
+
+const MEDAL_TIER_META: Record<
+  MedalTier,
+  { label: string; chipClass: string; glow: string; progressBackground: string }
+> = {
+  bronze: {
+    label: "铜章",
+    chipClass: "border-amber-300/20 bg-amber-300/10 text-amber-100",
+    glow: "rgba(251, 191, 36, 0.26)",
+    progressBackground:
+      "linear-gradient(90deg, rgba(245, 158, 11, 0.95), rgba(251, 191, 36, 0.78))",
+  },
+  silver: {
+    label: "银章",
+    chipClass: "border-slate-300/20 bg-slate-200/10 text-slate-100",
+    glow: "rgba(148, 163, 184, 0.26)",
+    progressBackground:
+      "linear-gradient(90deg, rgba(148, 163, 184, 0.95), rgba(226, 232, 240, 0.82))",
+  },
+  gold: {
+    label: "金章",
+    chipClass: "border-yellow-300/20 bg-yellow-300/10 text-yellow-50",
+    glow: "rgba(250, 204, 21, 0.3)",
+    progressBackground: "linear-gradient(90deg, rgba(234, 179, 8, 0.96), rgba(253, 224, 71, 0.82))",
+  },
+  platinum: {
+    label: "铂金章",
+    chipClass: "border-cyan-300/20 bg-cyan-300/10 text-cyan-50",
+    glow: "rgba(103, 232, 249, 0.28)",
+    progressBackground:
+      "linear-gradient(90deg, rgba(34, 211, 238, 0.94), rgba(129, 140, 248, 0.82))",
+  },
+};
+
+const MEDAL_ICON_PATHS: Record<MedalIconKey, string> = {
+  spark: "M12 3l1.9 4.8L19 9.4l-4 3.1 1.4 5.1L12 14.7 7.6 17.6 9 12.5 5 9.4l5.1-1.6L12 3z",
+  report:
+    "M9 3.75h4.5L18 8.25V18a2.25 2.25 0 01-2.25 2.25h-6.5A2.25 2.25 0 017 18V6A2.25 2.25 0 019.25 3.75z M13.5 3.75V8.25H18 M9.75 12h4.5 M9.75 15h4.5",
+  favorite:
+    "M12 4.75l2.12 4.3 4.75.69-3.43 3.34.81 4.72L12 15.57 7.75 17.8l.81-4.72-3.43-3.34 4.75-.69L12 4.75z",
+  trophy:
+    "M8.25 5.25h7.5v2.1a3.75 3.75 0 01-3 3.67v2.23h1.5A1.75 1.75 0 0116 15v.75H8V15a1.75 1.75 0 011.75-1.75h1.5v-2.23a3.75 3.75 0 01-3-3.67v-2.1z M8.25 6.75H5.5a1.75 1.75 0 00-1.75 1.75c0 2.1 1.78 3.8 3.97 3.8 M15.75 6.75h2.75a1.75 1.75 0 011.75 1.75c0 2.1-1.78 3.8-3.97 3.8",
+  shield:
+    "M12 3.75l6 2.25v4.5c0 4.1-2.72 7.82-6 9-3.28-1.18-6-4.9-6-9V6l6-2.25z M9.25 11.75l1.75 1.75 3.75-4",
+  group:
+    "M15 10.5a2.25 2.25 0 100-4.5 2.25 2.25 0 000 4.5z M9 12.75a2.625 2.625 0 100-5.25 2.625 2.625 0 000 5.25z M15.5 19.25v-.5c0-1.88-1.46-3.42-3.31-3.55a4.74 4.74 0 013.56-1.45c2.24 0 4.05 1.68 4.25 3.85v1.65 M2.75 19.25v-1.4c0-2.49 2.27-4.5 5.07-4.5s5.07 2.01 5.07 4.5v1.4",
+  trend: "M4.5 16.5l5.25-5.25 3.5 3.5 6.25-7.25 M14.5 7.5h5.25v5.25",
+  hex: "M10.5 3.75h3l5.25 3v6l-5.25 3h-3l-5.25-3v-6l5.25-3z M12 7.5l2.1 1.2v2.4L12 12.3 9.9 11.1V8.7L12 7.5z",
+};
+
+const MEDAL_SURFACE_BY_TIER: Record<
+  MedalTier,
+  {
+    rim: string;
+    core: string;
+    shade: string;
+    glow: string;
+    shadow: string;
+    ribbonLeft: string;
+    ribbonRight: string;
+    ink: string;
+  }
+> = {
+  bronze: {
+    rim: "#f7d7a0",
+    core: "#bc7b3c",
+    shade: "#6d3f19",
+    glow: "rgba(251, 191, 36, 0.34)",
+    shadow: "rgba(146, 64, 14, 0.42)",
+    ribbonLeft: "#8b1e3f",
+    ribbonRight: "#4338ca",
+    ink: "#fff7ed",
+  },
+  silver: {
+    rim: "#f8fafc",
+    core: "#b6c2d1",
+    shade: "#64748b",
+    glow: "rgba(148, 163, 184, 0.34)",
+    shadow: "rgba(71, 85, 105, 0.4)",
+    ribbonLeft: "#0f3b66",
+    ribbonRight: "#6d28d9",
+    ink: "#f8fafc",
+  },
+  gold: {
+    rim: "#fff3bf",
+    core: "#d4a62f",
+    shade: "#7c5310",
+    glow: "rgba(250, 204, 21, 0.4)",
+    shadow: "rgba(120, 53, 15, 0.46)",
+    ribbonLeft: "#9f1239",
+    ribbonRight: "#b45309",
+    ink: "#fff9db",
+  },
+  platinum: {
+    rim: "#e0fbff",
+    core: "#81d4e8",
+    shade: "#355f86",
+    glow: "rgba(103, 232, 249, 0.42)",
+    shadow: "rgba(49, 95, 134, 0.44)",
+    ribbonLeft: "#1d4ed8",
+    ribbonRight: "#6d28d9",
+    ink: "#ecfeff",
+  },
+};
+
+const LOCKED_MEDAL_SURFACE = {
+  rim: "#cbd5e1",
+  core: "#475569",
+  shade: "#0f172a",
+  glow: "rgba(148, 163, 184, 0.18)",
+  shadow: "rgba(15, 23, 42, 0.5)",
+  ribbonLeft: "#475569",
+  ribbonRight: "#1e293b",
+  ink: "#e2e8f0",
+};
+
+const MEDAL_TIER_RANK: Record<MedalTier, number> = {
+  bronze: 1,
+  silver: 2,
+  gold: 3,
+  platinum: 4,
+};
 
 const getAverage = (values: number[]) => {
   if (values.length === 0) {
@@ -148,6 +308,85 @@ const pushScore = (bucket: number[], value: unknown) => {
   if (score !== null) {
     bucket.push(score);
   }
+};
+
+const clampPercentage = (value: number) => {
+  return Math.max(0, Math.min(100, Math.round(value)));
+};
+
+const getProgressToTarget = (current: number, target: number) => {
+  if (target <= 0) {
+    return 100;
+  }
+
+  return clampPercentage((current / target) * 100);
+};
+
+const buildAbilityProgress = (
+  completedInterviews: readonly (typeof interviews.value)[number][],
+): AbilityProgressState => {
+  const communicationScores: number[] = [];
+  const adaptabilityScores: number[] = [];
+  const logicalThinkingScores: number[] = [];
+  const professionalSkillScores: number[] = [];
+
+  completedInterviews.forEach((item) => {
+    const report = item.report;
+
+    if (!report) {
+      return;
+    }
+
+    pushScore(communicationScores, report.general?.["沟通表达"]);
+    pushScore(adaptabilityScores, report.general?.["应变能力"]);
+    pushScore(logicalThinkingScores, report.general?.["逻辑思维"]);
+    Object.values(report.specific ?? {}).forEach((score) => {
+      pushScore(professionalSkillScores, score);
+    });
+  });
+
+  return {
+    communication: Math.round(getAverage(communicationScores) * 10),
+    adaptability: Math.round(getAverage(adaptabilityScores) * 10),
+    logicalThinking: Math.round(getAverage(logicalThinkingScores) * 10),
+    professionalSkills: Math.round(getAverage(professionalSkillScores) * 10),
+  };
+};
+
+const getTierLabel = (tier: MedalTier) => {
+  return MEDAL_TIER_META[tier].label;
+};
+
+const getTierChipClass = (tier: MedalTier, unlocked: boolean) => {
+  return unlocked ? MEDAL_TIER_META[tier].chipClass : "border-white/10 bg-white/5 text-slate-400";
+};
+
+const getMedalProgressBackground = (medal: AchievementMedal) => {
+  return medal.unlocked
+    ? MEDAL_TIER_META[medal.tier].progressBackground
+    : "linear-gradient(90deg, rgba(71, 85, 105, 0.95), rgba(100, 116, 139, 0.7))";
+};
+
+const getMedalStyle = (medal: AchievementMedal) => {
+  const surface = medal.unlocked ? MEDAL_SURFACE_BY_TIER[medal.tier] : LOCKED_MEDAL_SURFACE;
+
+  return {
+    "--medal-rim": surface.rim,
+    "--medal-core": surface.core,
+    "--medal-shade": surface.shade,
+    "--medal-glow": surface.glow,
+    "--medal-shadow": surface.shadow,
+    "--medal-ribbon-left": surface.ribbonLeft,
+    "--medal-ribbon-right": surface.ribbonRight,
+    "--medal-ink": surface.ink,
+    "--medal-tier-glow": medal.unlocked
+      ? MEDAL_TIER_META[medal.tier].glow
+      : "rgba(148, 163, 184, 0.14)",
+  };
+};
+
+const getMedalIconPath = (icon: MedalIconKey) => {
+  return MEDAL_ICON_PATHS[icon];
 };
 
 const rankReportTexts = (values: unknown[]) => {
@@ -383,39 +622,243 @@ const timeRange = ref("30"); // 默认近30天
 
 // 能力对比进度条数据
 const abilityProgress = ref<AbilityProgressState>(createEmptyAbilityProgress());
+const selectedAchievementId = ref<string | null>(null);
+
+const abilityAverageProgress = computed<AbilityProgressState>(() => {
+  return buildAbilityProgress(commonComputedData.value.completedInterviews);
+});
 
 const abilityTargetProgress = computed<AbilityProgressState>(() => {
   if (!hasEnoughReportsForAnalysis.value) {
     return createEmptyAbilityProgress();
   }
 
-  const communicationScores: number[] = [];
-  const adaptabilityScores: number[] = [];
-  const logicalThinkingScores: number[] = [];
-  const professionalSkillScores: number[] = [];
+  return abilityAverageProgress.value;
+});
 
-  commonComputedData.value.completedInterviews.forEach((item) => {
-    const report = item.report;
-
-    if (!report) {
-      return;
-    }
-
-    pushScore(communicationScores, report.general?.["沟通表达"]);
-    pushScore(adaptabilityScores, report.general?.["应变能力"]);
-    pushScore(logicalThinkingScores, report.general?.["逻辑思维"]);
-    Object.values(report.specific ?? {}).forEach((score) => {
-      pushScore(professionalSkillScores, score);
-    });
-  });
+const achievementStats = computed(() => {
+  const abilityFloor = Math.round(Math.min(...Object.values(abilityAverageProgress.value)));
 
   return {
-    communication: Math.round(getAverage(communicationScores) * 10),
-    adaptability: Math.round(getAverage(adaptabilityScores) * 10),
-    logicalThinking: Math.round(getAverage(logicalThinkingScores) * 10),
-    professionalSkills: Math.round(getAverage(professionalSkillScores) * 10),
+    totalInterviews: growthData.value.totalInterviews,
+    completedInterviews: growthData.value.completedInterviews,
+    averageScore: growthData.value.averageScore,
+    highestScore: growthData.value.highestScore,
+    improvement: growthData.value.improvement,
+    favoriteQuestionCount: favoriteQuestionCount.value,
+    hasPanelTrio: interviews.value.some((item) => item.mode === "panel_trio"),
+    abilityFloor,
   };
 });
+
+const achievementMedals = computed<AchievementMedal[]>(() => {
+  const stats = achievementStats.value;
+  const completedProgress = getProgressToTarget(stats.completedInterviews, 3);
+  const averageProgress = getProgressToTarget(stats.averageScore, 85);
+  const steadyUnlocked = stats.completedInterviews >= 3 && stats.averageScore >= 85;
+  const highestScoreUnlocked = stats.highestScore >= 90;
+  const trendReady = stats.improvement !== null;
+  const trendProgress = trendReady
+    ? getProgressToTarget(Math.max(stats.improvement, 0), 10)
+    : getProgressToTarget(stats.completedInterviews, 3);
+  const hexUnlocked = hasEnoughReportsForAnalysis.value && stats.abilityFloor >= 80;
+  const hexProgress = hasEnoughReportsForAnalysis.value
+    ? getProgressToTarget(stats.abilityFloor, 80)
+    : getProgressToTarget(stats.completedInterviews, 3);
+  const steadyReason = steadyUnlocked
+    ? `已累计 ${stats.completedInterviews} 份报告，均分稳定在 ${stats.averageScore} 分。`
+    : stats.completedInterviews < 3
+      ? `先累计到 3 份报告，当前为 ${stats.completedInterviews} 份。`
+      : `均分距离 85 分还差 ${Math.max(0, 85 - stats.averageScore)} 分。`;
+  const trendReason = !trendReady
+    ? `至少需要 ${MIN_REPORTS_FOR_ANALYSIS} 份报告后才计算成长趋势。`
+    : stats.improvement >= 10
+      ? `相较首次面试，当前总分已提升 ${stats.improvement}%。`
+      : stats.improvement >= 0
+        ? `距离 +10% 目标还差 ${10 - stats.improvement}%。`
+        : `当前较首次面试变动 ${stats.improvement}%，先回到正增长再冲击 +10%。`;
+  const hexReason = !hasEnoughReportsForAnalysis.value
+    ? `至少需要 ${MIN_REPORTS_FOR_ANALYSIS} 份报告后才判定六边形成熟度。`
+    : stats.abilityFloor >= 80
+      ? `四项核心能力最低项已达到 ${stats.abilityFloor}%。`
+      : `最低能力项当前为 ${stats.abilityFloor}%，距离 80% 还差 ${80 - stats.abilityFloor}%。`;
+
+  return [
+    {
+      id: "first-interview",
+      name: "初试锋芒",
+      tier: "bronze",
+      icon: "spark",
+      description: "迈出第一场模拟面试，让成长面板不再停留在零。",
+      unlockLabel: "完成 1 场面试",
+      unlocked: stats.totalInterviews >= 1,
+      current: Math.min(stats.totalInterviews, 1),
+      target: 1,
+      progress: getProgressToTarget(stats.totalInterviews, 1),
+      progressLabel:
+        stats.totalInterviews >= 1
+          ? `已完成 ${stats.totalInterviews} 场面试`
+          : `${stats.totalInterviews} / 1 场面试`,
+      reason:
+        stats.totalInterviews >= 1
+          ? "你已经完成首场模拟面试，这枚起始勋章已经点亮。"
+          : "完成首场面试后解锁，适合作为成就墙的起点。",
+    },
+    {
+      id: "report-harvester",
+      name: "报告收割者",
+      tier: "bronze",
+      icon: "report",
+      description: "连续拿到多份报告，才有资格进入稳定分析区。",
+      unlockLabel: "累计 3 份面试报告",
+      unlocked: stats.completedInterviews >= 3,
+      current: Math.min(stats.completedInterviews, 3),
+      target: 3,
+      progress: completedProgress,
+      progressLabel: `${stats.completedInterviews} / 3 份报告`,
+      reason:
+        stats.completedInterviews >= 3
+          ? `当前已累计 ${stats.completedInterviews} 份报告，成长分析正式成形。`
+          : `还差 ${3 - stats.completedInterviews} 份报告即可解锁。`,
+    },
+    {
+      id: "question-hunter",
+      name: "题海拾金",
+      tier: "bronze",
+      icon: "favorite",
+      description: "把高价值题目收进收藏夹，形成自己的高频题库。",
+      unlockLabel: "收藏 5 道题目",
+      unlocked: stats.favoriteQuestionCount >= 5,
+      current: Math.min(stats.favoriteQuestionCount, 5),
+      target: 5,
+      progress: getProgressToTarget(stats.favoriteQuestionCount, 5),
+      progressLabel: `${stats.favoriteQuestionCount} / 5 道收藏题`,
+      reason:
+        stats.favoriteQuestionCount >= 5
+          ? `已沉淀 ${stats.favoriteQuestionCount} 道收藏题，复盘资产开始累积。`
+          : `再收藏 ${5 - stats.favoriteQuestionCount} 道高频题即可解锁。`,
+    },
+    {
+      id: "highlight-moment",
+      name: "高光时刻",
+      tier: "silver",
+      icon: "trophy",
+      description: "单场得分冲上 90 分，说明你已经打出明显亮点。",
+      unlockLabel: "单场面试得分达到 90 分",
+      unlocked: highestScoreUnlocked,
+      current: stats.highestScore,
+      target: 90,
+      progress: getProgressToTarget(stats.highestScore, 90),
+      progressLabel: `最高分 ${stats.highestScore} / 90`,
+      reason: highestScoreUnlocked
+        ? `当前最高分达到 ${stats.highestScore} 分，已经留下高光局。`
+        : `距离 90 分还差 ${Math.max(0, 90 - stats.highestScore)} 分。`,
+    },
+    {
+      id: "steady-performer",
+      name: "稳定输出",
+      tier: "silver",
+      icon: "shield",
+      description: "不只是偶尔发挥好，而是多份报告都维持高质量表现。",
+      unlockLabel: "3 份报告后平均分达到 85 分",
+      unlocked: steadyUnlocked,
+      current: stats.averageScore,
+      target: 85,
+      progress: Math.min(completedProgress, averageProgress),
+      progressLabel: `报告 ${Math.min(stats.completedInterviews, 3)}/3 · 均分 ${stats.averageScore}/85`,
+      reason: steadyReason,
+    },
+    {
+      id: "panel-breakthrough",
+      name: "群面突围",
+      tier: "silver",
+      icon: "group",
+      description: "进入多人压迫式场景，在不同角色追问里保持节奏。",
+      unlockLabel: "完成 1 次群面模式",
+      unlocked: stats.hasPanelTrio,
+      current: stats.hasPanelTrio ? 1 : 0,
+      target: 1,
+      progress: stats.hasPanelTrio ? 100 : 0,
+      progressLabel: stats.hasPanelTrio ? "已完成群面模式" : "尝试 1 次群面模式",
+      reason: stats.hasPanelTrio
+        ? "你已经进入过群面模式，这枚压力测试勋章正式点亮。"
+        : "切换到群面模式完成一场面试即可解锁。",
+    },
+    {
+      id: "growth-engine",
+      name: "上升引擎",
+      tier: "gold",
+      icon: "trend",
+      description: "分数稳定爬升，说明复盘和练习已经开始产生复利。",
+      unlockLabel: "相较首次面试提升 10%",
+      unlocked: trendReady && stats.improvement >= 10,
+      current: trendReady ? stats.improvement : stats.completedInterviews,
+      target: trendReady ? 10 : 3,
+      progress: trendProgress,
+      progressLabel: trendReady
+        ? `当前 ${stats.improvement >= 0 ? "+" : ""}${stats.improvement}% / +10%`
+        : `报告 ${stats.completedInterviews} / 3`,
+      reason: trendReason,
+    },
+    {
+      id: "all-rounder",
+      name: "六边形候选人",
+      tier: "platinum",
+      icon: "hex",
+      description: "沟通、应变、逻辑和专业技能没有明显短板，能力面开始闭环。",
+      unlockLabel: "4 项核心能力均达到 80%",
+      unlocked: hexUnlocked,
+      current: stats.abilityFloor,
+      target: 80,
+      progress: hexProgress,
+      progressLabel: hasEnoughReportsForAnalysis.value
+        ? `最低项 ${stats.abilityFloor} / 80`
+        : `报告 ${stats.completedInterviews} / 3 · 最低项 ${stats.abilityFloor}`,
+      reason: hexReason,
+    },
+  ];
+});
+
+const unlockedAchievementCount = computed(() => {
+  return achievementMedals.value.filter((item) => item.unlocked).length;
+});
+
+const getDefaultAchievementId = (medals: AchievementMedal[]) => {
+  const highestUnlocked = [...medals]
+    .filter((item) => item.unlocked)
+    .sort((left, right) => {
+      if (MEDAL_TIER_RANK[left.tier] !== MEDAL_TIER_RANK[right.tier]) {
+        return MEDAL_TIER_RANK[right.tier] - MEDAL_TIER_RANK[left.tier];
+      }
+
+      return right.progress - left.progress;
+    })[0];
+
+  if (highestUnlocked) {
+    return highestUnlocked.id;
+  }
+
+  return [...medals].sort((left, right) => {
+    if (left.progress !== right.progress) {
+      return right.progress - left.progress;
+    }
+
+    return MEDAL_TIER_RANK[right.tier] - MEDAL_TIER_RANK[left.tier];
+  })[0]?.id;
+};
+
+const selectedAchievement = computed(() => {
+  const medals = achievementMedals.value;
+  if (medals.length === 0) {
+    return null;
+  }
+
+  return medals.find((item) => item.id === selectedAchievementId.value) ?? medals[0];
+});
+
+const selectAchievement = (id: string) => {
+  selectedAchievementId.value = id;
+};
 
 const abilityComparisonEmptyMessage = computed(() => {
   return `至少需要 ${MIN_REPORTS_FOR_ANALYSIS} 份已生成面试报告后才展示能力对比，当前为 ${commonComputedData.value.completedInterviews.length} 份。`;
@@ -506,11 +949,12 @@ const weakPointAbilityInsights = computed<AbilityInsight[]>(() => {
 });
 
 const weakPointFocusAbilities = computed(() => {
-  const lowerScoreAbilities = weakPointAbilityInsights.value.filter((item) => item.averageScore < 8.5);
-  return (lowerScoreAbilities.length > 0 ? lowerScoreAbilities : weakPointAbilityInsights.value).slice(
-    0,
-    3,
+  const lowerScoreAbilities = weakPointAbilityInsights.value.filter(
+    (item) => item.averageScore < 8.5,
   );
+  return (
+    lowerScoreAbilities.length > 0 ? lowerScoreAbilities : weakPointAbilityInsights.value
+  ).slice(0, 3);
 });
 
 const extractedWeakPoints = computed(() => {
@@ -800,6 +1244,22 @@ watch(
   { immediate: true },
 );
 
+watch(
+  achievementMedals,
+  (medals) => {
+    if (medals.length === 0) {
+      selectedAchievementId.value = null;
+      return;
+    }
+
+    const hasSelected = medals.some((item) => item.id === selectedAchievementId.value);
+    if (!hasSelected) {
+      selectedAchievementId.value = getDefaultAchievementId(medals) ?? medals[0]?.id ?? null;
+    }
+  },
+  { immediate: true },
+);
+
 onMounted(() => {
   // 从localStorage获取用户信息
   const userInfo = getUserInfo();
@@ -918,11 +1378,39 @@ onUnmounted(() => {
         class="fixed left-0 top-16 bottom-0 w-72 bg-gray-900/60 backdrop-blur-md border-r border-white/5 overflow-hidden flex flex-col z-40 transition-all duration-300"
       >
         <div class="p-4 border-b border-white/5">
-          <div class="flex items-center justify-between">
-            <h2 class="font-semibold text-white">历史面试记录</h2>
-            <span class="text-xs text-slate-400 bg-gray-800/50 px-2 py-1 rounded-full"
-              >{{ interviews.length }}次</span
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <h2 class="font-semibold text-white">历史面试记录</h2>
+              <span class="text-xs text-slate-400 bg-gray-800/50 px-2 py-1 rounded-full"
+                >{{ interviews.length }}次</span
+              >
+            </div>
+            <button
+              type="button"
+              @click="goToFavorites"
+              class="w-full rounded-2xl border border-amber-400/15 bg-linear-to-r from-amber-400/10 to-orange-400/10 px-4 py-3 text-left transition-all duration-300 hover:border-amber-300/30 hover:from-amber-400/15 hover:to-orange-400/15"
             >
+              <div class="flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-400/15 text-amber-300"
+                  >
+                    <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path
+                        d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <p class="text-sm font-semibold text-white">收藏题</p>
+                    <p class="text-xs text-amber-100/70">点击查看</p>
+                  </div>
+                </div>
+                <span class="rounded-full bg-black/20 px-3 py-1 text-xs text-amber-100 text-nowrap">
+                  {{ favoriteQuestionCount }} 题
+                </span>
+              </div>
+            </button>
           </div>
         </div>
 
@@ -1031,7 +1519,9 @@ onUnmounted(() => {
                     {{ formatInterviewModeLabel(interview.mode) }}
                   </span>
                 </div>
-                <span class="text-xs text-slate-500">{{ formatInterviewTime(interview.created_at) }}</span>
+                <span class="text-xs text-slate-500">{{
+                  formatInterviewTime(interview.created_at)
+                }}</span>
               </div>
               <h3
                 class="font-medium text-white text-sm mb-1 group-hover:text-blue-300 transition-colors"
@@ -1391,6 +1881,230 @@ onUnmounted(() => {
           </div>
         </section>
 
+        <!-- 成就勋章区 -->
+        <section
+          v-if="selectedAchievement"
+          class="space-y-6 animate-fade-in-up [&_h2]:text-nowrap [&_h3]:text-nowrap"
+        >
+          <div class="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div class="min-w-0">
+              <h2 class="text-xl font-semibold text-white">成就勋章</h2>
+              <p class="mt-1 text-sm text-slate-400">
+                勋章会根据当前面试数据实时点亮，未达成的目标会保留下一步进度。
+              </p>
+            </div>
+            <div class="flex items-center gap-3">
+              <span
+                class="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-slate-200 text-nowrap"
+              >
+                已解锁 {{ unlockedAchievementCount }} / {{ achievementMedals.length }}
+              </span>
+              <span class="text-xs text-slate-500 text-nowrap">纯前端实时计算</span>
+            </div>
+          </div>
+
+          <div class="achievement-stage rounded-[32px] p-5 md:p-8">
+            <div class="grid gap-6 xl:grid-cols-[minmax(320px,0.95fr)_minmax(0,1.35fr)]">
+              <div class="achievement-hero rounded-[28px] p-6 md:p-8">
+                <div class="flex items-start justify-between gap-4">
+                  <div class="min-w-0">
+                    <span
+                      :class="[
+                        'inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-semibold tracking-[0.24em] uppercase text-nowrap',
+                        getTierChipClass(selectedAchievement.tier, selectedAchievement.unlocked),
+                      ]"
+                    >
+                      {{ getTierLabel(selectedAchievement.tier) }}
+                    </span>
+                    <h3 class="mt-4 text-2xl font-semibold text-white">
+                      {{ selectedAchievement.name }}
+                    </h3>
+                    <p class="mt-3 max-w-md text-sm leading-6 text-slate-300">
+                      {{ selectedAchievement.description }}
+                    </p>
+                  </div>
+                  <span
+                    :class="[
+                      'rounded-full px-3 py-1 text-[11px] font-semibold tracking-[0.24em] uppercase text-nowrap',
+                      selectedAchievement.unlocked
+                        ? 'border border-emerald-300/20 bg-emerald-300/10 text-emerald-100'
+                        : 'border border-white/10 bg-white/5 text-slate-400',
+                    ]"
+                  >
+                    {{ selectedAchievement.unlocked ? "已解锁" : "锁定中" }}
+                  </span>
+                </div>
+
+                <div class="mt-8 flex justify-center">
+                  <div
+                    :class="[
+                      'medal-figure medal-figure--hero',
+                      selectedAchievement.unlocked ? 'is-unlocked' : 'is-locked',
+                    ]"
+                    :style="getMedalStyle(selectedAchievement)"
+                  >
+                    <div class="medal-ribbons" aria-hidden="true">
+                      <div class="medal-ribbon medal-ribbon--left"></div>
+                      <div class="medal-ribbon medal-ribbon--right"></div>
+                    </div>
+                    <div class="medal-halo" aria-hidden="true"></div>
+                    <div class="medal-disc">
+                      <div class="medal-inner-ring">
+                        <div class="medal-center">
+                          <svg
+                            class="medal-icon h-12 w-12 md:h-14 md:w-14"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="1.75"
+                              :d="getMedalIconPath(selectedAchievement.icon)"
+                            />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="mt-8 space-y-4">
+                  <div class="rounded-3xl border border-white/8 bg-black/15 p-5">
+                    <div class="flex items-center justify-between gap-4">
+                      <p class="text-[11px] uppercase tracking-[0.3em] text-slate-500 text-nowrap">
+                        解锁条件
+                      </p>
+                      <span class="min-w-0 text-right text-sm font-medium text-slate-100 whitespace-normal">
+                        {{ selectedAchievement.unlockLabel }}
+                      </span>
+                    </div>
+                    <p class="mt-3 text-sm leading-6 text-slate-400">
+                      {{ selectedAchievement.reason }}
+                    </p>
+                    <div class="mt-4">
+                      <div class="flex items-start justify-between gap-3 text-xs text-slate-400">
+                        <span class="min-w-0 whitespace-normal">{{ selectedAchievement.progressLabel }}</span>
+                        <span class="shrink-0 text-nowrap">{{ selectedAchievement.progress }}%</span>
+                      </div>
+                      <div class="mt-2 h-2.5 rounded-full bg-white/8">
+                        <div
+                          class="h-full rounded-full transition-all duration-500"
+                          :style="{
+                            width: `${selectedAchievement.progress}%`,
+                            background: getMedalProgressBackground(selectedAchievement),
+                            boxShadow: `0 0 18px ${MEDAL_TIER_META[selectedAchievement.tier].glow}`,
+                          }"
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
+                  <button
+                    v-for="(medal, index) in achievementMedals"
+                    :key="medal.id"
+                    type="button"
+                    @click="selectAchievement(medal.id)"
+                    :class="[
+                      'medal-tile rounded-[26px] p-4 text-left animate-fade-in-up',
+                      selectedAchievement.id === medal.id ? 'is-selected' : '',
+                      medal.unlocked ? 'is-unlocked' : 'is-locked-surface',
+                    ]"
+                    :style="{ animationDelay: `${0.08 * (index + 1)}s` }"
+                  >
+                    <div class="flex items-start justify-between gap-3">
+                      <span
+                        :class="[
+                          'inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] font-semibold tracking-[0.2em] uppercase text-nowrap',
+                          getTierChipClass(medal.tier, medal.unlocked),
+                        ]"
+                      >
+                        {{ getTierLabel(medal.tier) }}
+                      </span>
+                      <span
+                        :class="[
+                          'rounded-full px-2 py-1 text-[10px] font-semibold tracking-[0.2em] uppercase text-nowrap',
+                          medal.unlocked
+                            ? 'bg-emerald-300/10 text-emerald-100'
+                            : 'bg-white/5 text-slate-500',
+                        ]"
+                      >
+                        {{ medal.unlocked ? "已解锁" : "进行中" }}
+                      </span>
+                    </div>
+
+                    <div class="mt-4 flex justify-center">
+                      <div
+                        :class="['medal-figure', medal.unlocked ? 'is-unlocked' : 'is-locked']"
+                        :style="getMedalStyle(medal)"
+                      >
+                        <div class="medal-ribbons" aria-hidden="true">
+                          <div class="medal-ribbon medal-ribbon--left"></div>
+                          <div class="medal-ribbon medal-ribbon--right"></div>
+                        </div>
+                        <div class="medal-halo" aria-hidden="true"></div>
+                        <div class="medal-disc">
+                          <div class="medal-inner-ring">
+                            <div class="medal-center">
+                              <svg
+                                class="medal-icon h-8 w-8"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  stroke-linecap="round"
+                                  stroke-linejoin="round"
+                                  stroke-width="1.7"
+                                  :d="getMedalIconPath(medal.icon)"
+                                />
+                              </svg>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="mt-4">
+                      <div class="flex items-center justify-between gap-3">
+                        <h3 class="text-sm font-semibold text-white">{{ medal.name }}</h3>
+                        <span class="text-[11px] text-slate-400 text-nowrap">
+                          {{ medal.progress }}%
+                        </span>
+                      </div>
+                      <p class="mt-2 min-h-[3rem] whitespace-normal text-xs leading-5 text-slate-400">
+                        {{ medal.unlockLabel }}
+                      </p>
+                      <div class="mt-3 h-1.5 rounded-full bg-white/8">
+                        <div
+                          class="h-full rounded-full transition-all duration-500"
+                          :style="{
+                            width: `${medal.progress}%`,
+                            background: getMedalProgressBackground(medal),
+                          }"
+                        ></div>
+                      </div>
+                      <p
+                        :class="[
+                          'mt-2 whitespace-normal text-[11px] leading-5',
+                          medal.unlocked ? 'text-slate-300' : 'text-slate-500',
+                        ]"
+                      >
+                        {{ medal.progressLabel }}
+                      </p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <!-- 能力分析区 -->
         <section class="space-y-6 animate-fade-in-up">
           <h2 class="text-xl font-semibold text-white">能力分析</h2>
@@ -1678,3 +2392,293 @@ onUnmounted(() => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.achievement-stage {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.16), transparent 30%),
+    radial-gradient(circle at bottom right, rgba(244, 114, 182, 0.1), transparent 30%),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.86), rgba(2, 6, 23, 0.94));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 24px 80px rgba(2, 6, 23, 0.34);
+}
+
+.achievement-stage::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: 30px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.06), transparent 36%),
+    linear-gradient(315deg, rgba(148, 163, 184, 0.08), transparent 30%);
+  pointer-events: none;
+}
+
+.achievement-hero {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.06), transparent 34%),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.8), rgba(2, 6, 23, 0.88));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 18px 45px rgba(2, 6, 23, 0.32);
+}
+
+.medal-tile {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.72), rgba(2, 6, 23, 0.86)), rgba(255, 255, 255, 0.02);
+  transition:
+    transform 0.28s ease,
+    border-color 0.28s ease,
+    box-shadow 0.28s ease,
+    background 0.28s ease;
+}
+
+.medal-tile::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  border-radius: 24px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.05), transparent 42%);
+  opacity: 0;
+  transition: opacity 0.28s ease;
+  pointer-events: none;
+}
+
+.medal-tile:hover,
+.medal-tile:focus-visible,
+.medal-tile.is-selected {
+  transform: translateY(-6px);
+  border-color: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 18px 40px rgba(2, 6, 23, 0.3);
+}
+
+.medal-tile:hover::before,
+.medal-tile:focus-visible::before,
+.medal-tile.is-selected::before {
+  opacity: 1;
+}
+
+.medal-tile.is-selected {
+  box-shadow:
+    0 22px 48px rgba(2, 6, 23, 0.36),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.medal-tile.is-unlocked {
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.04), transparent 30%),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.72), rgba(2, 6, 23, 0.88));
+}
+
+.medal-tile.is-locked-surface {
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.6), rgba(2, 6, 23, 0.82)), rgba(255, 255, 255, 0.02);
+}
+
+.medal-figure {
+  position: relative;
+  width: 112px;
+  aspect-ratio: 1;
+  filter: drop-shadow(0 16px 28px rgba(2, 6, 23, 0.34));
+}
+
+.medal-figure--hero {
+  width: clamp(220px, 32vw, 296px);
+}
+
+.medal-ribbons {
+  position: absolute;
+  top: 3%;
+  left: 50%;
+  z-index: 1;
+  display: flex;
+  gap: 12%;
+  width: 46%;
+  height: 44%;
+  transform: translateX(-50%);
+  transform-origin: center top;
+  transition: transform 0.28s ease;
+}
+
+.medal-ribbon {
+  width: 44%;
+  height: 100%;
+  border-radius: 999px 999px 18px 18px;
+  clip-path: polygon(18% 0, 82% 0, 100% 100%, 50% 82%, 0 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -14px 18px rgba(15, 23, 42, 0.28);
+}
+
+.medal-ribbon--left {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.26), transparent 22%),
+    linear-gradient(180deg, var(--medal-ribbon-left), rgba(15, 23, 42, 0.34));
+}
+
+.medal-ribbon--right {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.24), transparent 22%),
+    linear-gradient(180deg, var(--medal-ribbon-right), rgba(15, 23, 42, 0.34));
+}
+
+.medal-halo {
+  position: absolute;
+  inset: 26% 16% 10%;
+  z-index: 0;
+  border-radius: 999px;
+  background: radial-gradient(circle, var(--medal-glow) 0%, transparent 70%);
+  filter: blur(18px);
+  opacity: 0.9;
+}
+
+.medal-disc {
+  position: absolute;
+  inset: 24% 8% 0;
+  z-index: 2;
+  overflow: hidden;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.78), transparent 18%),
+    linear-gradient(145deg, var(--medal-rim), var(--medal-core) 46%, var(--medal-shade));
+  box-shadow:
+    inset 0 2px 2px rgba(255, 255, 255, 0.22),
+    inset 0 -14px 20px rgba(15, 23, 42, 0.24),
+    0 18px 26px var(--medal-shadow);
+}
+
+.medal-disc::before {
+  content: "";
+  position: absolute;
+  inset: 7%;
+  border-radius: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  opacity: 0.72;
+}
+
+.medal-disc::after {
+  content: "";
+  position: absolute;
+  inset: -10% 24% 18% -28%;
+  background: linear-gradient(115deg, transparent 15%, rgba(255, 255, 255, 0.55), transparent 65%);
+  transform: rotate(12deg) translateX(-120%);
+  animation: medal-glint 7s linear infinite;
+  opacity: 0.82;
+}
+
+.medal-inner-ring {
+  position: absolute;
+  inset: 15%;
+  display: grid;
+  place-items: center;
+  border-radius: inherit;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), transparent 28%),
+    linear-gradient(180deg, rgba(15, 23, 42, 0.12), rgba(255, 255, 255, 0.08));
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    inset 0 -10px 16px rgba(15, 23, 42, 0.14);
+}
+
+.medal-center {
+  display: grid;
+  place-items: center;
+  width: 66%;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.3), transparent 22%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(15, 23, 42, 0.18));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 -10px 14px rgba(15, 23, 42, 0.18);
+}
+
+.medal-icon {
+  color: var(--medal-ink);
+  filter: drop-shadow(0 2px 8px rgba(255, 255, 255, 0.12));
+}
+
+.medal-figure.is-locked {
+  opacity: 0.88;
+}
+
+.medal-figure.is-locked .medal-disc,
+.medal-figure.is-locked .medal-ribbon {
+  filter: saturate(0.68) grayscale(0.12);
+}
+
+.medal-figure.is-locked .medal-halo {
+  opacity: 0.48;
+}
+
+.medal-figure.is-locked .medal-disc::after {
+  opacity: 0.36;
+  animation-duration: 10s;
+}
+
+.medal-figure.is-unlocked .medal-halo {
+  box-shadow: 0 0 36px var(--medal-tier-glow);
+}
+
+.achievement-hero .medal-figure.is-unlocked .medal-disc {
+  animation: medal-pulse 3.6s ease-in-out infinite;
+}
+
+.medal-tile:hover .medal-ribbons,
+.medal-tile:focus-visible .medal-ribbons,
+.medal-tile.is-selected .medal-ribbons {
+  transform: translateX(-50%) rotate(-4deg);
+}
+
+@keyframes medal-glint {
+  0% {
+    transform: rotate(12deg) translateX(-120%);
+  }
+  20% {
+    transform: rotate(12deg) translateX(140%);
+  }
+  100% {
+    transform: rotate(12deg) translateX(140%);
+  }
+}
+
+@keyframes medal-pulse {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 2px 2px rgba(255, 255, 255, 0.22),
+      inset 0 -14px 20px rgba(15, 23, 42, 0.24),
+      0 18px 26px var(--medal-shadow);
+  }
+  50% {
+    box-shadow:
+      inset 0 2px 2px rgba(255, 255, 255, 0.22),
+      inset 0 -14px 20px rgba(15, 23, 42, 0.24),
+      0 22px 34px var(--medal-shadow),
+      0 0 26px var(--medal-tier-glow);
+  }
+}
+
+@media (max-width: 768px) {
+  .medal-tile:hover,
+  .medal-tile:focus-visible,
+  .medal-tile.is-selected {
+    transform: translateY(-3px);
+  }
+
+  .medal-figure {
+    width: 104px;
+  }
+}
+</style>
