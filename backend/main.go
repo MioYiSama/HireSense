@@ -22,6 +22,7 @@ func main() {
 	}
 	slog.Info("configuration loaded",
 		"app_addr", cfg.AppAddress,
+		"app_body_limit_bytes", cfg.AppBodyLimit,
 		"jwt_ttl", cfg.JWTTTL,
 		"whisper_configured", cfg.WhisperURL != "",
 		"ai_configured", cfg.AIURL != "",
@@ -56,6 +57,7 @@ func main() {
 
 	app := fiber.New(fiber.Config{
 		PassLocalsToContext: true,
+		BodyLimit:           cfg.AppBodyLimit,
 		ErrorHandler:        api.ErrorHandler,
 	})
 	app.Use(api.RequestLogger())

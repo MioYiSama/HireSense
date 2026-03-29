@@ -6,12 +6,16 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
 
+const defaultAppBodyLimitBytes = 256 * 1024 * 1024
+
 type Config struct {
 	AppAddress      string
+	AppBodyLimit    int
 	DatabaseURL     string
 	JWTIssuer       string
 	JWTTTL          time.Duration
@@ -37,8 +41,14 @@ func LoadConfig() (Config, error) {
 		return Config{}, fmt.Errorf("parse JWT_TTL: %w", err)
 	}
 
+	bodyLimit, err := getEnvAsPositiveInt("APP_BODY_LIMIT_BYTES", defaultAppBodyLimitBytes)
+	if err != nil {
+		return Config{}, fmt.Errorf("parse APP_BODY_LIMIT_BYTES: %w", err)
+	}
+
 	cfg := Config{
 		AppAddress:      getEnv("APP_ADDR", ":8080"),
+		AppBodyLimit:    bodyLimit,
 		DatabaseURL:     strings.TrimSpace(os.Getenv("DATABASE_URL")),
 		JWTIssuer:       getEnv("JWT_ISSUER", "hiresense-backend"),
 		JWTTTL:          ttl,
@@ -54,6 +64,8 @@ func LoadConfig() (Config, error) {
 		return Config{}, errors.New("PUT_REPORT_SECRET is required")
 	case cfg.JWTTTL <= 0:
 		return Config{}, errors.New("JWT_TTL must be greater than zero")
+	case cfg.AppBodyLimit <= 0:
+		return Config{}, errors.New("APP_BODY_LIMIT_BYTES must be greater than zero")
 	}
 
 	return cfg, nil
@@ -123,4 +135,21 @@ func getEnv(key, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+func getEnvAsPositiveInt(key string, fallback int) (int, error) {
+	value := strings.TrimSpace(os.Getenv(key))
+	if value == "" {
+		return fallback, nil
+	}
+
+	parsed, err := strconv.Atoi(value)
+	if err != nil {
+		return 0, err
+	}
+	if parsed <= 0 {
+		return 0, errors.New("must be greater than zero")
+	}
+
+	return parsed, nil
 }

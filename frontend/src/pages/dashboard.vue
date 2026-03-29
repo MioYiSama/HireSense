@@ -1899,11 +1899,10 @@ onUnmounted(() => {
               >
                 已解锁 {{ unlockedAchievementCount }} / {{ achievementMedals.length }}
               </span>
-              <span class="text-xs text-slate-500 text-nowrap">纯前端实时计算</span>
             </div>
           </div>
 
-          <div class="achievement-stage rounded-[32px] p-5 md:p-8">
+          <div class="achievement-stage rounded-4xl p-5 md:p-8">
             <div class="grid gap-6 xl:grid-cols-[minmax(320px,0.95fr)_minmax(0,1.35fr)]">
               <div class="achievement-hero rounded-[28px] p-6 md:p-8">
                 <div class="flex items-start justify-between gap-4">
@@ -1976,7 +1975,9 @@ onUnmounted(() => {
                       <p class="text-[11px] uppercase tracking-[0.3em] text-slate-500 text-nowrap">
                         解锁条件
                       </p>
-                      <span class="min-w-0 text-right text-sm font-medium text-slate-100 whitespace-normal">
+                      <span
+                        class="min-w-0 text-right text-sm font-medium text-slate-100 whitespace-normal"
+                      >
                         {{ selectedAchievement.unlockLabel }}
                       </span>
                     </div>
@@ -1985,8 +1986,12 @@ onUnmounted(() => {
                     </p>
                     <div class="mt-4">
                       <div class="flex items-start justify-between gap-3 text-xs text-slate-400">
-                        <span class="min-w-0 whitespace-normal">{{ selectedAchievement.progressLabel }}</span>
-                        <span class="shrink-0 text-nowrap">{{ selectedAchievement.progress }}%</span>
+                        <span class="min-w-0 whitespace-normal">{{
+                          selectedAchievement.progressLabel
+                        }}</span>
+                        <span class="shrink-0 text-nowrap"
+                          >{{ selectedAchievement.progress }}%</span
+                        >
                       </div>
                       <div class="mt-2 h-2.5 rounded-full bg-white/8">
                         <div
@@ -2077,7 +2082,9 @@ onUnmounted(() => {
                           {{ medal.progress }}%
                         </span>
                       </div>
-                      <p class="mt-2 min-h-[3rem] whitespace-normal text-xs leading-5 text-slate-400">
+                      <p
+                        class="mt-2 min-h-[3rem] whitespace-normal text-xs leading-5 text-slate-400"
+                      >
                         {{ medal.unlockLabel }}
                       </p>
                       <div class="mt-3 h-1.5 rounded-full bg-white/8">
